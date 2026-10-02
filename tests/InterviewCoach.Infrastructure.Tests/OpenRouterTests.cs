@@ -1,4 +1,6 @@
 using System.Net;
+using System.Net.Sockets;
+using System.Text.Json.Nodes;
 using InterviewCoach.Core.Models;
 using InterviewCoach.Infrastructure.Llm;
 using InterviewCoach.Infrastructure.Settings;
@@ -165,6 +167,110 @@ public class OpenRouterTests : IDisposable
         Assert.Equal(2, handler.Calls); // a failure is not cached
     }
 
+    // ---- What is actually sent to OpenRouter (a local stand-in server records the request)
+
+    private sealed class FakeOpenRouter : IDisposable
+    {
+        private const string Completion = """
+            {"id":"x","object":"chat.completion","created":1,"model":"m",
+             "choices":[{"index":0,"message":{"role":"assistant","content":"{\"ok\":true}"},"finish_reason":"stop"}],
+             "usage":{"prompt_tokens":5,"completion_tokens":3,"total_tokens":8}}
+            """;
+
+        private readonly HttpListener _listener = new();
+        public Uri Endpoint { get; }
+        public string? Path { get; private set; }
+        public string? Authorization { get; private set; }
+        public JsonObject? Body { get; private set; }
+
+        public FakeOpenRouter()
+        {
+            var probe = new TcpListener(IPAddress.Loopback, 0);
+            probe.Start();
+            var port = ((IPEndPoint)probe.LocalEndpoint).Port;
+            probe.Stop();
+            Endpoint = new Uri($"http://127.0.0.1:{port}/api/v1");
+            _listener.Prefixes.Add($"http://127.0.0.1:{port}/");
+            _listener.Start();
+        }
+
+        public async Task<string> AskAsync(IChatClient client)
+        {
+            var served = Task.Run(async () =>
+            {
+                var context = await _listener.GetContextAsync();
+                Path = context.Request.Url!.AbsolutePath;
+                Authorization = context.Request.Headers["Authorization"];
+                using (var reader = new StreamReader(context.Request.InputStream))
+                    Body = JsonNode.Parse(await reader.ReadToEndAsync()) as JsonObject;
+                var bytes = System.Text.Encoding.UTF8.GetBytes(Completion);
+                context.Response.ContentType = "application/json";
+                await context.Response.OutputStream.WriteAsync(bytes);
+                context.Response.Close();
+            });
+            var reply = await client.GetResponseAsync([new ChatMessage(ChatRole.User, "ping")], new ChatOptions { MaxOutputTokens = 100 });
+            await served;
+            return reply.Text;
+        }
+
+        public void Dispose() => _listener.Close();
+    }
+
+    [Fact]
+    public async Task A_chosen_thinking_effort_is_sent_in_OpenRouters_own_reasoning_field()
+    {
+        using var server = new FakeOpenRouter();
+        var factory = new ChatClientFactory(server.Endpoint);
+        var settings = new AppSettings { Provider = LlmProvider.OpenRouter, OpenRouterApiKey = "sk-or-test", ThinkingEffort = ThinkingEffort.Low };
+
+        var text = await server.AskAsync(factory.Create(settings, "anthropic/claude-sonnet-5.5"));
+
+        Assert.Equal("{\"ok\":true}", text);
+        Assert.Equal("/api/v1/chat/completions", server.Path);
+        Assert.Equal("Bearer sk-or-test", server.Authorization);
+        Assert.Equal("anthropic/claude-sonnet-5.5", server.Body!["model"]!.GetValue<string>());
+        Assert.Equal("low", server.Body["reasoning"]!["effort"]!.GetValue<string>());
+        Assert.Null(server.Body["reasoning_effort"]); // the OpenAI-style field is not used
+    }
+
+    [Theory]
+    [InlineData(ThinkingEffort.Medium, "medium")]
+    [InlineData(ThinkingEffort.High, "high")]
+    public async Task Each_effort_level_is_sent_as_its_own_name(ThinkingEffort effort, string expected)
+    {
+        using var server = new FakeOpenRouter();
+        var settings = new AppSettings { Provider = LlmProvider.OpenRouter, OpenRouterApiKey = "k", ThinkingEffort = effort };
+
+        await server.AskAsync(new ChatClientFactory(server.Endpoint).Create(settings, "google/gemini-3.5-flash-lite"));
+
+        Assert.Equal(expected, server.Body!["reasoning"]!["effort"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task With_the_model_default_nothing_about_reasoning_is_sent()
+    {
+        using var server = new FakeOpenRouter();
+        var settings = new AppSettings { Provider = LlmProvider.OpenRouter, OpenRouterApiKey = "k", ThinkingEffort = ThinkingEffort.ModelDefault };
+
+        await server.AskAsync(new ChatClientFactory(server.Endpoint).Create(settings, "anthropic/claude-haiku-4.5"));
+
+        Assert.Null(server.Body!["reasoning"]);
+        Assert.Null(server.Body["reasoning_effort"]);
+        Assert.Equal("user", server.Body["messages"]![0]!["role"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public void Changing_the_effort_gives_a_new_client_so_the_change_takes_effect_at_once()
+    {
+        var factory = new ChatClientFactory();
+        var low = new AppSettings { Provider = LlmProvider.OpenRouter, OpenRouterApiKey = "k", ThinkingEffort = ThinkingEffort.Low };
+        var high = low.Clone();
+        high.ThinkingEffort = ThinkingEffort.High;
+
+        Assert.NotSame(factory.Create(low, "m/x"), factory.Create(high, "m/x"));
+        Assert.Same(factory.Create(low, "m/x"), factory.Create(low.Clone(), "m/x"));
+    }
+
     // ---- The provider itself
 
     [Fact]
@@ -201,7 +307,7 @@ public class OpenRouterTests : IDisposable
     }
 
     [Fact]
-    public void Anthropic_only_features_are_not_sent_through_OpenRouter()
+    public void Cache_markers_and_the_OpenAI_style_effort_field_are_not_used_through_OpenRouter()
     {
         var settings = new AppSettings { Provider = LlmProvider.OpenRouter, ThinkingEffort = ThinkingEffort.Low };
         const string prompt = "Guidance\n=== THE CANDIDATE AND THE QUESTION ===\n<candidate_resume>\nme\n</candidate_resume>\nPer-call text";

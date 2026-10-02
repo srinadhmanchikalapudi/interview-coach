@@ -1,4 +1,5 @@
 using System.ClientModel;
+using System.ClientModel.Primitives;
 using System.Collections.Concurrent;
 using Anthropic;
 using InterviewCoach.Core.Models;
@@ -13,7 +14,7 @@ public interface IChatClientFactory
 }
 
 /// <summary>Builds (and caches) an IChatClient for the configured provider and model.</summary>
-public sealed class ChatClientFactory : IChatClientFactory
+public sealed class ChatClientFactory(Uri? openRouterEndpoint = null) : IChatClientFactory
 {
     private readonly ConcurrentDictionary<string, IChatClient> _cache = new();
 
@@ -65,13 +66,23 @@ public sealed class ChatClientFactory : IChatClientFactory
     }
 
     // OpenRouter is an OpenAI-compatible service: one key, and the model id (for example "anthropic/claude-sonnet-5.5") picks the model.
+    // When the user picked a thinking effort it is sent in OpenRouter's own "reasoning" field (see OpenRouterReasoningPolicy).
     private IChatClient CreateOpenRouter(AppSettings settings, string modelId)
     {
         var key = settings.EffectiveOpenRouterKey
             ?? throw new LlmException("No OpenRouter API key. Add one in Settings or set the OPENROUTER_API_KEY environment variable.");
-        return _cache.GetOrAdd($"openrouter|{key}|{modelId}", _ =>
+        var effort = settings.ThinkingEffort switch
         {
-            var options = new OpenAIClientOptions { Endpoint = new Uri(AppSettings.OpenRouterBaseUrl) };
+            ThinkingEffort.Low => "low",
+            ThinkingEffort.Medium => "medium",
+            ThinkingEffort.High => "high",
+            _ => null,
+        };
+        return _cache.GetOrAdd($"openrouter|{key}|{modelId}|{effort}", _ =>
+        {
+            var options = new OpenAIClientOptions { Endpoint = openRouterEndpoint ?? new Uri(AppSettings.OpenRouterBaseUrl) };
+            if (effort is not null)
+                options.AddPolicy(new OpenRouterReasoningPolicy(effort), PipelinePosition.PerCall);
             var client = new OpenAIClient(new ApiKeyCredential(key), options);
             return client.GetChatClient(modelId).AsIChatClient();
         });
