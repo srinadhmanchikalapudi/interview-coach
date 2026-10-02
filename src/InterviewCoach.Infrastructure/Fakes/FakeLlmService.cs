@@ -84,7 +84,7 @@ public sealed class FakeLlmService(Func<LlmRole, string, string>? responder = nu
         {
           "what_theyre_testing": "Demo mode: this is sample coaching text, not advice written for your resume. With a real key, this explains the signal the interviewer wants at your level.",
           "feedback": [],
-          "model_answer": "Yeah, so the short version is that I picked the simplest thing that could work first. At [Company] we had [a specific problem, with a number], and the reason we didn't just [obvious alternative] was [the real constraint]. What I ended up doing was [what you personally built or decided]. The result was [your actual before/after metric]. Honestly, what I'd change is [one honest thing you'd do differently].",
+          "model_answer": "I picked the simplest thing that could work first. At [Company] we had [a specific problem, with a number], and the reason we didn't just [obvious alternative] was [the real constraint]. What I ended up doing was [what you personally built or decided]. The result was [your actual before/after metric]. Honestly, what I'd change is [one honest thing you'd do differently].",
           "shape": "Direct answer → the constraint → what you chose and why → result with a number → what you'd change",
           "delivery": null,
           "follow_ups": [

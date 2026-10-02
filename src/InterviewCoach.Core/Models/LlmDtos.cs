@@ -49,4 +49,22 @@ public class CoachOutput
         Delivery = null,
         FollowUps = FollowUps,
     };
+
+    /// <summary>
+    /// What Learn mode shows: no invented feedback, and a model answer that starts with the point rather than a warm-up such as
+    /// "Sure. Short version:". Applied to fresh replies and to answers saved before the prompt was changed.
+    /// </summary>
+    public CoachOutput ForLearning()
+    {
+        var clean = WithoutFeedback();
+        return new CoachOutput
+        {
+            WhatTheyreTesting = clean.WhatTheyreTesting,
+            Feedback = clean.Feedback,
+            ModelAnswer = CoachText.WithoutOpeningFiller(clean.ModelAnswer),
+            Shape = clean.Shape,
+            Delivery = clean.Delivery,
+            FollowUps = clean.FollowUps,
+        };
+    }
 }

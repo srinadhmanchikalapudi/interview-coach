@@ -28,6 +28,20 @@ public class PromptLibraryTests
         Assert.Contains("<<JOB_ROLE>>", rendered);
     }
 
+    [Fact]
+    public void The_coach_prompt_asks_for_the_point_first_and_never_shows_a_warm_up_opening()
+    {
+        // The debug log of 2 October 2026 showed answers starting "Sure. Short version:" and "Yeah, so", copied from the
+        // prompt's own instruction and example. Neither may come back.
+        var rendered = EmbeddedOnly().Render(PromptName.Coach, FullVars());
+
+        Assert.Contains("Start with the substance", rendered);
+        Assert.DoesNotContain("Open the way people actually open", rendered);
+        // The example of a good answer must itself start with the point (the rule names the forbidden openers, so it may quote them).
+        var normalised = rendered.Replace("\r\n", "\n");
+        Assert.Contains("HUMAN (write like this):\n\"At [Company]", normalised);
+    }
+
     [Theory]
     [MemberData(nameof(AllPrompts))]
     public void Every_prompt_throws_when_a_variable_is_missing(PromptName name)

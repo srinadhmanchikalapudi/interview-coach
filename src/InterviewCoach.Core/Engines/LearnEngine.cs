@@ -272,7 +272,7 @@ public sealed class LearnEngine(ILlmService llm, IPromptLibrary prompts, TechBan
 
         var coach = await llm.GetJsonAsync<CoachOutput>(
             LlmRole.Coach, RenderCoachPrompt(item, transcript), [UserTurn(PromptName.Coach)], ct);
-        return coach.WithoutFeedback();
+        return coach.ForLearning();
     }
 
     // ---- choosing the next question
@@ -372,7 +372,7 @@ public sealed class LearnEngine(ILlmService llm, IPromptLibrary prompts, TechBan
             IsGeneric = true,
             TechQuestionId = question.Id,
         };
-        item.Coach = await bank.GetSavedAnswerAsync(question.Id, _answerWords, ct);
+        item.Coach = (await bank.GetSavedAnswerAsync(question.Id, _answerWords, ct))?.ForLearning();
         return (item, true, false);
     }
 

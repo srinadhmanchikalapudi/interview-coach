@@ -10,6 +10,38 @@ public static partial class CoachText
     [GeneratedRegex(@"\[[^\[\]\r\n]+\]")]
     private static partial Regex Placeholder();
 
+    // A filler word is only removed when punctuation follows it ("Sure." "Yeah," "Okay,"), so real words that start a
+    // sentence ("Right now", "Well-known", "So far") are left alone. "Yes" and "No" are answers, not filler, and stay.
+    [GeneratedRegex(
+        @"^\s*(?:" +
+        @"(?:yeah|okay|ok|alright|right|well|sure),?\s+so\b,?\s*" +                                                  // "Yeah, so"  "Okay so" (before the single words, so the "so" goes too)
+        @"|(?:sure|yeah|okay|ok|alright|right|well|so|honestly|great question|good question)\s*[,.!:;\u2014\u2013]+\s*" +   // "Sure."  "Yeah,"
+        @"|(?:the\s+)?short\s+(?:version|answer)(?:\s+is(?:\s+that)?\s+|\s*[,.!:;\u2014\u2013]+\s*)" +            // "Short version:"  "Short version is that"
+        @")", RegexOptions.IgnoreCase)]
+    private static partial Regex OpeningFiller();
+
+    /// <summary>
+    /// Removes warm-up words from the start of a spoken answer ("Sure. Short version: ...", "Yeah, so ..."), then capitalises
+    /// what is left. The prompt asks the model not to write them; this catches the ones that slip through and the ones
+    /// already saved. An answer that would be left almost empty is returned unchanged.
+    /// </summary>
+    public static string WithoutOpeningFiller(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return text ?? "";
+
+        var result = text;
+        for (var pass = 0; pass < 5; pass++)
+        {
+            var next = OpeningFiller().Replace(result, "", 1);
+            if (next.Length == result.Length) break;
+            result = next;
+        }
+
+        result = result.TrimStart();
+        if (result.Length < 20 || result.Length == text.TrimStart().Length) return text;
+        return char.IsLower(result[0]) ? char.ToUpperInvariant(result[0]) + result[1..] : result;
+    }
+
     /// <summary>
     /// Splits a model answer into plain text and bracketed placeholders such as "[your actual p99]",
     /// so the UI can highlight the parts the candidate has to fill in with real values.

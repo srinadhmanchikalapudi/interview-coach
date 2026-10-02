@@ -70,7 +70,9 @@ public sealed class TechBank(ITechBankRepository repository, ILlmService llm, IP
         if (unseen.Count > 0)
             return unseen[Math.Min(unseen.Count - 1, (int)(_random() * unseen.Count))];
 
-        var avoid = saved.Select(q => q.Question).Concat(askedThisSession).ToList();
+        var avoid = new List<string>();
+        foreach (var question in saved.Select(q => q.Question).Concat(askedThisSession))
+            if (!avoid.Any(a => TextTools.SameQuestion(a, question))) avoid.Add(question);
         QuestionDto written = new();
         for (var attempt = 0; attempt < 2; attempt++)
         {
@@ -117,7 +119,7 @@ public sealed class TechBank(ITechBankRepository repository, ILlmService llm, IP
         var coach = await llm.GetJsonAsync<CoachOutput>(
             LlmRole.Coach, prompts.Render(PromptName.Coach, vars),
             [new ChatTurn(ChatTurnRole.User, PromptName.Coach.UserMessage()!)], ct);
-        return coach.WithoutFeedback();
+        return coach.ForLearning();
     }
 
     private string RenderGeneratorPrompt(string technology, Seniority seniority, IReadOnlyList<string> avoid)
