@@ -53,3 +53,10 @@ public interface ITextToSpeech
     void Stop();
     Task<IReadOnlyList<VoiceInfo>> GetVoicesAsync(CancellationToken ct);
 }
+
+/// <summary>The list of models OpenRouter offers, with prices. Used by Settings to help choose a model; the list is public and needs no key.</summary>
+public interface IOpenRouterCatalog
+{
+    /// <summary>Models that take text and answer in text, sorted by name. The list is kept for the rest of the run unless <paramref name="refresh"/> is set.</summary>
+    Task<IReadOnlyList<OpenRouterModel>> GetModelsAsync(bool refresh, CancellationToken ct = default);
+}
