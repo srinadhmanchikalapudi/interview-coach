@@ -40,14 +40,15 @@ Pick one question that a real interviewer for this role would plausibly ask this
 - Phrase it exactly as an interviewer would say it out loud: short, natural, and with one question only. Real interviewers keep fundamentals questions brief, so match these lengths:
   - technical_concept: one direct sentence of about 6 to 18 words, with no setup and no "walk me through". The style is "What's the difference between checked and unchecked exceptions?", "When would you use a struct instead of a class?", "What happens if you await inside a lock?" or "How does garbage collection decide what to free?". Do not explain the concept inside the question.
   - tell_me_about_yourself and behavioral: one sentence, such as "Tell me about a time you pushed back on a deadline."
-  - resume_deep_dive: one or two sentences that name the project and ask one thing about it.
-  - system_design: one sentence naming the system to design, such as "Design a rate limiter for a public API."
+  - resume_deep_dive: one sentence of about 12 to 25 words that names the project or system and asks one thing about it. The style is "Why did you choose Redis over Memcached for the claims cache?" or "What was the hardest part of moving the billing service to microservices?", using the real project and technology from the resume. Do not list the technologies the resume mentions.
+  - system_design: one sentence of up to 15 words naming the system to design, with no list of requirements, such as "Design a rate limiter for a public API." or "Design a notification service for a claims platform."
   - coding_talkthrough: a short problem statement of up to three sentences, then the question.
   - scenario: up to three short sentences to set the situation, then one question.
   - motivation_fit: one short sentence, such as "Why this role, and why now?"
-  - engagement: one short sentence, such as "When could you start, and what is your notice period?"
-- Ask one thing only. Do not add a follow-on clause such as "and what are the trade-offs?" or "and how would you handle X?"; the interviewer saves those for the next turn.
-- Vary the wording so the questions do not all start the same way.
+  - engagement: one short question that asks one thing, such as "When could you start?", "What is your notice period?" or "What rate are you looking for?"
+- Ask one thing only. A second request joined with "and" makes it two questions, so do not write "..., and what trade-offs did you face?", "..., and how would you handle X?" or "walk me through how you decided ... and ...". The interviewer saves those for the next turn.
+- Vary the wording. If most of the already-asked questions start the same way (for example "What's the difference between"), start this one differently: "When would you...", "What happens if...", "Why does...", "How does ... work?", "What does ... do?" or "How would you debug...".
+- Prefer what real interviewers ask often at this level over obscure corners. Skip rarely used APIs and runtime internals that most engineers never touch. If the common questions have already been asked, move to a different area of the technology instead of a more obscure corner of the same area.
 - The question must not hint at its own answer.
 - Difficulty must match {{SENIORITY}}.
 

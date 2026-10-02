@@ -29,6 +29,8 @@ internal sealed class ScriptedLlmService(Func<LlmCall, Task<object>> handler) : 
     public IEnumerable<LlmCall> To(LlmRole role) => Calls.Where(c => c.Role == role);
     public IEnumerable<LlmCall> TagCalls => Calls.Where(c => c.Prompt.Contains(BankScript.TagsMarker));
     public IEnumerable<LlmCall> BankQuestionCalls => To(LlmRole.QuestionGenerator).Where(c => BankScript.FocusOf(c) != "(none)");
+    public IEnumerable<LlmCall> BatchCalls => BankQuestionCalls.Where(c => c.Prompt.Contains(BankScript.BatchMarker));
+    public IEnumerable<LlmCall> SingleQuestionCalls => BankQuestionCalls.Where(c => !c.Prompt.Contains(BankScript.BatchMarker));
     public IEnumerable<LlmCall> ModelQuestionCalls => To(LlmRole.QuestionGenerator).Where(c => !c.Prompt.Contains(BankScript.TagsMarker) && BankScript.FocusOf(c) == "(none)");
     public IEnumerable<LlmCall> GeneralAnswerCalls => To(LlmRole.Coach).Where(c => c.Prompt.Contains(TechBank.GeneralAnswerNote));
     public IEnumerable<LlmCall> TailoredAnswerCalls => To(LlmRole.Coach).Where(c => !c.Prompt.Contains(TechBank.GeneralAnswerNote));
@@ -41,10 +43,15 @@ internal sealed class ScriptedLlmService(Func<LlmCall, Task<object>> handler) : 
 internal sealed partial class BankScript
 {
     public const string TagsMarker = "List the main technologies this job actually requires";
+    public const string BatchMarker = "preparing a bank of technical screening questions";
 
     public string[] Technologies { get; set; } = ["C#", "SQL Server"];
     public bool FailTags { get; set; }
     public bool FailBankQuestions { get; set; }
+    /// <summary>When the bank runs out the app asks for a batch; this many questions come back (the app asks for 10).</summary>
+    public int BatchCount { get; set; } = 1;
+    /// <summary>Makes the batch call fail, so the app falls back to writing one question.</summary>
+    public bool FailBatches { get; set; }
     public bool FailGeneralAnswers { get; set; }
 
     private int _bankQuestions;
@@ -61,6 +68,18 @@ internal sealed partial class BankScript
         {
             if (FailTags) throw new LlmException("tag extraction failed");
             return Task.FromResult<object>(new TechTagsDto { Technologies = [.. Technologies] });
+        }
+
+        if (call.Prompt.Contains(BatchMarker))
+        {
+            if (FailBankQuestions || FailBatches) throw new LlmException("batch failed");
+            var batchFocus = FocusOf(call);
+            return Task.FromResult<object>(new QuestionBatchDto
+            {
+                Questions = Enumerable.Range(0, BatchCount)
+                    .Select(_ => new BatchQuestionDto { Question = $"{batchFocus} concept question {++_bankQuestions}?", Area = $"{batchFocus} basics" })
+                    .ToList(),
+            });
         }
 
         if (call.Role == LlmRole.QuestionGenerator)

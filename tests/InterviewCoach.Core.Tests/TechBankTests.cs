@@ -119,9 +119,8 @@ public class TechBankTests
         Assert.NotEqual(0, question.Id);
         var call = Assert.Single(llm.BankQuestionCalls);
         Assert.Contains("<focus_technology>\nSQL Server\n</focus_technology>", call.Prompt);
-        Assert.Contains("<allowed_question_types>\n- technical_concept\n</allowed_question_types>", call.Prompt);
-        Assert.Contains("<job_description>\n(none)\n</job_description>", call.Prompt);
-        Assert.Contains("<candidate_resume>\n(none)\n</candidate_resume>", call.Prompt);
+        Assert.DoesNotContain("<job_description>", call.Prompt);   // the batch prompt never has a place for personal details
+        Assert.DoesNotContain("<candidate_resume>", call.Prompt);
         Assert.Contains("software engineer", call.Prompt);
         Assert.Single(await repo.ListQuestionsAsync("sql server", Seniority.Senior)); // saved, found ignoring case
     }
@@ -167,13 +166,15 @@ public class TechBankTests
     }
 
     [Fact]
-    public async Task A_model_that_repeats_a_question_gets_one_more_try_and_is_never_stored_twice()
+    public async Task A_model_that_only_repeats_a_question_is_tried_as_a_batch_then_twice_singly_and_never_stored_twice()
     {
         var repeats = 0;
         var llm = new ScriptedLlmService(call =>
         {
             repeats++;
-            return Task.FromResult<object>(new QuestionDto { Question = "What is a closure?", QuestionType = "technical_concept", Source = "fundamentals", Focus = "closures" });
+            return Task.FromResult<object>(call.Prompt.Contains(BankScript.BatchMarker)
+                ? new QuestionBatchDto { Questions = [new BatchQuestionDto { Question = "What is a closure?", Area = "closures" }] }
+                : new QuestionDto { Question = "What is a closure?", QuestionType = "technical_concept", Source = "fundamentals", Focus = "closures" });
         });
         var repo = new InMemoryTechBankRepository();
         var bank = new TechBank(repo, llm, new PromptLibrary(Path.Combine(Path.GetTempPath(), "no-such-dir")), () => 0.0);
@@ -182,7 +183,7 @@ public class TechBankTests
 
         var second = await bank.NextQuestionAsync("JavaScript", Seniority.Mid, [first.Question]);
 
-        Assert.Equal(2, repeats);                       // tried twice, then gave up
+        Assert.Equal(3, repeats);                       // one batch with nothing new, then two single tries, then gave up
         Assert.Equal(first.Id, second.Id);              // the repeat collapses onto the stored question
         Assert.Single(await repo.ListQuestionsAsync("JavaScript", Seniority.Mid));
     }
@@ -190,10 +191,102 @@ public class TechBankTests
     [Fact]
     public async Task An_empty_question_from_the_model_is_an_error()
     {
-        var llm = new ScriptedLlmService(_ => Task.FromResult<object>(new QuestionDto()));
+        var llm = new ScriptedLlmService(call => Task.FromResult<object>(
+            call.Prompt.Contains(BankScript.BatchMarker) ? new QuestionBatchDto() : new QuestionDto()));
         var bank = new TechBank(new InMemoryTechBankRepository(), llm, new PromptLibrary(Path.Combine(Path.GetTempPath(), "no-such-dir")));
 
         await Assert.ThrowsAsync<LlmException>(() => bank.NextQuestionAsync("Go", Seniority.Mid, []));
+    }
+
+    // ---- batches of common questions
+
+    [Fact]
+    public async Task When_the_saved_questions_run_out_a_batch_is_written_in_one_call_and_all_of_it_is_saved()
+    {
+        var (bank, llm, repo, script) = Create();
+        script.BatchCount = 4;
+
+        var first = await bank.NextQuestionAsync("C#", Seniority.Senior, []);
+
+        Assert.Equal("C# concept question 1?", first.Question);       // the one asked for first leads the batch
+        Assert.Single(llm.BatchCalls);
+        Assert.Empty(llm.SingleQuestionCalls);
+        Assert.Equal(4, (await repo.ListQuestionsAsync("C#", Seniority.Senior)).Count);
+    }
+
+    [Fact]
+    public async Task The_rest_of_a_batch_is_served_from_the_bank_without_another_call()
+    {
+        var (bank, llm, _, script) = Create();
+        script.BatchCount = 3;
+        var asked = new List<string>();
+        for (var i = 0; i < 3; i++)
+            asked.Add((await bank.NextQuestionAsync("C#", Seniority.Senior, asked)).Question);
+
+        Assert.Equal(3, asked.Distinct().Count());
+        Assert.Single(llm.BankQuestionCalls); // three questions, one model call
+    }
+
+    [Fact]
+    public async Task A_batch_asks_for_ten_and_keeps_at_most_ten()
+    {
+        var (bank, llm, repo, script) = Create();
+        script.BatchCount = 14;
+
+        await bank.NextQuestionAsync("C#", Seniority.Senior, []);
+
+        Assert.Equal(TechBank.BatchSize, (await repo.ListQuestionsAsync("C#", Seniority.Senior)).Count);
+        Assert.Contains("Write 10 new technical questions", llm.BatchCalls.Single().Prompt);
+    }
+
+    [Fact]
+    public async Task The_batch_prompt_lists_what_is_saved_and_asked_once_each_and_names_the_technology_and_level()
+    {
+        var (bank, llm, repo, _) = Create();
+        await repo.AddQuestionAsync("C#", Seniority.Senior, "What does the async keyword do?", "f");
+        await repo.AddQuestionAsync("C#", Seniority.Senior, "What is a struct?", "f");
+
+        await bank.NextQuestionAsync("C#", Seniority.Senior, ["What does the async keyword do?", "What is a struct?", "Something asked elsewhere?"]);
+
+        var prompt = llm.BatchCalls.Single().Prompt;
+        Assert.Contains("<focus_technology>\nC#\n</focus_technology>", prompt);
+        Assert.Contains("for a Senior candidate", prompt);
+        Assert.Equal(1, Count(prompt, "What does the async keyword do?"));
+        Assert.Equal(1, Count(prompt, "What is a struct?"));
+        Assert.Contains("Something asked elsewhere?", prompt);
+    }
+
+    [Fact]
+    public async Task Questions_a_batch_repeats_from_the_bank_are_dropped()
+    {
+        var (bank, _, repo, script) = Create();
+        await repo.AddQuestionAsync("C#", Seniority.Senior, "C# concept question 1?", "f"); // the script's first batch question
+        script.BatchCount = 2;
+
+        var next = await bank.NextQuestionAsync("C#", Seniority.Senior, ["C# concept question 1?"]);
+
+        Assert.Equal("C# concept question 2?", next.Question);
+        Assert.Equal(2, (await repo.ListQuestionsAsync("C#", Seniority.Senior)).Count); // the repeat was not stored again
+    }
+
+    [Fact]
+    public async Task If_the_batch_fails_a_single_question_is_written_instead()
+    {
+        var (bank, llm, _, script) = Create();
+        script.FailBatches = true;
+
+        var question = await bank.NextQuestionAsync("C#", Seniority.Senior, []);
+
+        Assert.Equal("C# concept question 1?", question.Question);
+        Assert.Single(llm.BatchCalls);
+        Assert.Single(llm.SingleQuestionCalls);
+    }
+
+    private static int Count(string text, string part)
+    {
+        var count = 0;
+        for (var i = text.IndexOf(part, StringComparison.Ordinal); i >= 0; i = text.IndexOf(part, i + part.Length, StringComparison.Ordinal)) count++;
+        return count;
     }
 
     // ---- answers

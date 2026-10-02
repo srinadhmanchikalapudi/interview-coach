@@ -174,7 +174,9 @@ public class LearnEngineEmploymentTests
 
         await engine.StartAsync(Profile(), [QuestionType.TechnicalConcept], employment: EmploymentType.Contract);
 
-        Assert.Contains("<employment_type>\n(none)\n</employment_type>", llm.BankQuestionCalls.Single().Prompt);
+        var bankPrompt = llm.BankQuestionCalls.Single().Prompt;
+        Assert.DoesNotContain("Contract", bankPrompt);   // the saved-question prompts have no place for the kind of job at all
+        Assert.DoesNotContain("<employment_type>", bankPrompt);
         Assert.Contains("Employment type: (none)", llm.GeneralAnswerCalls.Single().Prompt);
     }
 

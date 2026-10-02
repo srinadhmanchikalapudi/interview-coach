@@ -255,6 +255,8 @@ public class LearnEngineTechnologyTests
     {
         var llm = new ScriptedLlmService(call => call.Role switch
         {
+            LlmRole.QuestionGenerator when call.Prompt.Contains(BankScript.BatchMarker)
+                => Task.FromResult<object>(new QuestionBatchDto { Questions = [new BatchQuestionDto { Question = "What is a cache?", Area = "caching" }] }),
             LlmRole.QuestionGenerator => Task.FromResult<object>(new QuestionDto { Question = "What is a cache?", QuestionType = "technical_concept", Source = "fundamentals", Focus = "caching" }),
             _ => Task.FromResult<object>(new CoachOutput { ModelAnswer = "answer", Shape = "A → B" }),
         });

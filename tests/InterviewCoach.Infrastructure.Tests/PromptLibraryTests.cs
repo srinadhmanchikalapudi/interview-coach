@@ -53,6 +53,51 @@ public class PromptLibraryTests
     }
 
     [Fact]
+    public void The_batch_prompt_asks_for_ten_common_questions_spread_over_areas_in_mixed_forms()
+    {
+        // The debug log of 2 October 2026 showed one-at-a-time questions drifting into obscure corners (ConditionalWeakTable)
+        // and nearly all starting "What's the difference between". The batch is written in one go to avoid both.
+        var rendered = EmbeddedOnly().Render(PromptName.QuestionBatch, FullVars());
+
+        Assert.Contains("Write 10 new technical questions", rendered);
+        Assert.Contains("most often asked in real interviews first", rendered);
+        Assert.Contains("no more than two questions from the same area", rendered);
+        Assert.Contains("At most three questions may start with \"What's the difference between\"", rendered);
+        Assert.Contains("at least three situational ones", rendered);
+        Assert.Contains("about 6 to 18 words", rendered);
+        Assert.Contains("<<FOCUS_TECHNOLOGY>>", rendered);
+        Assert.Contains("<<ALREADY_ASKED>>", rendered);
+        Assert.DoesNotContain("<candidate_resume>", rendered); // a saved question never depends on a person's details
+        Assert.Equal("Write the questions.", PromptName.QuestionBatch.UserMessage());
+    }
+
+    [Fact]
+    public void Question_generator_gives_examples_for_the_types_that_ran_long_and_allows_one_ask_only()
+    {
+        // Logged: 5 of 6 resume, design and engagement questions ran 24 to 48 words with a second ask. Only the technical
+        // type had examples, and it was the only one that obeyed.
+        var rendered = EmbeddedOnly().Render(PromptName.QuestionGenerator, FullVars());
+
+        Assert.Contains("resume_deep_dive: one sentence of about 12 to 25 words", rendered);
+        Assert.Contains("Why did you choose Redis over Memcached", rendered);
+        Assert.Contains("system_design: one sentence of up to 15 words", rendered);
+        Assert.Contains("with no list of requirements", rendered);
+        Assert.Contains("\"What is your notice period?\"", rendered);
+        Assert.DoesNotContain("When could you start, and what is your notice period?", rendered); // that example itself had two asks
+        Assert.Contains("A second request joined with \"and\" makes it two questions", rendered);
+    }
+
+    [Fact]
+    public void Question_generator_prefers_common_questions_and_varied_wording()
+    {
+        var rendered = EmbeddedOnly().Render(PromptName.QuestionGenerator, FullVars());
+
+        Assert.Contains("Prefer what real interviewers ask often at this level over obscure corners", rendered);
+        Assert.Contains("move to a different area of the technology", rendered);
+        Assert.Contains("start this one differently", rendered);
+    }
+
+    [Fact]
     public void Question_generator_prompt_defines_the_scenario_type_and_allows_a_short_setup()
     {
         var rendered = EmbeddedOnly().Render(PromptName.QuestionGenerator, FullVars());

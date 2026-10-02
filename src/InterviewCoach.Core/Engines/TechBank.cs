@@ -58,9 +58,15 @@ public sealed class TechBank(ITechBankRepository repository, ILlmService llm, IP
         return technologies;
     }
 
+    /// <summary>How many questions one batch call asks for.</summary>
+    public const int BatchSize = 10;
+
     /// <summary>
     /// A saved question for this technology and level that has not come up this session. Only when every saved one has
-    /// been seen is a new question written (and saved), so the bank grows exactly as fast as it is used up.
+    /// been seen does the model write more, and then a batch of <see cref="BatchSize"/> in one call, most commonly asked
+    /// first and spread over different areas. Writing them one at a time drifted into obscure corners and the same
+    /// "What's the difference between" form, and cost more per question. If the batch fails or adds nothing new, one
+    /// question is written the old way.
     /// </summary>
     public async Task<TechQuestion> NextQuestionAsync(
         string technology, Seniority seniority, IReadOnlyCollection<string> askedThisSession, CancellationToken ct = default)
@@ -73,12 +79,16 @@ public sealed class TechBank(ITechBankRepository repository, ILlmService llm, IP
         var avoid = new List<string>();
         foreach (var question in saved.Select(q => q.Question).Concat(askedThisSession))
             if (!avoid.Any(a => TextTools.SameQuestion(a, question))) avoid.Add(question);
+
+        var batch = await TryWriteBatchAsync(technology, seniority, avoid, ct);
+        if (batch.Count > 0) return batch[0];
+
         QuestionDto written = new();
         for (var attempt = 0; attempt < 2; attempt++)
         {
             written = await llm.GetJsonAsync<QuestionDto>(
                 LlmRole.QuestionGenerator,
-                RenderGeneratorPrompt(technology, seniority, avoid),
+                RenderPrompt(PromptName.QuestionGenerator, technology, seniority, avoid),
                 [new ChatTurn(ChatTurnRole.User, PromptName.QuestionGenerator.UserMessage()!)], ct);
             if (string.IsNullOrWhiteSpace(written.Question))
                 throw new LlmException("The model returned an empty question.");
@@ -86,6 +96,32 @@ public sealed class TechBank(ITechBankRepository repository, ILlmService llm, IP
         }
 
         return await repository.AddQuestionAsync(technology, seniority, written.Question.Trim(), written.Focus, ct);
+    }
+
+    private async Task<List<TechQuestion>> TryWriteBatchAsync(string technology, Seniority seniority, List<string> avoid, CancellationToken ct)
+    {
+        var added = new List<TechQuestion>();
+        try
+        {
+            var batch = await llm.GetJsonAsync<QuestionBatchDto>(
+                LlmRole.QuestionGenerator,
+                RenderPrompt(PromptName.QuestionBatch, technology, seniority, avoid),
+                [new ChatTurn(ChatTurnRole.User, PromptName.QuestionBatch.UserMessage()!)], ct);
+
+            foreach (var item in batch.Questions.Take(BatchSize + 5))
+            {
+                var text = item.Question?.Trim() ?? "";
+                if (text.Length == 0 || avoid.Any(a => TextTools.SameQuestion(a, text))) continue;
+                added.Add(await repository.AddQuestionAsync(technology, seniority, text, item.Area ?? "", ct));
+                avoid.Add(text);
+                if (added.Count == BatchSize) break;
+            }
+        }
+        catch (LlmException)
+        {
+            // Not worth failing the session: the caller writes a single question instead.
+        }
+        return added;
     }
 
     public Task<CoachOutput?> GetSavedAnswerAsync(int questionId, int? answerWords, CancellationToken ct = default)
@@ -122,13 +158,13 @@ public sealed class TechBank(ITechBankRepository repository, ILlmService llm, IP
         return coach.ForLearning();
     }
 
-    private string RenderGeneratorPrompt(string technology, Seniority seniority, IReadOnlyList<string> avoid)
+    private string RenderPrompt(PromptName name, string technology, Seniority seniority, IReadOnlyList<string> avoid)
     {
         var vars = PromptVars.Generic(seniority);
         vars["QUESTION_TYPES"] = "- " + QuestionType.TechnicalConcept.Id();
         vars["EMPLOYMENT_TYPE"] = null; // saved questions are general, shared by every kind of interview
         vars["ALREADY_ASKED"] = PromptVars.AlreadyAsked(avoid);
         vars["FOCUS_TECHNOLOGY"] = technology;
-        return prompts.Render(PromptName.QuestionGenerator, vars);
+        return prompts.Render(name, vars);
     }
 }

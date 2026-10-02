@@ -12,6 +12,18 @@ public class QuestionDto
     public string Focus { get; init; } = "";
 }
 
+/// <summary>Reply from question_batch.md: several common questions about one technology, most common first.</summary>
+public class QuestionBatchDto
+{
+    public List<BatchQuestionDto> Questions { get; init; } = [];
+}
+
+public class BatchQuestionDto
+{
+    public string Question { get; init; } = "";
+    public string Area { get; init; } = "";
+}
+
 public class FeedbackPoint
 {
     /// <summary>strength | fix | missing</summary>

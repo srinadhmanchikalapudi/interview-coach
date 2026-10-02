@@ -1,6 +1,6 @@
 namespace InterviewCoach.Core.Prompts;
 
-public enum PromptName { Planner, Interviewer, QuestionGenerator, Coach, Debrief, TechTags }
+public enum PromptName { Planner, Interviewer, QuestionGenerator, Coach, Debrief, TechTags, QuestionBatch }
 
 public static class PromptNames
 {
@@ -12,6 +12,7 @@ public static class PromptNames
         PromptName.Coach => "coach.md",
         PromptName.Debrief => "debrief.md",
         PromptName.TechTags => "tech_tags.md",
+        PromptName.QuestionBatch => "question_batch.md",
         _ => throw new ArgumentOutOfRangeException(nameof(name)),
     };
 
@@ -23,6 +24,7 @@ public static class PromptNames
         PromptName.Coach => "Coach this.",
         PromptName.Debrief => "Write the debrief.",
         PromptName.TechTags => "List the technologies.",
+        PromptName.QuestionBatch => "Write the questions.",
         _ => null,
     };
 }
