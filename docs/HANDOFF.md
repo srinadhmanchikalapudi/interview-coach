@@ -31,7 +31,7 @@ background preparation of the next question; the technology bank (saved technica
 and seniority); By technology with an Other box; interviewer-style question length rules; full-time or contract role type with two
 extra question types; scroll-wheel behaviour on Home; app icon; a full visual redesign.
 
-Test status when written: **398 tests passing** (Core 168, Infrastructure 100, App 130). The last full verification was done with
+Test status: **441 tests passing** (Core 178, Infrastructure 115, App 148). The last full verification was done with
 `-c Release` because the user had the Debug build running (see section 2).
 
 **Version control.** The folder is a git repository (branch `main`). History is written to be read; see "Commit conventions" in `README.md`.
@@ -62,7 +62,7 @@ dotnet build InterviewCoach.sln -c Release           # verify while the Debug ex
   `dotnet test tests/InterviewCoach.App.Tests --filter VisualSnapshots`. Unset, that test does nothing.
 - **Where the app keeps things:** `%LOCALAPPDATA%\InterviewCoach\` holds `settings.json` (API keys encrypted with DPAPI, current user),
   `app.db` (SQLite, WAL mode so `app.db-wal` and `-shm` appear), and `logs\llm-yyyymmdd.log` (only when Debug logging is on).
-- **Key fallbacks** when a key field is empty: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION`.
+- **Key fallbacks** when a key field is empty: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION`.
 - **Demo mode** (Settings) uses a fake LLM, fake speech and an in-memory technology bank, so the UI runs with no keys and nothing
   made up reaches the real database.
 - **Debug logging** (Settings) writes full prompts and replies (resume and JD included) plus timing, token counts, cache reads and
@@ -187,10 +187,10 @@ screen uses for "Interviewers typically expect..."; `(none)` only for an unknown
 Not stored yet (spec section 7 entities for later milestones): Session, Turn, QuestionThread, PracticeItem, Attempt. **Learn sessions are
 not saved**; the History screen (milestone 7) will need writes added to the engines.
 
-**`settings.json`** (enums written as names): Provider, AnthropicApiKey, OpenAiApiKey, OpenAiBaseUrl, the five model ids, ThinkingEffort,
+**`settings.json`** (enums written as names): Provider, AnthropicApiKey, OpenAiApiKey, OpenAiBaseUrl, OpenRouterApiKey, the five model ids, the five OpenRouter model ids (`OpenRouter*Model`), ThinkingEffort,
 PromptCaching, **EmploymentType**, ReuseGeneralAnswers, SpeechToText, TextToSpeech, AzureSpeechKey, AzureSpeechRegion, Voice,
 SpeakingRate, MicrophoneDeviceId, AutoListen, SilenceAutoSubmit, SilenceSeconds, ShowQuestionTextDefault, DemoMode, DebugLogging.
-Secret fields (`AnthropicApiKey`, `OpenAiApiKey`, `AzureSpeechKey`) are stored as `dpapi:<base64>`; the computed `Effective*` properties
+Secret fields (`AnthropicApiKey`, `OpenAiApiKey`, `OpenRouterApiKey`, `AzureSpeechKey`) are stored as `dpapi:<base64>`; the computed `Effective*` properties
 are `[JsonIgnore]` (an earlier version leaked plaintext keys through them; a test guards this). A corrupt file falls back to defaults.
 
 ---
@@ -243,7 +243,7 @@ show as "Coming soon". The Learn mode card is bound to the view model (always se
 ## 7. Decisions and why
 
 1. **Core has no SDK or UI references**, so a different UI or provider can replace WPF or Anthropic without touching engines.
-2. **`IChatClient` from Microsoft.Extensions.AI** over the Anthropic SDK's adapter, with an OpenAI-compatible alternative.
+2. **`IChatClient` from Microsoft.Extensions.AI** over the Anthropic SDK's adapter, with an OpenAI-compatible alternative and OpenRouter (which is OpenAI-compatible at a fixed address).
 3. **Keys encrypted with DPAPI (current user)** in `settings.json`; environment variables as fallback.
 4. **Prompts are files, not strings**, so they can be edited without a rebuild; embedded copies are the fallback.
 5. **One repair retry** for bad JSON, with the first balanced JSON value extracted first (a measured Haiku failure shape).
@@ -315,7 +315,7 @@ cache read about 0.1x, cache write about 1.25x; the user's balance drop was cons
 
 ## 10. Tests
 
-398 tests: Core 168, Infrastructure 100, App 130.
+441 tests: Core 178, Infrastructure 115, App 148.
 
 - **Core.Tests**: prompt rendering, engine behaviour (`LearnEngineTests`, `LearnEngineBankTests`, `LearnEngineTechnologyTests`,
   `EmploymentTypeTests`), bank service, answer length, question types, text helpers. Helpers in `TestDoubles.cs`:
@@ -386,3 +386,34 @@ Planned for later; this handoff is the raw material. Suggested set, in `docs/`:
 | User guide | Setup, profiles, Learn mode, options, tips, FAQ | Section 6 |
 
 When these are written, keep them in step with `SPEC.md` section 14 and update this handoff's status table.
+
+---
+
+## 14. OpenRouter provider
+
+Added after the first push. `LlmProvider.OpenRouter` uses the OpenAI client pointed at `https://openrouter.ai/api/v1` with the user's
+OpenRouter key; the model id (`maker/model`, for example `anthropic/claude-sonnet-5.5`) picks the model.
+
+- **Separate model set.** OpenRouter ids differ from Anthropic's, so `AppSettings` keeps five more model fields (`OpenRouter*Model`,
+  default `anthropic/claude-sonnet-5.5`). `ModelFor(provider, role)` and `SetModel(provider, role, id)` read and write either set;
+  `ModelFor(role)` follows the current provider. Anthropic and OpenAI-compatible still share the original set. In `SettingsViewModel`
+  the five boxes show the set of the provider on screen; `OnProviderChanged` stores the visible values under the old provider and loads
+  the new one, and `Load`/`ToSettings` use a private `_models` copy of both sets. `_loading` stops that swap while loading.
+- **Model browser.** `IOpenRouterCatalog` (Core) and `OpenRouterCatalog` (Infrastructure) download the public `GET /models` list (no key,
+  nothing about the user). `Parse` keeps models that take text and answer only in text and drops `:batch` copies; prices are converted from
+  dollars per token to dollars per million; a negative price ("varies") or a missing one is shown as "Price not listed" and sorts last.
+  The catalog is kept for the run, a failure is not cached, and errors become `LlmException` with a plain message. The list loads only when
+  the user clicks **Load models**, so opening Settings never touches the network. The screen has search (every word must match the name or the
+  id), **Cheapest first**, and three buttons that copy the selected id into the Question generator, the Coach or every role. Nothing is saved
+  until **Save**.
+- **Not sent through OpenRouter:** thinking effort (`LlmService.OptionsFor` only sets it for Anthropic) and the cache markers
+  (`BuildSystemMessage` only splits for Anthropic), because the OpenAI adapter cannot carry Anthropic's `cache_control`. OpenRouter caches
+  automatically for some providers. A thinking model on OpenRouter will therefore think at its own default, so prefer a fast model.
+- **Measured:** the live catalogue on 2 October 2026 had 465 entries; the parser keeps 377 (the rest are batch copies and image or audio
+  generators), 20 of them free, 4 with no price. Examples, per million tokens in/out: `anthropic/claude-sonnet-5.5` $2.00/$10.00,
+  `anthropic/claude-haiku-4.5` $1.00/$5.00, `google/gemini-3.5-flash-lite` $0.30/$2.50, `deepseek/deepseek-v4-flash` $0.028/$0.056.
+  **Not yet measured:** real calls through OpenRouter (speed, whether each model returns valid JSON, actual spend). The user should try the
+  question generator on a cheap model first and watch the debug log.
+- **Tests:** `OpenRouterSettingsTests` (Core), `OpenRouterTests` (Infrastructure: parsing, HTTP stub, factory, key encryption, no Anthropic-only
+  features), `OpenRouterSettingsUiTests` (App: provider swap, search, sort, use buttons, real view without binding errors). `FakeCatalog` is in
+  `Fakes.cs`; `VisualSnapshots` also writes `5-settings-openrouter-*.png`.

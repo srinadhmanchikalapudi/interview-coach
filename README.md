@@ -12,7 +12,7 @@
 <p align="center">
   <img alt=".NET 10" src="https://img.shields.io/badge/.NET-10-512BD4">
   <img alt="WPF" src="https://img.shields.io/badge/UI-WPF%20%28MVVM%29-0078D4">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-398%20passing-2EA043">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-441%20passing-2EA043">
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%2010%2F11-lightgrey">
   <img alt="Status" src="https://img.shields.io/badge/status-Learn%20mode%20complete-blue">
 </p>
@@ -65,7 +65,7 @@ Things that make it more than a question generator:
 | **Tailor to my resume** | Turn any general answer into one built from your own experience, on demand. |
 | **Answer length control** | Short, Medium, Long or a custom word count. By default the model aims for the same range the screen shows. |
 | **Interviewer-style phrasing** | Technical questions are short and direct ("What's the difference between checked and unchecked exceptions?"), not essay prompts. |
-| **Two providers** | Anthropic (default) or any OpenAI-compatible endpoint. |
+| **Three providers** | Anthropic (default), any OpenAI-compatible endpoint, or **OpenRouter**: one key for hundreds of models, with an in-app model browser showing prices. |
 | **Demo mode** | Runs the whole UI on canned data with no keys and no network. |
 | **Light and dark** | Follows the Windows theme. |
 
@@ -85,9 +85,9 @@ Rendered from the real views by the repository's own snapshot test, in Demo mode
 |---|---|
 | <img src="docs/images/learn-light.png" alt="Learn, light"> | <img src="docs/images/learn-dark.png" alt="Learn, dark"> |
 
-**Settings**
+**Settings** (Anthropic, and OpenRouter with the model browser)
 
-<img src="docs/images/settings-light.png" alt="Settings, light" width="560">
+<img src="docs/images/settings-light.png" alt="Settings, light" width="400"> <img src="docs/images/settings-openrouter-dark.png" alt="Settings with OpenRouter, dark" width="400">
 
 To regenerate them, see [Testing](#testing).
 
@@ -104,7 +104,7 @@ To regenerate them, see [Testing](#testing).
 | 7. History and polish | Not started |
 
 Beyond the original spec, these were added during the build: scenario questions, answer-length control, technology bank,
-By technology and Other, prompt caching and prefetching, thinking-effort setting, full-time or contract role type, a new icon and
+By technology and Other, prompt caching and prefetching, thinking-effort setting, full-time or contract role type, an OpenRouter provider with a model browser, a new icon and
 a full visual redesign. [SPEC.md](SPEC.md) section 14 lists every change and **overrides the spec where they differ**.
 
 ## Getting started
@@ -113,7 +113,7 @@ a full visual redesign. [SPEC.md](SPEC.md) section 14 lists every change and **o
 
 - Windows 10 (version 2004 or later) or Windows 11
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
-- An [Anthropic API key](https://console.anthropic.com/) (or an OpenAI-compatible endpoint and key). Not needed for Demo mode.
+- An [Anthropic API key](https://console.anthropic.com/) (or an [OpenRouter](https://openrouter.ai/) key, or an OpenAI-compatible endpoint and key). Not needed for Demo mode.
 
 ### Run
 
@@ -133,6 +133,23 @@ Or open `InterviewCoach.sln` in Visual Studio and run `InterviewCoach.App`.
    **Thinking effort** to **Low**. See [Speed and cost](#speed-and-cost).
 3. Go to **Home**, click **New**, fill in role, seniority, job description and resume, and **Save**.
 4. Choose **Learn**, pick a role type and question types, and **Start**.
+
+### Optional: use OpenRouter instead of Anthropic
+
+OpenRouter gives you **one key for many models** and you choose the model yourself, which makes it easy to try cheaper ones.
+
+1. Create a key at [openrouter.ai/keys](https://openrouter.ai/keys) and add credit.
+2. In **Settings**, set **Provider** to **OpenRouter** and paste the key (or set `OPENROUTER_API_KEY`).
+3. Under **Choose a model**, click **Load models**. Search by name (for example `claude`, `gemini flash`, `deepseek`), tick
+   **Cheapest first** if you like, select a model, and click **Question generator**, **Coach** or **Every role**.
+   Each row shows the model name, its id, the price per million tokens and the context size.
+4. Click **Test connection**, then **Save**.
+
+OpenRouter model ids look like `anthropic/claude-sonnet-5.5`, so OpenRouter keeps its **own set of models**, separate from the
+Anthropic ones; switching provider swaps the boxes and never loses either set. Two Anthropic-only features are not used through
+OpenRouter: **Thinking effort** and **Prompt caching** (pick a model that is fast without thinking instead).
+
+<img src="docs/images/settings-openrouter-light.png" alt="Settings with OpenRouter selected, light" width="560">
 
 ### Optional: speech keys
 
@@ -190,7 +207,7 @@ flowchart LR
     B -->|saved question + general answer| R[(SQLite)]
     B -->|bank miss| Q
     Q[ILlmService] --> P[PromptRenderer + prompt files]
-    Q --> C[IChatClient<br/>Anthropic or OpenAI-compatible]
+    Q --> C[IChatClient<br/>Anthropic, OpenAI-compatible or OpenRouter]
     E -->|coach call| Q
 ```
 
@@ -283,25 +300,26 @@ Everything is stored locally under `%LOCALAPPDATA%\InterviewCoach\`:
 | `logs\llm-yyyymmdd.log` | Only when **Debug logging** is on. Contains full prompts and replies, **including your resume and job description**. Turn it off afterwards. |
 
 **What leaves your machine:** your resume, job description, and the question text go to the LLM provider you configure, and nothing
-else. There is no telemetry. In Demo mode nothing is sent anywhere.
+else. With OpenRouter they go to OpenRouter and on to whichever company runs the model you picked, so check that model's data policy
+on its OpenRouter page if that matters to you. The model list for the OpenRouter browser is a public download that carries nothing about you. There is no telemetry. In Demo mode nothing is sent anywhere.
 
-**Key fallbacks** when a Settings field is empty: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION`.
+**Key fallbacks** when a Settings field is empty: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION`.
 
 **Database tables:** `Profiles`, `TechQuestions`, `TechAnswers`, `JdTechnologies`. Learn sessions are not saved yet (History is milestone 7).
 
 ## Testing
 
 ```bash
-dotnet test                                     # all 398 tests
+dotnet test                                     # all 441 tests
 dotnet test tests/InterviewCoach.Core.Tests     # one project
 dotnet build InterviewCoach.sln -c Release      # use this if the Debug exe is running (it locks its DLLs)
 ```
 
 | Project | Tests | Covers |
 |---|---|---|
-| `InterviewCoach.Core.Tests` | 168 | Prompt rendering, engine behaviour, the bank, answer lengths, question types, text helpers, role type |
-| `InterviewCoach.Infrastructure.Tests` | 100 | JSON parsing, LLM service (retry, cache split, options), settings (DPAPI round trip, no plaintext), SQLite repositories on real files, file extractors, prompt guards, Demo-mode isolation |
-| `InterviewCoach.App.Tests` | 130 | View models and **real WPF views** on a shared STA dispatcher; fails on any binding error |
+| `InterviewCoach.Core.Tests` | 178 | Prompt rendering, engine behaviour, the bank, answer lengths, question types, text helpers, role type |
+| `InterviewCoach.Infrastructure.Tests` | 115 | JSON parsing, LLM service (retry, cache split, options), settings (DPAPI round trip, no plaintext), SQLite repositories on real files, file extractors, prompt guards, Demo-mode isolation |
+| `InterviewCoach.App.Tests` | 148 | View models and **real WPF views** on a shared STA dispatcher; fails on any binding error |
 
 Test names are sentences that describe behaviour. Scripted test doubles (`ScriptedLlmService`, `BankScript`) let tests control exactly
 what the model "says", including delays and failures.
