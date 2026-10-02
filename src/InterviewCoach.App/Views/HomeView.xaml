@@ -1,0 +1,363 @@
+<UserControl x:Class="InterviewCoach.App.Views.HomeView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctl="clr-namespace:InterviewCoach.App.Controls">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        <Style x:Key="LongText" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+            <Setter Property="AcceptsReturn" Value="True" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+            <Setter Property="MinHeight" Value="140" />
+            <Setter Property="MaxHeight" Value="260" />
+            <Setter Property="Padding" Value="12,10" />
+            <Setter Property="VerticalContentAlignment" Value="Top" />
+            <!-- The wheel scrolls the page over these boxes, unless you are editing one that still has text to scroll. -->
+            <Setter Property="ctl:WheelScrolling.PassToPage" Value="True" />
+        </Style>
+        <Style x:Key="EmptyState" TargetType="Grid">
+            <Setter Property="Visibility" Value="Visible" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding HasEditor}" Value="True">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="HiddenWhenEmpty" TargetType="TextBlock">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Text, RelativeSource={RelativeSource Self}}" Value="">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="304" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- ===== Profiles ===== -->
+        <Border Grid.Column="0" Style="{StaticResource Card}" Margin="28,28,0,28" Padding="14,16">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid Grid.Row="0" Margin="6,0,0,14">
+                    <TextBlock Text="Profiles" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <Button Command="{Binding NewCommand}" HorizontalAlignment="Right" Padding="12,6" Style="{DynamicResource AccentButtonStyle}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource Glyph}" Text="&#xE710;" FontSize="12" Margin="0,0,7,0" />
+                            <TextBlock Text="New" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+                <ListBox Grid.Row="1" ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+                         ItemContainerStyle="{StaticResource ProfileItem}" Background="Transparent" BorderThickness="0"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="38" Height="38" CornerRadius="19" Background="{StaticResource BrandGradient}" Margin="6,0,12,0">
+                                    <TextBlock Text="{Binding Initial}" Foreground="White" FontWeight="SemiBold" FontSize="16"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Subtitle}" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               TextTrimming="CharacterEllipsis" Margin="0,1,0,0" />
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+        </Border>
+
+        <!-- ===== Editor ===== -->
+        <Grid Grid.Column="1">
+            <!-- Nothing selected -->
+            <Grid Style="{StaticResource EmptyState}" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="460" Margin="32">
+                <StackPanel>
+                    <Image Source="pack://application:,,,/InterviewCoach.App;component/Assets/logo-256.png" Width="96" Height="96" Margin="0,0,0,20" RenderOptions.BitmapScalingMode="HighQuality" />
+                    <TextBlock Text="Create a profile to get started" FontSize="22" FontWeight="SemiBold" TextAlignment="Center" TextWrapping="Wrap" />
+                    <TextBlock Style="{StaticResource PageSubtitle}" TextAlignment="Center" Margin="0,8,0,0"
+                               Text="A profile holds the role you are interviewing for, the job description and your resume. Every session is built from it." />
+                </StackPanel>
+            </Grid>
+
+            <Grid Visibility="{Binding HasEditor, Converter={StaticResource BoolToVis}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <ScrollViewer x:Name="EditorScroller" Grid.Row="0" VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="28,28,32,24" MaxWidth="940">
+
+                        <!-- Page header -->
+                        <Grid Margin="0,0,0,22">
+                            <StackPanel>
+                                <TextBlock Text="{Binding EditorTitle}" Style="{StaticResource PageTitle}" />
+                                <TextBlock Style="{StaticResource PageSubtitle}" Text="The role, the job description and your resume. Sessions use the saved version." />
+                            </StackPanel>
+                            <Border Style="{StaticResource Chip}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0"
+                                    Background="{DynamicResource SystemFillColorCautionBackgroundBrush}"
+                                    Visibility="{Binding IsDirty, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="Unsaved changes" FontSize="12" />
+                            </Border>
+                        </Grid>
+
+                        <!-- Profile -->
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <StackPanel Style="{StaticResource Field}">
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="Profile name" />
+                                    <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
+                                </StackPanel>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="16" />
+                                        <ColumnDefinition Width="180" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Style="{StaticResource FieldLabel}" Text="Job role (for example Senior Backend Engineer)" />
+                                        <TextBox Text="{Binding JobRole, UpdateSourceTrigger=PropertyChanged}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Style="{StaticResource FieldLabel}" Text="Seniority" />
+                                        <ComboBox ItemsSource="{Binding SeniorityChoices}" DisplayMemberPath="Label" SelectedValuePath="Value"
+                                                  SelectedValue="{Binding SelectedSeniority}" HorizontalAlignment="Stretch" />
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Job description -->
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,12">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Style="{StaticResource Glyph}" Text="&#xE8A5;" Margin="0,0,10,0" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                                        <TextBlock Text="Job description" Style="{StaticResource CardHeading}" />
+                                    </StackPanel>
+                                    <Button Command="{Binding LoadJobDescriptionFileCommand}" IsEnabled="{Binding IsNotBusy}" HorizontalAlignment="Right" Padding="12,5">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Style="{StaticResource Glyph}" Text="&#xE8E5;" FontSize="13" Margin="0,0,8,0" />
+                                            <TextBlock Text="Load file…" />
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+                                <TextBox Style="{StaticResource LongText}" Text="{Binding JobDescription, UpdateSourceTrigger=PropertyChanged}" />
+                                <TextBlock Style="{StaticResource Hint}" Text="{Binding JobDescriptionStats}" />
+                                <StackPanel Visibility="{Binding JobDescriptionTooLong, Converter={StaticResource BoolToVis}}" Margin="0,6,0,0">
+                                    <TextBlock Style="{StaticResource Hint}" Text="{Binding JobDescriptionWarning}" Foreground="{DynamicResource SystemFillColorCautionBrush}" />
+                                    <Button Content="Trim" Command="{Binding TrimJobDescriptionCommand}" Padding="14,4" Margin="0,8,0,0" HorizontalAlignment="Left" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Resume -->
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,12">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Style="{StaticResource Glyph}" Text="&#xE77B;" Margin="0,0,10,0" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                                        <TextBlock Text="Resume" Style="{StaticResource CardHeading}" />
+                                    </StackPanel>
+                                    <Button Command="{Binding LoadResumeFileCommand}" IsEnabled="{Binding IsNotBusy}" HorizontalAlignment="Right" Padding="12,5">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Style="{StaticResource Glyph}" Text="&#xE8E5;" FontSize="13" Margin="0,0,8,0" />
+                                            <TextBlock Text="Load file…" />
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+                                <TextBox Style="{StaticResource LongText}" MinHeight="200" MaxHeight="360" Text="{Binding ResumeText, UpdateSourceTrigger=PropertyChanged}" />
+                                <TextBlock Style="{StaticResource Hint}" Text="{Binding ResumeStats}" />
+                                <StackPanel Visibility="{Binding ResumeTooLong, Converter={StaticResource BoolToVis}}" Margin="0,6,0,0">
+                                    <TextBlock Style="{StaticResource Hint}" Text="{Binding ResumeWarning}" Foreground="{DynamicResource SystemFillColorCautionBrush}" />
+                                    <Button Content="Trim" Command="{Binding TrimResumeCommand}" Padding="14,4" Margin="0,8,0,0" HorizontalAlignment="Left" />
+                                </StackPanel>
+                                <TextBlock Style="{StaticResource Hint}" Margin="0,10,0,0"
+                                           Text="Paste text directly or load a PDF, DOCX, TXT or MD file. Loaded text is shown above so you can check and fix it." />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Start a session -->
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Text="Start a session" Style="{StaticResource CardHeading}" />
+                                <TextBlock Style="{StaticResource Hint}" Margin="0,2,0,16" Text="Choose how you want to practice." />
+
+                                <UniformGrid Columns="3" Margin="0,0,0,22">
+                                    <RadioButton Style="{StaticResource ModeCard}" IsEnabled="False" Margin="0,0,10,0" HorizontalContentAlignment="Stretch">
+                                        <StackPanel>
+                                            <TextBlock Style="{StaticResource Glyph}" Text="&#xE720;" FontSize="20" HorizontalAlignment="Left" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                            <TextBlock Text="Mock Interview" FontWeight="SemiBold" FontSize="15" Margin="0,10,0,2" />
+                                            <TextBlock Text="A full interview with a debrief at the end." TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                            <Border Style="{StaticResource Chip}" HorizontalAlignment="Left" Margin="0,10,0,0" Padding="9,2">
+                                                <TextBlock Text="Coming soon" FontSize="11" />
+                                            </Border>
+                                        </StackPanel>
+                                    </RadioButton>
+                                    <RadioButton Style="{StaticResource ModeCard}" IsChecked="{Binding IsLearnMode, Mode=OneWay}" Margin="5,0" HorizontalContentAlignment="Stretch">
+                                        <StackPanel>
+                                            <TextBlock Style="{StaticResource Glyph}" Text="&#xE82F;" FontSize="20" HorizontalAlignment="Left" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                                            <TextBlock Text="Learn" FontWeight="SemiBold" FontSize="15" Margin="0,10,0,2" />
+                                            <TextBlock Text="See a question and how to answer it, straight away." TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                    </RadioButton>
+                                    <RadioButton Style="{StaticResource ModeCard}" IsEnabled="False" Margin="10,0,0,0" HorizontalContentAlignment="Stretch">
+                                        <StackPanel>
+                                            <TextBlock Style="{StaticResource Glyph}" Text="&#xE70F;" FontSize="20" HorizontalAlignment="Left" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                            <TextBlock Text="Practice" FontWeight="SemiBold" FontSize="15" Margin="0,10,0,2" />
+                                            <TextBlock Text="Answer first, then get feedback." TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                            <Border Style="{StaticResource Chip}" HorizontalAlignment="Left" Margin="0,10,0,0" Padding="9,2">
+                                                <TextBlock Text="Coming soon" FontSize="11" />
+                                            </Border>
+                                        </StackPanel>
+                                    </RadioButton>
+                                </UniformGrid>
+
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="Role type" />
+                                <ItemsControl ItemsSource="{Binding EmploymentOptions}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <RadioButton Style="{StaticResource ChipRadio}" Content="{Binding Label}" IsChecked="{Binding IsSelected}" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,20" Text="{Binding EmploymentDescription}" />
+
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="Question types" />
+                                <WrapPanel Margin="0,0,0,0">
+                                    <CheckBox Style="{StaticResource ChipCheckBox}" Content="Any" IsChecked="{Binding AnyType}" />
+                                    <CheckBox Style="{StaticResource ChipCheckBox}" Content="By technology…" IsChecked="{Binding TechnologyMode}"
+                                              Visibility="{Binding HasTechnologyOption, Converter={StaticResource BoolToVis}}" />
+                                </WrapPanel>
+                                <ItemsControl ItemsSource="{Binding TypeOptions}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <CheckBox Style="{StaticResource ChipCheckBox}" Content="{Binding Label}" IsChecked="{Binding IsChecked}" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <!-- By technology: pick technologies from the job description, then every question is about them -->
+                                <Border Style="{StaticResource InsetCard}" Visibility="{Binding TechnologyMode, Converter={StaticResource BoolToVis}}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource CardTitle}" Text="TECHNOLOGIES IN THIS JOB DESCRIPTION" />
+                                        <ProgressBar IsIndeterminate="True" Height="3" Margin="0,0,0,10"
+                                                     Visibility="{Binding IsLoadingTechnologies, Converter={StaticResource BoolToVis}}" />
+                                        <TextBlock Text="{Binding TechnologyStatus}" TextWrapping="Wrap" Margin="0,0,0,10"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" Style="{StaticResource HiddenWhenEmpty}" />
+                                        <ItemsControl ItemsSource="{Binding Technologies}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <CheckBox Style="{StaticResource ChipCheckBox}" Content="{Binding Name}" IsChecked="{Binding IsChecked}" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <Button Content="Try again" Command="{Binding ReloadTechnologiesCommand}" Padding="16,4" HorizontalAlignment="Left" Margin="0,0,0,10"
+                                                Visibility="{Binding TechnologyLoadFailed, Converter={StaticResource BoolToVis}}" />
+
+                                        <!-- Other: a technology that was not detected -->
+                                        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                            <CheckBox Style="{StaticResource ChipCheckBox}" Content="Other" IsChecked="{Binding OtherTechnologyChecked}" Margin="0,0,10,0" />
+                                            <TextBox Text="{Binding OtherTechnologies, UpdateSourceTrigger=PropertyChanged}" Width="320" VerticalAlignment="Center"
+                                                     AutomationProperties.Name="Other technologies" />
+                                        </StackPanel>
+                                        <TextBlock Style="{StaticResource Hint}"
+                                                   Text="Not in the list? Type one or more technologies under Other, separated by commas, for example Kafka, GraphQL. Every question will be about the ones you pick (or, with other types ticked too, a share of them)." />
+                                    </StackPanel>
+                                </Border>
+
+                                <StackPanel Margin="0,18,0,0">
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="Answer length" />
+                                    <StackPanel Orientation="Horizontal">
+                                        <ComboBox ItemsSource="{Binding AnswerLengthChoices}" DisplayMemberPath="Label" SelectedValuePath="Value"
+                                                  SelectedValue="{Binding AnswerLengthChoice}" MinWidth="320" />
+                                        <StackPanel Orientation="Horizontal" Margin="12,0,0,0"
+                                                    Visibility="{Binding IsCustomLength, Converter={StaticResource BoolToVis}}">
+                                            <TextBox Text="{Binding CustomWords, UpdateSourceTrigger=PropertyChanged}" Width="76" VerticalContentAlignment="Center" />
+                                            <TextBlock Text="words" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <TextBlock Style="{StaticResource Hint}" Text="{Binding AnswerLengthHint}" />
+                                </StackPanel>
+
+                                <StackPanel Orientation="Horizontal" Margin="0,22,0,0">
+                                    <Button Command="{Binding StartLearnCommand}" Padding="26,10" Style="{DynamicResource AccentButtonStyle}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Style="{StaticResource Glyph}" Text="&#xE768;" FontSize="13" Margin="0,0,10,0" />
+                                            <TextBlock Text="Start Learn" FontWeight="SemiBold" />
+                                        </StackPanel>
+                                    </Button>
+                                    <TextBlock Text="{Binding StartHint}" VerticalAlignment="Center" Margin="16,0,0,0" TextWrapping="Wrap" MaxWidth="460"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- Save / revert / delete -->
+                <Border Grid.Row="1" Style="{StaticResource ActionBar}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Orientation="Horizontal">
+                            <Button Command="{Binding SaveCommand}" Padding="22,8" Style="{DynamicResource AccentButtonStyle}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource Glyph}" Text="&#xE74E;" FontSize="13" Margin="0,0,8,0" />
+                                    <TextBlock Text="Save" />
+                                </StackPanel>
+                            </Button>
+                            <Button Command="{Binding RevertCommand}" Padding="18,8" Margin="8,0,0,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource Glyph}" Text="&#xE7A7;" FontSize="13" Margin="0,0,8,0" />
+                                    <TextBlock Text="Revert" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Margin="20,0" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Status}" TextWrapping="Wrap" Style="{StaticResource HiddenWhenEmpty}" />
+                            <TextBlock Text="{Binding ReadinessText}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                        <Button Grid.Column="2" Command="{Binding DeleteCommand}" Padding="18,8" Foreground="{DynamicResource SystemFillColorCriticalBrush}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Style="{StaticResource Glyph}" Text="&#xE74D;" FontSize="13" Margin="0,0,8,0" />
+                                <TextBlock Text="Delete" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>
