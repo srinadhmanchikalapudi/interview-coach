@@ -306,6 +306,55 @@ public class OpenRouterTests : IDisposable
         Assert.NotSame(a, factory.Create(settings, "anthropic/claude-haiku-4.5"));
     }
 
+    // ---- Thinking effort by role: the fast roles never ask OpenRouter models to think
+
+    [Theory]
+    [InlineData(LlmRole.QuestionGenerator)]
+    [InlineData(LlmRole.Interviewer)]
+    public void On_OpenRouter_the_fast_roles_send_no_thinking_effort(LlmRole role)
+    {
+        // A logged Gemini 3.5 Flash Lite call spent about 500 of 550 output tokens thinking about a 25-token question.
+        var settings = new AppSettings { Provider = LlmProvider.OpenRouter, ThinkingEffort = ThinkingEffort.Low };
+
+        Assert.Equal(ThinkingEffort.ModelDefault, LlmService.ForRole(settings, role).ThinkingEffort);
+        Assert.Equal(ThinkingEffort.Low, settings.ThinkingEffort); // the user's setting itself is untouched
+    }
+
+    [Theory]
+    [InlineData(LlmRole.Coach)]
+    [InlineData(LlmRole.Planner)]
+    [InlineData(LlmRole.Debrief)]
+    public void On_OpenRouter_the_coaching_roles_still_send_the_chosen_effort(LlmRole role)
+    {
+        var settings = new AppSettings { Provider = LlmProvider.OpenRouter, ThinkingEffort = ThinkingEffort.Low };
+
+        Assert.Same(settings, LlmService.ForRole(settings, role));
+    }
+
+    [Theory]
+    [InlineData(LlmProvider.Anthropic)]
+    [InlineData(LlmProvider.OpenAiCompatible)]
+    public void The_other_providers_are_not_affected_by_the_role_rule(LlmProvider provider)
+    {
+        var settings = new AppSettings { Provider = provider, ThinkingEffort = ThinkingEffort.Low };
+
+        Assert.Same(settings, LlmService.ForRole(settings, LlmRole.QuestionGenerator));
+    }
+
+    [Fact]
+    public async Task A_question_call_on_OpenRouter_goes_out_without_a_reasoning_field_while_a_coach_call_has_one()
+    {
+        using var server = new FakeOpenRouter();
+        var settings = new AppSettings { Provider = LlmProvider.OpenRouter, OpenRouterApiKey = "k", ThinkingEffort = ThinkingEffort.Low };
+        var factory = new ChatClientFactory(server.Endpoint);
+
+        await server.AskAsync(factory.Create(LlmService.ForRole(settings, LlmRole.QuestionGenerator), "anthropic/claude-haiku-4.5"));
+        Assert.Null(server.Body!["reasoning"]);
+
+        await server.AskAsync(factory.Create(LlmService.ForRole(settings, LlmRole.Coach), "openai/gpt-5-mini"));
+        Assert.Equal("low", server.Body["reasoning"]!["effort"]!.GetValue<string>());
+    }
+
     [Fact]
     public void Cache_markers_and_the_OpenAI_style_effort_field_are_not_used_through_OpenRouter()
     {

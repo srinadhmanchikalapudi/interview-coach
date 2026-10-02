@@ -24,12 +24,13 @@ public sealed class LlmService(ISettingsStore settings, IChatClientFactory clien
     public async Task<T> GetJsonAsync<T>(AppSettings s, LlmRole role, string systemPrompt, IReadOnlyList<ChatTurn> messages, CancellationToken ct)
     {
         var model = s.ModelFor(role);
-        var client = clients.Create(s, model);
+        var requestSettings = ForRole(s, role);
+        var client = clients.Create(requestSettings, model);
 
         var chat = new List<ChatMessage> { BuildSystemMessage(s, systemPrompt) };
         chat.AddRange(messages.Select(m => new ChatMessage(m.Role == ChatTurnRole.User ? ChatRole.User : ChatRole.Assistant, m.Content)));
 
-        var options = OptionsFor(s, model);
+        var options = OptionsFor(requestSettings, model);
         var reply = await SendAsync(client, role, chat, options, ct);
         Log(s, role, model, "system", systemPrompt, messages, reply);
         try
@@ -85,6 +86,22 @@ public sealed class LlmService(ISettingsStore settings, IChatClientFactory clien
             }
         }
         return results;
+    }
+
+    /// <summary>
+    /// Settings as they apply to one role. On OpenRouter a thinking effort makes models that think only when asked start
+    /// thinking: a logged Gemini 3.5 Flash Lite call spent about 500 of its 550 output tokens thinking about a 25-token
+    /// question, and took twice as long as Haiku. The question generator and the interviewer (short, fast replies) therefore
+    /// send no effort there; the coach, planner and debrief still do.
+    /// </summary>
+    public static AppSettings ForRole(AppSettings s, LlmRole role)
+    {
+        var fastRole = role is LlmRole.QuestionGenerator or LlmRole.Interviewer;
+        if (!fastRole || s.Provider != LlmProvider.OpenRouter || s.ThinkingEffort == ThinkingEffort.ModelDefault)
+            return s;
+        var copy = s.Clone();
+        copy.ThinkingEffort = ThinkingEffort.ModelDefault;
+        return copy;
     }
 
     /// <summary>One model reply plus what is needed to tell why a call was slow: wall-clock time, token counts, stop reason.</summary>
