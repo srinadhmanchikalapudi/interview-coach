@@ -277,6 +277,112 @@ public class OpenRouterSettingsUiTests
         Assert.Equal("claude-sonnet-5-5", store.Current.ModelFor(LlmProvider.Anthropic, LlmRole.Coach));
     }
 
+    // ---- Recommended setups
+
+    [Fact]
+    public void Each_provider_shows_its_own_recommended_setups_and_OpenAI_compatible_shows_none()
+    {
+        var vm = New(out _);
+
+        Assert.True(vm.HasSetupCards);
+        Assert.Single(vm.SetupCards); // Anthropic
+
+        vm.Provider = LlmProvider.OpenRouter;
+        Assert.Equal(2, vm.SetupCards.Count);
+        Assert.StartsWith("Recommended", vm.SetupCards[0].Title);
+        Assert.Contains("Not tried", vm.SetupCards[1].TestedNote);
+        Assert.Contains("Tried with this app", vm.SetupCards[0].TestedNote);
+
+        vm.Provider = LlmProvider.OpenAiCompatible;
+        Assert.False(vm.HasSetupCards);
+        Assert.Empty(vm.SetupCards);
+    }
+
+    [Fact]
+    public void A_setup_lists_every_role_with_the_model_and_the_reason()
+    {
+        var vm = New(out _);
+        vm.Provider = LlmProvider.OpenRouter;
+
+        var rows = vm.SetupCards[0].Rows;
+
+        Assert.Equal(["Question generator", "Coach", "Planner", "Interviewer", "Debrief"], rows.Select(r => r.Role).ToArray());
+        Assert.Equal("anthropic/claude-haiku-4.5", rows[0].ModelId);
+        Assert.Equal("anthropic/claude-sonnet-5.5", rows[1].ModelId);
+        Assert.All(rows, r => Assert.False(string.IsNullOrWhiteSpace(r.Why)));
+    }
+
+    [Fact]
+    public void Using_the_Anthropic_setup_fills_the_boxes_and_sets_thinking_effort_low()
+    {
+        var vm = New(out var store);
+
+        vm.SetupCards[0].ApplyCommand.Execute(null);
+
+        Assert.Equal("claude-haiku-4-5-20251001", vm.QuestionGeneratorModel);
+        Assert.Equal("claude-sonnet-5-5", vm.CoachModel);
+        Assert.Equal(ThinkingEffort.Low, vm.ThinkingEffort);
+        Assert.Contains("Click Save", vm.StatusMessage);
+        Assert.Equal(ThinkingEffort.ModelDefault, store.Current.ThinkingEffort); // nothing is saved until Save
+
+        vm.SaveCommand.Execute(null);
+        Assert.Equal(ThinkingEffort.Low, store.Current.ThinkingEffort);
+        Assert.Equal("claude-haiku-4-5-20251001", store.Current.ModelFor(LlmProvider.Anthropic, LlmRole.QuestionGenerator));
+    }
+
+    [Fact]
+    public void Using_an_OpenRouter_setup_changes_only_the_OpenRouter_models()
+    {
+        var vm = New(out var store);
+        vm.CoachModel = "claude-opus-5-5";
+        vm.Provider = LlmProvider.OpenRouter;
+
+        vm.SetupCards[1].ApplyCommand.Execute(null);
+
+        Assert.Equal("openai/gpt-5-mini", vm.CoachModel);
+        Assert.Equal("google/gemini-3.5-flash-lite", vm.QuestionGeneratorModel);
+        vm.SaveCommand.Execute(null);
+        Assert.Equal("openai/gpt-5-mini", store.Current.ModelFor(LlmProvider.OpenRouter, LlmRole.Coach));
+        Assert.Equal("claude-opus-5-5", store.Current.ModelFor(LlmProvider.Anthropic, LlmRole.Coach));
+    }
+
+    [Fact]
+    public void Prices_for_suggested_models_appear_once_the_list_is_loaded()
+    {
+        var vm = New(out _);
+        vm.Provider = LlmProvider.OpenRouter;
+        Assert.All(vm.SetupCards[0].Rows, r => Assert.Contains("Load models", r.PriceNote));
+
+        vm.LoadModelsCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+
+        var rows = vm.SetupCards[0].Rows;
+        Assert.Equal(Haiku.Details, rows.Single(r => r.Role == "Question generator").PriceNote);
+        Assert.Equal(Sonnet.Details, rows.Single(r => r.Role == "Coach").PriceNote);
+    }
+
+    [Fact]
+    public void A_suggested_model_that_is_no_longer_listed_is_flagged_and_applying_says_so()
+    {
+        var vm = New(out _, new FakeCatalog(Sonnet)); // Haiku is not in this list
+        vm.Provider = LlmProvider.OpenRouter;
+        vm.LoadModelsCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+
+        Assert.Contains("current list", vm.SetupCards[0].Rows.Single(r => r.Role == "Question generator").PriceNote);
+
+        vm.SetupCards[0].ApplyCommand.Execute(null);
+
+        Assert.Contains("anthropic/claude-haiku-4.5", vm.StatusMessage);
+        Assert.Contains("no longer lists", vm.StatusMessage);
+    }
+
+    [Fact]
+    public void Anthropic_rows_carry_no_price_note()
+    {
+        var vm = New(out _);
+
+        Assert.All(vm.SetupCards[0].Rows, r => Assert.Equal("", r.PriceNote));
+    }
+
     // ---- The real view
 
     [Fact]

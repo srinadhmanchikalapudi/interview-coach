@@ -74,6 +74,41 @@
                             <TextBlock Style="{StaticResource Hint}" Text="For example http://localhost:11434/v1 for Ollama. Local servers do not need a key." />
                         </StackPanel>
 
+                        <!-- ===== Recommended setups ===== -->
+                        <ItemsControl ItemsSource="{Binding SetupCards}" Margin="0,0,0,6"
+                                      Visibility="{Binding HasSetupCards, Converter={StaticResource BoolToVis}}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource InsetCard}" Margin="0,0,0,12">
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Title}" Style="{StaticResource CardTitle}" />
+                                                <TextBlock Text="{Binding TestedNote}" Style="{StaticResource Hint}" Margin="10,2,0,0" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding Summary}" Style="{StaticResource Hint}" Margin="0,2,0,10" />
+                                            <ItemsControl ItemsSource="{Binding Rows}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Margin="0,0,0,5" ToolTip="{Binding Why}">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="140" />
+                                                                <ColumnDefinition Width="250" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBlock Grid.Column="0" Text="{Binding Role}" />
+                                                            <TextBlock Grid.Column="1" Text="{Binding ModelId}" FontWeight="SemiBold" Margin="0,0,16,0" />
+                                                            <TextBlock Grid.Column="2" Text="{Binding PriceNote}" Style="{StaticResource Hint}" VerticalAlignment="Center" />
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                            <Button Content="Use this setup" Command="{Binding ApplyCommand}" HorizontalAlignment="Left" Padding="16,6" Margin="0,4,0,0" />
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
                         <TextBlock Style="{StaticResource FieldLabel}" Margin="0,6,0,10" FontSize="13" FontWeight="SemiBold" Text="Model for each role" />
 
                         <Grid>
@@ -191,11 +226,11 @@
                         <TextBlock Style="{StaticResource Hint}" Margin="0,2,0,16" Text="Two switches that make answers arrive sooner and cost less." />
 
                         <StackPanel Style="{StaticResource Field}">
-                            <TextBlock Style="{StaticResource FieldLabel}" Text="Thinking effort (Anthropic)" />
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="Thinking effort (Anthropic and OpenRouter)" />
                             <ComboBox ItemsSource="{Binding ThinkingEfforts}" DisplayMemberPath="Label" SelectedValuePath="Value"
                                       SelectedValue="{Binding ThinkingEffort}" MinWidth="260" HorizontalAlignment="Left" />
                             <TextBlock Style="{StaticResource Hint}"
-                                       Text="Newer models think before they answer, and that can be most of the wait. Lower effort means less thinking, so replies should arrive sooner. Ignored for Haiku models, and not sent through OpenRouter (pick a fast model there instead). If a model rejects the setting, Test connection will say so; switch back to Model default." />
+                                       Text="Newer models think before they answer, and that can be most of the wait. Lower effort means less thinking, so replies should arrive sooner. Ignored for Haiku models. With OpenRouter it is sent as OpenRouter's own reasoning setting; models that always think (such as Claude Sonnet 5.5) default to high there, so Low is worth setting. If a model rejects the setting, Test connection will say so; switch back to Model default." />
                         </StackPanel>
 
                         <StackPanel>

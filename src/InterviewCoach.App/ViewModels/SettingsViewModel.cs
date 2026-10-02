@@ -16,6 +16,12 @@ public record TestResultItem(bool Success, string Message)
     public string Icon => Success ? "✓" : "✗";
 }
 
+/// <summary>One line of a recommended setup: the role, the model, why, and (for OpenRouter, once the list is loaded) its price.</summary>
+public record SetupRow(string Role, string ModelId, string Why, string PriceNote);
+
+/// <summary>A recommended set of models shown on the Settings screen, with a button that fills in the boxes.</summary>
+public sealed record SetupCard(string Title, string Summary, string TestedNote, IReadOnlyList<SetupRow> Rows, IRelayCommand ApplyCommand);
+
 public partial class SettingsViewModel : ObservableObject
 {
     private readonly ISettingsStore _store;
@@ -126,6 +132,10 @@ public partial class SettingsViewModel : ObservableObject
     public bool IsOpenAi => Provider == LlmProvider.OpenAiCompatible;
     public bool IsOpenRouter => Provider == LlmProvider.OpenRouter;
 
+    /// <summary>Suggested models for the provider on screen. Empty for OpenAI-compatible servers, whose model names cannot be known.</summary>
+    public IReadOnlyList<SetupCard> SetupCards { get; private set; } = [];
+    public bool HasSetupCards => SetupCards.Count > 0;
+
     /// <summary>The models shown in the browser: the loaded catalog after the search box and the sort choice.</summary>
     public ObservableCollection<OpenRouterModel> CatalogModels { get; } = [];
     public bool HasCatalog => _catalogModels.Count > 0;
@@ -146,6 +156,7 @@ public partial class SettingsViewModel : ObservableObject
         if (_loading) return;
         StoreVisibleModels(oldValue);
         ShowModelsFor(newValue);
+        BuildSetupCards();
     }
     partial void OnAzureSpeechKeyChanged(string value) => OnPropertyChanged(nameof(AzureKeyHint));
 
@@ -166,6 +177,7 @@ public partial class SettingsViewModel : ObservableObject
         {
             _loading = false;
         }
+        BuildSetupCards();
         AnthropicApiKey = s.AnthropicApiKey ?? "";
         OpenAiApiKey = s.OpenAiApiKey ?? "";
         OpenAiBaseUrl = s.OpenAiBaseUrl ?? "";
@@ -237,6 +249,59 @@ public partial class SettingsViewModel : ObservableObject
         DebriefModel = _models.ModelFor(provider, LlmRole.Debrief);
     }
 
+    // ---- Recommended setups
+
+    private static string RoleLabel(LlmRole role) => role switch
+    {
+        LlmRole.QuestionGenerator => "Question generator",
+        _ => role.ToString(),
+    };
+
+    private void BuildSetupCards()
+    {
+        var provider = Provider;
+        SetupCards = ModelRecommendations.For(provider).Select(setup =>
+        {
+            var rows = setup.Models.Select(m => new SetupRow(RoleLabel(m.Role), m.ModelId, m.Why, PriceNote(provider, m.ModelId))).ToList();
+            var tested = setup.Tested ? "Tried with this app." : "Not tried with this app yet.";
+            return new SetupCard(setup.Title, setup.Summary, tested, rows, new RelayCommand(() => ApplySetup(setup)));
+        }).ToList();
+        OnPropertyChanged(nameof(SetupCards));
+        OnPropertyChanged(nameof(HasSetupCards));
+    }
+
+    // Prices come from the loaded OpenRouter list, so they are never out of date; with no list there is nothing to show yet.
+    private string PriceNote(LlmProvider provider, string modelId)
+    {
+        if (provider != LlmProvider.OpenRouter) return "";
+        if (_catalogModels.Count == 0) return "Click Load models below to see the price.";
+        var match = _catalogModels.FirstOrDefault(m => m.Id == modelId);
+        return match is null ? "Not in OpenRouter's current list, so pick another." : match.Details;
+    }
+
+    private void ApplySetup(RecommendedSetup setup)
+    {
+        foreach (var m in setup.Models)
+        {
+            switch (m.Role)
+            {
+                case LlmRole.Planner: PlannerModel = m.ModelId; break;
+                case LlmRole.Interviewer: InterviewerModel = m.ModelId; break;
+                case LlmRole.QuestionGenerator: QuestionGeneratorModel = m.ModelId; break;
+                case LlmRole.Coach: CoachModel = m.ModelId; break;
+                case LlmRole.Debrief: DebriefModel = m.ModelId; break;
+            }
+        }
+        ThinkingEffort = setup.Thinking;
+
+        var gone = _catalogModels.Count == 0 || Provider != LlmProvider.OpenRouter
+            ? []
+            : setup.Models.Select(m => m.ModelId).Distinct().Where(id => _catalogModels.All(c => c.Id != id)).ToList();
+        StatusMessage = gone.Count == 0
+            ? $"Applied \"{setup.Title}\" and set Thinking effort to {setup.Thinking}. Click Save to keep it, or Test connection to try it first."
+            : $"Applied \"{setup.Title}\", but OpenRouter no longer lists {string.Join(", ", gone)}. Choose another model for those roles.";
+    }
+
     // ---- OpenRouter model browser
 
     [RelayCommand]
@@ -255,6 +320,7 @@ public partial class SettingsViewModel : ObservableObject
             _catalogModels = await _catalog.GetModelsAsync(refresh: true);
             OnPropertyChanged(nameof(HasCatalog));
             ApplyCatalogFilter();
+            BuildSetupCards(); // now the suggested models can show their prices, or say they are no longer offered
         }
         catch (LlmException ex)
         {
