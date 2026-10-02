@@ -26,6 +26,7 @@ public sealed class ChatClientFactory : IChatClientFactory
         {
             LlmProvider.Anthropic => CreateAnthropic(settings, modelId),
             LlmProvider.OpenAiCompatible => CreateOpenAi(settings, modelId),
+            LlmProvider.OpenRouter => CreateOpenRouter(settings, modelId),
             _ => throw new LlmException($"Unknown provider {settings.Provider}."),
         };
     }
@@ -59,6 +60,19 @@ public sealed class ChatClientFactory : IChatClientFactory
                 options.Endpoint = endpoint;
             }
             var client = new OpenAIClient(new ApiKeyCredential(key ?? "not-needed"), options);
+            return client.GetChatClient(modelId).AsIChatClient();
+        });
+    }
+
+    // OpenRouter is an OpenAI-compatible service: one key, and the model id (for example "anthropic/claude-sonnet-5.5") picks the model.
+    private IChatClient CreateOpenRouter(AppSettings settings, string modelId)
+    {
+        var key = settings.EffectiveOpenRouterKey
+            ?? throw new LlmException("No OpenRouter API key. Add one in Settings or set the OPENROUTER_API_KEY environment variable.");
+        return _cache.GetOrAdd($"openrouter|{key}|{modelId}", _ =>
+        {
+            var options = new OpenAIClientOptions { Endpoint = new Uri(AppSettings.OpenRouterBaseUrl) };
+            var client = new OpenAIClient(new ApiKeyCredential(key), options);
             return client.GetChatClient(modelId).AsIChatClient();
         });
     }

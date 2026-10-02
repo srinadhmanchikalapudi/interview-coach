@@ -16,7 +16,7 @@ public sealed class SettingsStore : ISettingsStore
 {
     private const string Prefix = "dpapi:";
     private static readonly string[] SecretProperties =
-        [nameof(AppSettings.AnthropicApiKey), nameof(AppSettings.OpenAiApiKey), nameof(AppSettings.AzureSpeechKey)];
+        [nameof(AppSettings.AnthropicApiKey), nameof(AppSettings.OpenAiApiKey), nameof(AppSettings.OpenRouterApiKey), nameof(AppSettings.AzureSpeechKey)];
 
     private static readonly JsonSerializerOptions Json = new()
     {
