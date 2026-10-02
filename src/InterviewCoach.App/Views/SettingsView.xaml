@@ -60,6 +60,14 @@
                             <TextBlock Style="{StaticResource Hint}" Text="{Binding OpenAiKeyHint}" />
                         </StackPanel>
 
+                        <StackPanel Style="{StaticResource Field}" Visibility="{Binding IsOpenRouter, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="OpenRouter API key" />
+                            <PasswordBox ctl:PasswordBoxBinder.BoundPassword="{Binding OpenRouterApiKey, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBlock Style="{StaticResource Hint}" Text="{Binding OpenRouterKeyHint}" />
+                            <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0"
+                                       Text="One key works for every model OpenRouter offers. You pay OpenRouter from your credit balance; you choose the model below. Create a key at openrouter.ai/keys." />
+                        </StackPanel>
+
                         <StackPanel Style="{StaticResource Field}" Visibility="{Binding IsOpenAi, Converter={StaticResource BoolToVis}}">
                             <TextBlock Style="{StaticResource FieldLabel}" Text="Base URL (leave empty for api.openai.com)" />
                             <TextBox Text="{Binding OpenAiBaseUrl, UpdateSourceTrigger=PropertyChanged}" />
@@ -87,7 +95,7 @@
                             <StackPanel Grid.Row="0" Grid.Column="2" Style="{StaticResource Field}">
                                 <TextBlock Style="{StaticResource FieldLabel}" Text="Interviewer" />
                                 <ComboBox IsEditable="True" ItemsSource="{Binding ModelSuggestions}" Text="{Binding InterviewerModel, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Stretch" />
-                                <TextBlock Style="{StaticResource Hint}" Text="Spoken live, so speed matters. Try a faster model such as claude-haiku-4-5-20251001 if it feels slow." />
+                                <TextBlock Style="{StaticResource Hint}" Text="Spoken live, so speed matters. Try a faster, smaller model if it feels slow." />
                             </StackPanel>
                             <StackPanel Grid.Row="1" Grid.Column="0" Style="{StaticResource Field}">
                                 <TextBlock Style="{StaticResource FieldLabel}" Text="Question generator" />
@@ -104,6 +112,54 @@
                                 <ComboBox IsEditable="True" ItemsSource="{Binding ModelSuggestions}" Text="{Binding DebriefModel, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Stretch" />
                             </StackPanel>
                         </Grid>
+
+                        <!-- ===== OpenRouter: choose a model from the catalog ===== -->
+                        <Border Style="{StaticResource InsetCard}" Margin="0,4,0,14"
+                                Visibility="{Binding IsOpenRouter, Converter={StaticResource BoolToVis}}">
+                            <StackPanel>
+                                <TextBlock Text="Choose a model" Style="{StaticResource CardTitle}" />
+                                <TextBlock Style="{StaticResource Hint}" Margin="0,2,0,10"
+                                           Text="Load the list, search it, pick a model, then say which role should use it. A cheaper model for the question generator and a stronger one for the coach is a good mix. You can also type any model name in the boxes above." />
+
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                    <Button Command="{Binding LoadModelsCommand}" Padding="16,7" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Style="{StaticResource Glyph}" Text="&#xE72C;" FontSize="13" Margin="0,0,8,0" />
+                                            <TextBlock Text="Load models" />
+                                        </StackPanel>
+                                    </Button>
+                                    <TextBlock Text="Search" VerticalAlignment="Center" Margin="16,0,8,0" Style="{StaticResource Hint}" />
+                                    <TextBox Text="{Binding ModelFilter, UpdateSourceTrigger=PropertyChanged}" Width="240"
+                                             VerticalAlignment="Center" ToolTip="Search by name or id, for example: claude, gemini flash, deepseek" />
+                                    <CheckBox Content="Cheapest first" IsChecked="{Binding CheapestFirst}" Margin="14,0,0,0" VerticalAlignment="Center" />
+                                </StackPanel>
+
+                                <TextBlock Style="{StaticResource Hint}" Text="{Binding CatalogStatus}" Margin="0,0,0,8" />
+
+                                <ListBox ItemsSource="{Binding CatalogModels}" SelectedItem="{Binding SelectedCatalogModel}"
+                                         Height="260" Margin="0,0,0,10"
+                                         Visibility="{Binding HasCatalog, Converter={StaticResource BoolToVis}}">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Margin="2,3">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                                </StackPanel>
+                                                <TextBlock Text="{Binding Id}" Style="{StaticResource Hint}" />
+                                                <TextBlock Text="{Binding Details}" Style="{StaticResource Hint}" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+
+                                <StackPanel Orientation="Horizontal" Visibility="{Binding HasCatalog, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="Use the selected model for" VerticalAlignment="Center" Margin="0,0,10,0" />
+                                    <Button Content="Question generator" Command="{Binding UseForQuestionGeneratorCommand}" Padding="12,6" Margin="0,0,8,0" />
+                                    <Button Content="Coach" Command="{Binding UseForCoachCommand}" Padding="12,6" Margin="0,0,8,0" />
+                                    <Button Content="Every role" Command="{Binding UseForAllRolesCommand}" Padding="12,6" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
 
                         <StackPanel Orientation="Horizontal" Margin="0,6,0,10">
                             <Button Command="{Binding TestConnectionCommand}" Padding="18,7">
@@ -139,13 +195,13 @@
                             <ComboBox ItemsSource="{Binding ThinkingEfforts}" DisplayMemberPath="Label" SelectedValuePath="Value"
                                       SelectedValue="{Binding ThinkingEffort}" MinWidth="260" HorizontalAlignment="Left" />
                             <TextBlock Style="{StaticResource Hint}"
-                                       Text="Newer models think before they answer, and that can be most of the wait. Lower effort means less thinking, so replies should arrive sooner. Ignored for Haiku models. If a model rejects the setting, Test connection will say so; switch back to Model default." />
+                                       Text="Newer models think before they answer, and that can be most of the wait. Lower effort means less thinking, so replies should arrive sooner. Ignored for Haiku models, and not sent through OpenRouter (pick a fast model there instead). If a model rejects the setting, Test connection will say so; switch back to Model default." />
                         </StackPanel>
 
                         <StackPanel>
                             <CheckBox Content="Use prompt caching (Anthropic)" IsChecked="{Binding PromptCaching}" />
                             <TextBlock Style="{StaticResource Hint}"
-                                       Text="Your resume and job description make up most of each request. With caching on, repeat requests within about five minutes reuse them at roughly a tenth of the normal input price. Turn it off only if a model rejects it." />
+                                       Text="Your resume and job description make up most of each request. With caching on, repeat requests within about five minutes reuse them at roughly a tenth of the normal input price. Not used through OpenRouter. Turn it off only if a model rejects it." />
                         </StackPanel>
                     </StackPanel>
                 </Border>

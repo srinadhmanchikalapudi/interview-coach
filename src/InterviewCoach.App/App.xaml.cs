@@ -74,6 +74,7 @@ internal static class ServiceRegistration
         s.AddSingleton<IPromptLibrary>(_ => new PromptLibrary());
 
         s.AddSingleton<IChatClientFactory, ChatClientFactory>();
+        s.AddSingleton<IOpenRouterCatalog>(_ => new OpenRouterCatalog(new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(20) }));
         s.AddSingleton<LlmService>(sp => new LlmService(sp.GetRequiredService<ISettingsStore>(), sp.GetRequiredService<IChatClientFactory>()));
         s.AddSingleton<FakeLlmService>(_ => new FakeLlmService());
         s.AddSingleton<ILlmService, RoutingLlmService>();

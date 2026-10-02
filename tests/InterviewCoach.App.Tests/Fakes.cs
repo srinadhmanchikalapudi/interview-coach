@@ -72,3 +72,18 @@ internal static class Samples
         ResumeText = "Built the ranking service.",
     };
 }
+
+internal sealed class FakeCatalog(params OpenRouterModel[] models) : IOpenRouterCatalog
+{
+public bool Fail { get; set; }
+public int Calls { get; private set; }
+public bool LastRefresh { get; private set; }
+
+public Task<IReadOnlyList<OpenRouterModel>> GetModelsAsync(bool refresh, CancellationToken ct = default)
+{
+    Calls++;
+    LastRefresh = refresh;
+    if (Fail) throw new LlmException("Could not reach OpenRouter to load its model list: no network");
+    return Task.FromResult<IReadOnlyList<OpenRouterModel>>(models);
+}
+}

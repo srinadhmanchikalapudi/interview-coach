@@ -88,6 +88,18 @@ public class VisualSnapshots
                 settingsVm.Load();
                 main.CurrentPage = settingsVm;
                 Save(window, 1180, 2000, Path.Combine(dir, $"4-settings-{name}.png"));
+
+                var openRouter = new SettingsViewModel(new MemorySettings(new AppSettings { Provider = LlmProvider.OpenRouter }), llm, bank, new ScriptedDialogs(),
+                    new FakeCatalog(
+                        new OpenRouterModel("anthropic/claude-sonnet-5.5", "Anthropic: Claude Sonnet 5.5", 1_000_000, 2m, 10m),
+                        new OpenRouterModel("anthropic/claude-haiku-4.5", "Anthropic: Claude Haiku 4.5", 200_000, 1m, 5m),
+                        new OpenRouterModel("google/gemini-3.5-flash-lite", "Google: Gemini 3.5 Flash Lite", 1_048_576, 0.3m, 2.5m),
+                        new OpenRouterModel("deepseek/deepseek-v4-flash", "DeepSeek: V4 Flash", 1_048_576, 0.028m, 0.056m)));
+                openRouter.LoadModelsCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+                openRouter.CheapestFirst = true;
+                openRouter.SelectedCatalogModel = openRouter.CatalogModels.First();
+                main.CurrentPage = openRouter;
+                Save(window, 1180, 1500, Path.Combine(dir, $"5-settings-openrouter-{name}.png"));
             }
         });
     }
