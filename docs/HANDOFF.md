@@ -31,7 +31,7 @@ background preparation of the next question; the technology bank (saved technica
 and seniority); By technology with an Other box; interviewer-style question length rules; full-time or contract role type with two
 extra question types; scroll-wheel behaviour on Home; app icon; a full visual redesign.
 
-Test status: **503 tests passing** (Core 219, Infrastructure 129, App 155). The last full verification was done with
+Test status: **571 tests passing** (Core 234, Infrastructure 147, App 190). The last full verification was done with
 `-c Release` because the user had the Debug build running (see section 2).
 
 **Version control.** The folder is a git repository (branch `main`). History is written to be read; see "Commit conventions" in `README.md`.
@@ -184,8 +184,8 @@ screen uses for "Interviewers typically expect..."; `(none)` only for an unknown
 - `JdTechnologies`: Fingerprint (SHA-256 of the whitespace-normalised JD), TechnologiesJson, CreatedAt.
 - Migrations: `InitialCreate`, `AddTechBank`.
 
-Not stored yet (spec section 7 entities for later milestones): Session, Turn, QuestionThread, PracticeItem, Attempt. **Learn sessions are
-not saved**; the History screen (milestone 7) will need writes added to the engines.
+Not stored yet (spec section 7 entities for later milestones): Session, Turn, QuestionThread, PracticeItem, Attempt. Learn questions and
+answers **are** kept since the Library was added (`LearnHistory`, section 16); mock interviews and practice attempts are not built yet.
 
 **`settings.json`** (enums written as names): Provider, AnthropicApiKey, OpenAiApiKey, OpenAiBaseUrl, OpenRouterApiKey, the five model ids, the five OpenRouter model ids (`OpenRouter*Model`), ThinkingEffort,
 PromptCaching, **EmploymentType**, ReuseGeneralAnswers, SpeechToText, TextToSpeech, AzureSpeechKey, AzureSpeechRegion, Voice,
@@ -315,7 +315,7 @@ cache read about 0.1x, cache write about 1.25x; the user's balance drop was cons
 
 ## 10. Tests
 
-503 tests: Core 219, Infrastructure 129, App 155.
+571 tests: Core 234, Infrastructure 147, App 190.
 
 - **Core.Tests**: prompt rendering, engine behaviour (`LearnEngineTests`, `LearnEngineBankTests`, `LearnEngineTechnologyTests`,
   `EmploymentTypeTests`), bank service, answer length, question types, text helpers. Helpers in `TestDoubles.cs`:
@@ -342,7 +342,7 @@ cache read about 0.1x, cache write about 1.25x; the user's balance drop was cons
    Interfaces, fakes and settings fields already exist.
 3. **Milestone 6, Mock Interview**: planner, interviewer loop with time pacing and end conditions, thread building, parallel coaching (max 3),
    debrief, Markdown export. Add `{{EMPLOYMENT_TYPE}}` to `planner.md`, `interviewer.md` and `debrief.md` and make the round type aware of it.
-4. **Milestone 7, History and polish**: History screen, resume unfinished mocks, error banners, shortcuts. Learn session persistence.
+4. **Milestone 7, History and polish**: the Library of Learn questions is done (section 16); still to do: history of mock interviews, resume unfinished mocks, error banners, shortcuts.
 5. Known limits and ideas not done: technology questions are technical-concept style only; the coach is not cached when set to Haiku
    (fixed part is below Haiku's minimum cache size); no structured-output (JSON schema) mode is used; no streaming of the answer as it is
    written (would make the first question feel instant, needs partial-JSON parsing); no installer or packaging; no localisation; no
@@ -497,3 +497,52 @@ Conclusions and what was changed:
 6. **Speed as the user sees it.** First question: about 2.6 s generation plus 6.5 s coach, roughly 9 to 10 s. After that prefetch hides it if the
    user spends 10 s or more reading; clicking Next within seconds (as at 17:54) shows the wait. Saved bank questions with saved answers are instant.
    JSON handling was reliable: 1 repair retry in 70 calls (a Haiku reply, earlier in the day), and Gemini's fenced ```json replies parsed fine.
+
+---
+
+## 16. Second OpenRouter log, question batches and the Library
+
+**What the second log window showed** (about 33 more calls, 2 October 2026, Haiku via OpenRouter for questions, GPT-5 Mini for the coach):
+questions took 1.1 to 3.0 s (the first cold one 3.0 s), general coach answers 3.8 to 8.6 s, tailored (resume) answers about 6.7 k input tokens,
+6.2 to 8.6 s and 190 to 220 words. One GPT-5 Mini reply was invalid JSON (1 in about 28 coach calls) and the repair retry fixed it for 4 s more.
+The 6 technology questions all began "What's the difference between", and 5 of 6 questions of the other types (resume, design, engagement) were 24 to
+48 words with a second ask, against a rule of one short question. The technical type has examples in its prompt and obeys; the others had none
+(and the engagement example itself had two asks, which the model copied).
+
+**Decisions taken on the proposals in section 15 item 5:**
+
+1. *Common over obscure, and varied form*: done in two places. The single-question prompt now says so; and the bank asks for a **batch** (below).
+2. *A seed of common questions per technology*: done as a model-written batch instead of a hand-made list, because the technologies come from job
+   descriptions and cannot be listed in advance. When the saved questions for a technology and level have all been seen (including the first
+   time), `TechBank.NextQuestionAsync` makes one `question_batch.md` call for 10 questions (`BatchSize`), saves them all, serves the first, and the
+   rest come free. Batch prompt rules: most common first; at most two from one area; at most three "What's the difference between"; at least three
+   situational; 6 to 18 words; one ask; nothing already saved or asked (the avoid list is de-duplicated). On failure or no new questions it falls
+   back to the old single question. Cost: about 1.2 k input and 450 output tokens once per ten questions, less per question than ten single calls.
+3. *Scenario style and the job description*: scenario-style questions ("What happens if...") are part of every batch. Job-description grounding is
+   deliberately **not** added to bank questions, because the bank is keyed by technology and level so it survives resume and job-description edits;
+   job-description scenarios are what the existing Scenario-based type is for.
+4. *Examples for every type*: `question_generator.md` has examples and word limits for resume deep-dive, system design and engagement, and a
+   stronger one-ask rule. Not yet measured live: whether Haiku now keeps these to one short sentence; check the next debug log.
+
+**The Library.** Table `LearnHistory` (migration `AddLearnHistory`): QuestionKey (normalized), Question, QuestionType, Technology, Seniority, Source,
+IsFollowUp, ParentQuestion and ParentKey, IsGeneral, ProfileName (empty for general answers), CoachJson, FirstSeenAt, LastSeenAt, TimesSeen. Unique on
+(QuestionKey, ParentKey, IsGeneral, ProfileName), so the same question seen again updates its row, and a general and a tailored answer, or a follow-up
+under two parents, are separate. The migration also copies bank questions that have a saved answer into the table (`INSERT OR IGNORE ... SELECT`,
+preferring the answer saved with AnswerWords = -1, keeping the original dates); a test builds a database at the previous migration and checks it.
+
+- Recording: `LearnEngine.RecordShownAsync` (best effort, exceptions swallowed so it can never interrupt practice) runs when an item and its answer are
+  on screen, in three places: a prefetched question when it is shown (not while it is prepared), a saved bank question with a saved answer, and after
+  `LoadAnswerAsync` (fresh questions, follow-ups, tailored answers, retries). `Back` does not record. `ILearnHistory` is the contract;
+  `LearnHistoryRepository` (SQLite), `InMemoryLearnHistory` and `RoutingLearnHistory` (Demo mode) implement it.
+- Screen: `LibraryViewModel` and `LibraryView`. Type chips are view-model bound (`LibraryTypeFilter`, single choice done in the view model, no radio
+  groups); search matches question, technology, type label and answer text; sorts are newest (last seen), oldest (first seen), question, type; the
+  detail pane reuses `CoachOutputViewModel`/`CoachOutputView` with the answer passed through `CoachOutput.ForLearning()` so old entries lose their
+  warm-up. A follow-up button opens that follow-up's saved entry (clearing the filter if it was hidden) or says there is none. Stored times are UTC and
+  shown local (today, yesterday, or a date). The list is a `ListBox` in a card that does not scroll, with the detail pane in its own `ScrollViewer`, so
+  the mouse-wheel trap in section 9 does not apply.
+- Navigation: the **Revisit** card on Home (a `ModeCard` with a command, enabled; the page is recreated on return so its checked look is harmless)
+  and a **Library** item in the sidebar, both handled in `MainViewModel`, which reads the library fresh each time it is opened.
+- Limits and ideas: only questions seen from now on are recorded (plus the carried-over bank questions); there is no export, no "practise this
+  again" button and no tags; "Remove" does not remove the question from the bank; the 4-card mode row on Home wraps "Mock Interview" onto two lines.
+- Screenshots: `VisualSnapshots` renders the library (`6-library-*`). Its capture was changed to paint the window at its own scale; the earlier
+  brush stretched the bounds of every descendant (including scrolled-away content) into the picture and rescaled it.

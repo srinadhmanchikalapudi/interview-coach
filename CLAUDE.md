@@ -8,7 +8,7 @@ architecture, decisions, measurements and traps. The code and tests are the trut
 
 ```
 dotnet run --project src/InterviewCoach.App
-dotnet test                                    # all tests (503 at last count)
+dotnet test                                    # all tests (571 at last count)
 dotnet build InterviewCoach.sln -c Release     # use -c Release when the user has the Debug exe running
 ```
 
@@ -28,6 +28,7 @@ Prompts are files in `src/InterviewCoach.App/Prompts/`.
 - **Prompts are cache-sensitive.** In `coach.md` the text before `=== THE CANDIDATE AND THE QUESTION ===` has no variables and that
   header appears exactly once; per-call values go after `</candidate_resume>`. `PromptLibraryTests` guards both. Read handoff section 4
   before editing a prompt, and record prompt changes in SPEC.md section 14.
+- **Every question type in `question_generator.md` needs an example of the right length.** Models obey examples and ignore bare limits (only the technical type had examples and only it was short).
 - **Never put an example opening in a prompt.** Models copy it word for word (every coach answer began "Sure. Short version:" after the prompt said to open that way). `CoachText.WithoutOpeningFiller` is the safety net.
 - **Do not use `RadioButton` groups** for choices (state is shared across view instances); bind to view model properties.
 - **Styles on themed controls need `BasedOn`; custom templates need an explicit `Foreground`.** Colours come from Fluent theme

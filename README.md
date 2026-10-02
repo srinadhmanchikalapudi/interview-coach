@@ -12,7 +12,7 @@
 <p align="center">
   <img alt=".NET 10" src="https://img.shields.io/badge/.NET-10-512BD4">
   <img alt="WPF" src="https://img.shields.io/badge/UI-WPF%20%28MVVM%29-0078D4">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-503%20passing-2EA043">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-571%20passing-2EA043">
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%2010%2F11-lightgrey">
   <img alt="Status" src="https://img.shields.io/badge/status-Learn%20mode%20complete-blue">
 </p>
@@ -61,7 +61,8 @@ Things that make it more than a question generator:
 | **Question types** (eight per interview) | Tell me about yourself, resume deep-dive, technical concept, system design, coding talk-through, behavioral, scenario-based, plus one of *Motivation and fit* (full-time) or *Availability and engagement* (contract). |
 | **Full-time or contract** | The two interview styles differ, so the role type changes which questions are offered and how they are written and coached. |
 | **By technology** | Reads the technologies out of the job description (or lets you type your own under **Other**) and asks questions about the ones you pick. |
-| **Saved technical questions** | Technical-concept questions and their general answers are saved per technology and seniority, so repeats cost nothing and survive edits to your resume. |
+| **Saved technical questions** | Technical-concept questions and their general answers are saved per technology and seniority, so repeats cost nothing and survive edits to your resume. When a technology runs out of saved questions the model writes ten common ones in a single call (most common first, spread over different areas, mixed phrasing) instead of one at a time. |
+| **Library (Revisit)** | Every question and answer you see is kept, so you can go back to it: filter by question type, search, sort, reopen the full answer, remove an entry. |
 | **Tailor to my resume** | Turn any general answer into one built from your own experience, on demand. |
 | **Answer length control** | Short, Medium, Long or a custom word count. By default the model aims for the same range the screen shows. |
 | **Interviewer-style phrasing** | Technical questions are short and direct ("What's the difference between checked and unchecked exceptions?"), not essay prompts. |
@@ -85,6 +86,12 @@ Rendered from the real views by the repository's own snapshot test, in Demo mode
 |---|---|
 | <img src="docs/images/learn-light.png" alt="Learn, light"> | <img src="docs/images/learn-dark.png" alt="Learn, dark"> |
 
+**Library: go back to every question and answer you have seen**
+
+| Light | Dark |
+|---|---|
+| <img src="docs/images/library-light.png" alt="Library, light"> | <img src="docs/images/library-dark.png" alt="Library, dark"> |
+
 **Settings** (Anthropic, and OpenRouter with the model browser)
 
 <img src="docs/images/settings-light.png" alt="Settings, light" width="400"> <img src="docs/images/settings-openrouter-dark.png" alt="Settings with OpenRouter, dark" width="400">
@@ -101,7 +108,7 @@ To regenerate them, see [Testing](#testing).
 | 4. Practice (typed): answer first, then get feedback; retry with comparison | Not started |
 | 5. Voice: speech to text and text to speech (Azure, OpenAI, Windows), mic in the composer | Not started (settings and fakes exist) |
 | 6. Mock Interview: planned interview, live interviewer, parallel coaching, debrief, Markdown export | Not started (prompts exist) |
-| 7. History and polish | Not started |
+| 7. History and polish | Partly: the **Library** of questions and answers you have seen is built (see below); a history of mock interviews and the final polish are not started |
 
 Beyond the original spec, these were added during the build: scenario questions, answer-length control, technology bank,
 By technology and Other, prompt caching and prefetching, thinking-effort setting, full-time or contract role type, an OpenRouter provider with a model browser, a new icon and
@@ -207,6 +214,23 @@ remembered), tick the ones you want, or tick **Other** and type names yourself (
 Questions are then about those technologies. On its own, By technology serves only technology questions; if one cannot be produced
 you see the error with **Retry** rather than a silent substitute.
 
+### Library (Revisit)
+
+Every question and answer Learn mode shows is kept, so you can come back to it. Open it from the **Revisit** card next to Practice on Home,
+or from **Library** in the sidebar.
+
+- **Filter by question type.** Chips for All and for each type you have seen, with a count on each.
+- **Search** the question, the technology, the question type and the answer text (every word must match).
+- **Sort** by newest, oldest, question (A to Z) or question type.
+- **Open an entry** to read its full answer again: what they are testing, the answer, its shape and the follow-ups. A follow-up you opened
+  before opens its own saved answer; one you never opened says so.
+- **Remove from library** deletes an entry (it is added back if you see that question again).
+- The same question seen again is one entry (it moves to the top and counts how many times you saw it). A general answer and one tailored to
+  your resume are separate entries.
+- Questions you already had saved as technical questions are carried over the first time the new version starts, so the library is not empty.
+  Anything seen before that and not saved cannot be recovered.
+- It is stored locally in `app.db` (table `LearnHistory`). In Demo mode it is kept in memory only.
+
 ### In a session
 
 - **Next question** moves on; the following question is prepared in the background, so it usually appears instantly.
@@ -282,6 +306,7 @@ build time and also embedded in Infrastructure as a fallback. You can edit the c
 | `question_generator.md` | Learn; the bank when it writes a question | Writes one question; per-type length rules; role-type rule; optional focus technology |
 | `coach.md` | Learn (later Practice and Mock) | Writes the answer, the shape, and the follow-ups |
 | `tech_tags.md` | By technology | Extracts up to eight technologies from a job description |
+| `question_batch.md` | The technology bank | Writes ten common questions about one technology in one call, for the bank |
 | `planner.md`, `interviewer.md`, `debrief.md` | Mock Interview (milestone 6) | Present, not yet used |
 
 `PromptRenderer` fills `{{VARIABLES}}` in a single pass, throws on a missing key, and renders a blank value as `(none)`.
@@ -330,21 +355,21 @@ on its OpenRouter page if that matters to you. The model list for the OpenRouter
 
 **Key fallbacks** when a Settings field is empty: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION`.
 
-**Database tables:** `Profiles`, `TechQuestions`, `TechAnswers`, `JdTechnologies`. Learn sessions are not saved yet (History is milestone 7).
+**Database tables:** `Profiles`, `TechQuestions`, `TechAnswers`, `JdTechnologies`, `LearnHistory` (the Library).
 
 ## Testing
 
 ```bash
-dotnet test                                     # all 503 tests
+dotnet test                                     # all 571 tests
 dotnet test tests/InterviewCoach.Core.Tests     # one project
 dotnet build InterviewCoach.sln -c Release      # use this if the Debug exe is running (it locks its DLLs)
 ```
 
 | Project | Tests | Covers |
 |---|---|---|
-| `InterviewCoach.Core.Tests` | 219 | Prompt rendering, engine behaviour, the bank, answer lengths, question types, text helpers, role type |
-| `InterviewCoach.Infrastructure.Tests` | 129 | JSON parsing, LLM service (retry, cache split, options), settings (DPAPI round trip, no plaintext), SQLite repositories on real files, file extractors, prompt guards, Demo-mode isolation |
-| `InterviewCoach.App.Tests` | 155 | View models and **real WPF views** on a shared STA dispatcher; fails on any binding error |
+| `InterviewCoach.Core.Tests` | 234 | Prompt rendering, engine behaviour, the bank, answer lengths, question types, text helpers, role type |
+| `InterviewCoach.Infrastructure.Tests` | 147 | JSON parsing, LLM service (retry, cache split, options), settings (DPAPI round trip, no plaintext), SQLite repositories on real files, file extractors, prompt guards, Demo-mode isolation |
+| `InterviewCoach.App.Tests` | 190 | View models and **real WPF views** on a shared STA dispatcher; fails on any binding error |
 
 Test names are sentences that describe behaviour. Scripted test doubles (`ScriptedLlmService`, `BankScript`) let tests control exactly
 what the model "says", including delays and failures.
