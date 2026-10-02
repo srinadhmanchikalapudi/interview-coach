@@ -12,7 +12,7 @@
 <p align="center">
   <img alt=".NET 10" src="https://img.shields.io/badge/.NET-10-512BD4">
   <img alt="WPF" src="https://img.shields.io/badge/UI-WPF%20%28MVVM%29-0078D4">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-461%20passing-2EA043">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-503%20passing-2EA043">
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%2010%2F11-lightgrey">
   <img alt="Status" src="https://img.shields.io/badge/status-Learn%20mode%20complete-blue">
 </p>
@@ -160,10 +160,11 @@ saved until **Save**.
 | Planner, Debrief | the strong model | Used by Mock Interview, which is not built yet |
 | Interviewer | the fast model | Speaks live in Mock Interview, so speed matters |
 
-These are the models the prompts were written and measured against. For OpenRouter there is also a **Lower cost** setup
-(`google/gemini-3.5-flash-lite` for questions, `openai/gpt-5-mini` for the rest) that is clearly marked **not tried with this app yet**:
-it was picked from OpenRouter's published list (price, support for low thinking effort), not from this app's answers, so read a few
-answers before relying on it.
+These are the models the prompts were written and measured against. For OpenRouter there is also a **Lower cost** setup:
+Haiku still writes the questions and `openai/gpt-5-mini` does the coaching. It was tried on seven C# questions (5 to 9 seconds per
+answer, about as fast as Sonnet at Low, for roughly a fifth of the cost), so read a few answers yourself before relying on it. A first
+version of this setup used `google/gemini-3.5-flash-lite` for questions; the debug log showed it was slower and dearer there (it spent
+about 500 of 550 output tokens thinking), so it was dropped.
 
 Why Low thinking effort matters: on OpenRouter, Claude Sonnet 5.5 always thinks and defaults to *high* effort. In earlier
 measurements this app's coach call took about 21 seconds at the default and about 10 at Low.
@@ -308,6 +309,11 @@ for each call. Prices in the estimates are assumptions (Sonnet $3 in / $15 out, 
 about 0.1x, cache write about 1.25x). Haiku was not faster than Sonnet in practice: it wrote more and once returned invalid JSON.
 Details are in [`docs/HANDOFF.md`](docs/HANDOFF.md) section 8.
 
+### Answers start with the point
+
+Spoken answers never open with a warm-up such as "Sure. Short version:" or "Yeah, so". The coach prompt tells the model to start with the
+substance, and as a safety net the app also strips such an opening from any answer it shows, including answers saved earlier.
+
 ## Data, settings and privacy
 
 Everything is stored locally under `%LOCALAPPDATA%\InterviewCoach\`:
@@ -329,15 +335,15 @@ on its OpenRouter page if that matters to you. The model list for the OpenRouter
 ## Testing
 
 ```bash
-dotnet test                                     # all 461 tests
+dotnet test                                     # all 503 tests
 dotnet test tests/InterviewCoach.Core.Tests     # one project
 dotnet build InterviewCoach.sln -c Release      # use this if the Debug exe is running (it locks its DLLs)
 ```
 
 | Project | Tests | Covers |
 |---|---|---|
-| `InterviewCoach.Core.Tests` | 186 | Prompt rendering, engine behaviour, the bank, answer lengths, question types, text helpers, role type |
-| `InterviewCoach.Infrastructure.Tests` | 120 | JSON parsing, LLM service (retry, cache split, options), settings (DPAPI round trip, no plaintext), SQLite repositories on real files, file extractors, prompt guards, Demo-mode isolation |
+| `InterviewCoach.Core.Tests` | 219 | Prompt rendering, engine behaviour, the bank, answer lengths, question types, text helpers, role type |
+| `InterviewCoach.Infrastructure.Tests` | 129 | JSON parsing, LLM service (retry, cache split, options), settings (DPAPI round trip, no plaintext), SQLite repositories on real files, file extractors, prompt guards, Demo-mode isolation |
 | `InterviewCoach.App.Tests` | 155 | View models and **real WPF views** on a shared STA dispatcher; fails on any binding error |
 
 Test names are sentences that describe behaviour. Scripted test doubles (`ScriptedLlmService`, `BankScript`) let tests control exactly

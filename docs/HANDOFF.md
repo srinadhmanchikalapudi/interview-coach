@@ -31,7 +31,7 @@ background preparation of the next question; the technology bank (saved technica
 and seniority); By technology with an Other box; interviewer-style question length rules; full-time or contract role type with two
 extra question types; scroll-wheel behaviour on Home; app icon; a full visual redesign.
 
-Test status: **461 tests passing** (Core 186, Infrastructure 120, App 155). The last full verification was done with
+Test status: **503 tests passing** (Core 219, Infrastructure 129, App 155). The last full verification was done with
 `-c Release` because the user had the Debug build running (see section 2).
 
 **Version control.** The folder is a git repository (branch `main`). History is written to be read; see "Commit conventions" in `README.md`.
@@ -315,7 +315,7 @@ cache read about 0.1x, cache write about 1.25x; the user's balance drop was cons
 
 ## 10. Tests
 
-461 tests: Core 186, Infrastructure 120, App 155.
+503 tests: Core 219, Infrastructure 129, App 155.
 
 - **Core.Tests**: prompt rendering, engine behaviour (`LearnEngineTests`, `LearnEngineBankTests`, `LearnEngineTechnologyTests`,
   `EmploymentTypeTests`), bank service, answer length, question types, text helpers. Helpers in `TestDoubles.cs`:
@@ -442,9 +442,58 @@ How the choices were made, so they can be revisited:
   cheaper and its replies there are short.
 - Why Low effort is part of every setup: the live OpenRouter catalogue (2 October 2026) says `anthropic/claude-sonnet-5.5` has mandatory reasoning with
   default effort **high**, the setup that made this app's Sonnet coach call take about 21 s instead of about 10 s at Low.
-- The **Lower cost** OpenRouter setup (`google/gemini-3.5-flash-lite` for the question generator and interviewer, `openai/gpt-5-mini` for the
-  rest) was chosen from the catalogue only: both list `low` among supported efforts, and prices were about $0.30/$2.50 and $0.25/$2.00 per million
-  tokens in/out. It is **not tried**: answer quality, JSON validity, speed and real cost are unmeasured. The UI says so. DeepSeek V4 models are
-  far cheaper but list only high and xhigh efforts and think by default, so they were left out of the suggestions.
+- The **Lower cost** OpenRouter setup is Haiku for the question generator and interviewer and `openai/gpt-5-mini` for the rest. It was first
+  suggested with `google/gemini-3.5-flash-lite` for questions, chosen from the catalogue only; the real log (section 15) showed that was a
+  mistake and it was changed. GPT-5 Mini as coach was tried on 7 questions (see section 15). DeepSeek V4 models are far cheaper but list only
+  high and xhigh efforts and think by default, so they were left out of the suggestions.
 - Ids drift. If an id leaves OpenRouter's list the card says so after Load models. Update `ModelRecommendations` when models are retired, and
   keep `OpenRouterSuggestions` in `SettingsViewModel` in step.
+
+---
+
+## 15. Findings from the first OpenRouter run (debug log, 2 October 2026)
+
+The user ran Learn mode on OpenRouter with the "Lower cost" setup as first suggested (Gemini 3.5 Flash Lite for questions, GPT-5 Mini for the
+coach), By technology = C#, Senior, 70 logged calls in all. What it showed:
+
+| Role and model | Calls | Avg seconds | Avg output tokens | Notes |
+|---|---|---|---|---|
+| Question generator, Haiku (Anthropic direct) | 16 | 1.6 (1.0 to 1.5 for bank-style questions) | 96 (66 to 74 for bank-style) | no thinking |
+| Question generator, Gemini 3.5 Flash Lite (OpenRouter, effort Low) | 7 | 2.6 (2.3 to 3.0) | 556, of which 466 to 557 were thinking | for a question of about 25 tokens |
+| Coach, Sonnet 5.5 (Anthropic direct, effort Low, general answers) | 5 | about 7.1 (5.7 to 8.2) | 635 to 758 | 8.3 s average over all 21 coach calls incl. default effort |
+| Coach, GPT-5 Mini (OpenRouter, effort Low) | 7 | 6.5 (5.4 to 8.5) | 724, of which 128 to 320 thinking | cache read 2,944 of 3,077 input tokens |
+
+Estimated cost per question (generator plus coach, warm cache, OpenRouter list prices: Haiku $1/$5, Sonnet 5.5 $2/$10, Gemini Flash Lite
+$0.30/$2.50, GPT-5 Mini $0.25/$2.00 per million in/out, cache reads at the listed cache-read price): Haiku + Sonnet at Low about $0.0095;
+Gemini + GPT-5 Mini about $0.0034; **Haiku + GPT-5 Mini about $0.0029**. The saving is almost all in the coach (about $0.008 to $0.0016).
+Note Sonnet 5.5 is listed at $2/$10 on OpenRouter, lower than the $3/$15 assumed in section 8; the direct Anthropic price was not checked.
+
+Conclusions and what was changed:
+
+1. **Every coach answer began with a warm-up** ("Sure. Short version:", "Yeah, so", "Short answer:"): 30 of 32 logged answers, from both Sonnet and
+   GPT-5 Mini. Cause: `coach.md` told the model to "open the way people actually open: Yeah, so... Sure. Short version is..." and its own example
+   began "Yeah, so". Fixed in the prompt, and `CoachText.WithoutOpeningFiller` is a safety net that also cleans answers already saved in the bank
+   (they were written with the old prompt). Lesson recorded in CLAUDE.md: never put an example opening in a prompt.
+2. **Gemini 3.5 Flash Lite as question writer was a bad choice**: 90% of its output was thinking, it took about twice as long as Haiku and cost
+   more per question. Cause: a thinking effort sent to an OpenRouter model that thinks only when asked starts thinking (its own default is
+   "minimal"). Fixed two ways: the Lower cost setup now uses Haiku for questions, and `LlmService.ForRole` sends no effort for the question
+   generator and interviewer on OpenRouter. (Not verified: whether Haiku on OpenRouter would also have started thinking under an effort.)
+3. **GPT-5 Mini is a good coach at about a fifth of Sonnet's cost** and about as fast as Sonnet at Low: answers 102 to 117 words (target 60 to
+   150), three follow-ups each, content accurate on the samples read (LOH compaction, static abstract members). It also wrote bracketed placeholders
+   correctly. Quality over many topics is not yet judged; the user should read more.
+4. **Duplicate lines in the already-asked list** (items 8 to 14 repeated 1 to 7): `TechBank` joined every saved question with this session's list and
+   the two overlapped. Harmless but wasteful; now de-duplicated with `TextTools.SameQuestion`.
+5. **Open: the questions drift into obscure trivia.** The 11 distinct C# questions of the day were, in order: ValueTask vs Task; interface vs abstract
+   class; struct vs class; the async keyword; IAsyncEnumerable vs Task of IEnumerable; ref struct restrictions; covariance and contravariance;
+   static abstract members; LOH fragmentation; Span vs Memory; ConditionalWeakTable. The first four are classic senior screens; later ones get
+   rarer, and ConditionalWeakTable almost never comes up. Cause: the bank-question prompt must avoid every saved question for that technology and
+   level plus everything asked this session, and "vary the topic" pushes the model off the common ground once the staples are used up. Also by
+   design the bank ignores the job description and resume, so questions are general language-feature questions only and every one is the
+   same style ("What is the difference between X and Y?"). Proposals, not yet done: (a) tell the generator to prefer questions that come up often in
+   real screens and, when the common ones are used up, to move to another area of the technology (memory and GC, async, generics, collections,
+   LINQ, DI, testing, exceptions) rather than an obscure API; (b) offer a seed list of common questions per technology so the bank starts with the
+   staples; (c) let a share of By technology questions be scenario style ("What happens if you await inside a lock?") using the job description;
+   (d) tick more than one technology, since the user's job also lists .NET, SQL Server and React.
+6. **Speed as the user sees it.** First question: about 2.6 s generation plus 6.5 s coach, roughly 9 to 10 s. After that prefetch hides it if the
+   user spends 10 s or more reading; clicking Next within seconds (as at 17:54) shows the wait. Saved bank questions with saved answers are instant.
+   JSON handling was reliable: 1 repair retry in 70 calls (a Haiku reply, earlier in the day), and Gemini's fenced ```json replies parsed fine.
