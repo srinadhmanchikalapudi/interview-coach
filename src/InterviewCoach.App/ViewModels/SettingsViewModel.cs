@@ -79,7 +79,7 @@ public partial class SettingsViewModel : ObservableObject
 
     // A few well-known OpenRouter models to start from. The full list, with prices, is in "Choose a model" below.
     private static readonly string[] OpenRouterSuggestions =
-        ["anthropic/claude-sonnet-5.5", "anthropic/claude-haiku-4.5", "google/gemini-3.5-flash-lite", "deepseek/deepseek-v4-flash"];
+        ["anthropic/claude-sonnet-5.5", "anthropic/claude-haiku-4.5", "openai/gpt-5-mini", "deepseek/deepseek-v4-flash"];
 
     public IReadOnlyList<string> ModelSuggestions => IsOpenRouter ? OpenRouterSuggestions : AnthropicSuggestions;
 

@@ -39,10 +39,13 @@ public static class ModelRecommendations
         "The same models the app was built and measured with, through OpenRouter: a small, fast one for questions and a strong one for coaching. Claude Sonnet 5.5 always thinks on OpenRouter and defaults to high effort, which is slow, so this also sets Thinking effort to Low. Point at a row to see why.",
         tested: true, strong: "anthropic/claude-sonnet-5.5", fast: "anthropic/claude-haiku-4.5");
 
+    // Tried on 2 October 2026 (debug log, 7 C# questions): GPT-5 Mini coached in 5 to 9 seconds, about as fast as Sonnet at Low,
+    // for roughly a fifth of the cost. Gemini 3.5 Flash Lite as the question writer was NOT kept: it spent about 500 of 550 output
+    // tokens thinking and took 2.3 to 3.0 seconds against Haiku's 1.0 to 1.5, so it cost more per question as well.
     private static readonly RecommendedSetup OpenRouterCheaper = Setup(
-        "Lower cost (not tried yet)",
-        "Much cheaper models that support low thinking effort. They have not been tried with this app's questions and coaching, so check a few answers (and use Test connection) before relying on them. If answers look thin or a reply is rejected, go back to Recommended.",
-        tested: false, strong: "openai/gpt-5-mini", fast: "google/gemini-3.5-flash-lite");
+        "Lower cost",
+        "Claude Haiku still writes the questions (it was both faster and cheaper there than the alternatives tried), and GPT-5 Mini does the coaching. In a first try on seven C# questions its answers took 5 to 9 seconds, about as fast as Sonnet at Low, for roughly a fifth of the cost. Read a few answers yourself to judge the quality, and go back to Recommended if they feel thin.",
+        tested: true, strong: "openai/gpt-5-mini", fast: "anthropic/claude-haiku-4.5");
 
     /// <summary>Setups worth offering for a provider. Empty when model names cannot be known in advance (OpenAI-compatible servers).</summary>
     public static IReadOnlyList<RecommendedSetup> For(LlmProvider provider) => provider switch

@@ -39,10 +39,22 @@ public class ModelRecommendationsTests
     [Fact]
     public void Anything_not_tried_with_the_app_is_labelled_as_such()
     {
-        var cheaper = ModelRecommendations.For(LlmProvider.OpenRouter).Where(s => !s.Tested).ToList();
+        foreach (var setup in ModelRecommendations.For(LlmProvider.OpenRouter).Where(s => !s.Tested))
+            Assert.Contains("not tried", setup.Title + setup.Summary, StringComparison.OrdinalIgnoreCase);
+    }
 
-        Assert.NotEmpty(cheaper);
-        Assert.All(cheaper, s => Assert.Contains("not tried", s.Title + s.Summary, StringComparison.OrdinalIgnoreCase));
+    [Fact]
+    public void The_lower_cost_setup_keeps_Haiku_for_questions_and_uses_GPT_5_Mini_for_coaching()
+    {
+        // From the debug log: Gemini 3.5 Flash Lite as question writer spent about 500 of 550 output tokens thinking and
+        // took 2.3 to 3.0 s against Haiku's 1.0 to 1.5 s, so it was slower and dearer there. GPT-5 Mini coached well.
+        var cheaper = ModelRecommendations.For(LlmProvider.OpenRouter)[1];
+        string Of(LlmRole r) => cheaper.Models.Single(m => m.Role == r).ModelId;
+
+        Assert.Equal("anthropic/claude-haiku-4.5", Of(LlmRole.QuestionGenerator));
+        Assert.Equal("anthropic/claude-haiku-4.5", Of(LlmRole.Interviewer));
+        Assert.Equal("openai/gpt-5-mini", Of(LlmRole.Coach));
+        Assert.DoesNotContain(cheaper.Models, m => m.ModelId.Contains("gemini"));
     }
 
     [Fact]

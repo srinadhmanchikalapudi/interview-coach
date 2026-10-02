@@ -290,7 +290,7 @@ public class OpenRouterSettingsUiTests
         vm.Provider = LlmProvider.OpenRouter;
         Assert.Equal(2, vm.SetupCards.Count);
         Assert.StartsWith("Recommended", vm.SetupCards[0].Title);
-        Assert.Contains("Not tried", vm.SetupCards[1].TestedNote);
+        Assert.Equal("Lower cost", vm.SetupCards[1].Title);
         Assert.Contains("Tried with this app", vm.SetupCards[0].TestedNote);
 
         vm.Provider = LlmProvider.OpenAiCompatible;
@@ -340,7 +340,7 @@ public class OpenRouterSettingsUiTests
         vm.SetupCards[1].ApplyCommand.Execute(null);
 
         Assert.Equal("openai/gpt-5-mini", vm.CoachModel);
-        Assert.Equal("google/gemini-3.5-flash-lite", vm.QuestionGeneratorModel);
+        Assert.Equal("anthropic/claude-haiku-4.5", vm.QuestionGeneratorModel);
         vm.SaveCommand.Execute(null);
         Assert.Equal("openai/gpt-5-mini", store.Current.ModelFor(LlmProvider.OpenRouter, LlmRole.Coach));
         Assert.Equal("claude-opus-5-5", store.Current.ModelFor(LlmProvider.Anthropic, LlmRole.Coach));
