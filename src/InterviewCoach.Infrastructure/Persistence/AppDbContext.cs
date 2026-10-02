@@ -11,6 +11,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<TechQuestionEntity> TechQuestions => Set<TechQuestionEntity>();
     public DbSet<TechAnswerEntity> TechAnswers => Set<TechAnswerEntity>();
     public DbSet<JdTechnologiesEntity> JdTechnologies => Set<JdTechnologiesEntity>();
+    public DbSet<LearnHistoryEntity> LearnHistory => Set<LearnHistoryEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -53,6 +54,18 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.ToTable("JdTechnologies");
             e.HasKey(j => j.Fingerprint);
             e.Property(j => j.TechnologiesJson).IsRequired();
+        });
+
+        modelBuilder.Entity<LearnHistoryEntity>(e =>
+        {
+            e.ToTable("LearnHistory");
+            e.HasKey(h => h.Id);
+            e.Property(h => h.QuestionKey).IsRequired();
+            e.Property(h => h.Question).IsRequired();
+            e.Property(h => h.CoachJson).IsRequired();
+            // The same question is one entry per kind of answer (general or for a profile) and per parent question.
+            e.HasIndex(h => new { h.QuestionKey, h.ParentKey, h.IsGeneral, h.ProfileName }).IsUnique();
+            e.HasIndex(h => h.LastSeenAt);
         });
     }
 }
