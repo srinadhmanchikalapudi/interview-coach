@@ -60,3 +60,20 @@ public interface IOpenRouterCatalog
     /// <summary>Models that take text and answer in text, sorted by name. The list is kept for the rest of the run unless <paramref name="refresh"/> is set.</summary>
     Task<IReadOnlyList<OpenRouterModel>> GetModelsAsync(bool refresh, CancellationToken ct = default);
 }
+
+/// <summary>
+/// The library: every question and answer Learn mode has shown, so they can be looked at again. Recording is best effort and
+/// must never interrupt a session.
+/// </summary>
+public interface ILearnHistory
+{
+    /// <summary>Adds the entry, or updates the existing one for the same question and answer kind (last seen, times seen, answer).</summary>
+    Task RecordAsync(LearnHistoryEntry entry, CancellationToken ct = default);
+
+    /// <summary>Everything recorded, most recently seen first.</summary>
+    Task<IReadOnlyList<LearnHistoryEntry>> ListAsync(CancellationToken ct = default);
+
+    Task DeleteAsync(int id, CancellationToken ct = default);
+
+    Task ClearAsync(CancellationToken ct = default);
+}

@@ -48,7 +48,7 @@ public sealed class LearnItem
 /// general answer that costs nothing to reuse. Everything else is written by the model from the resume and job description.
 /// No UI references. Async methods resume on the caller's context, so events are raised on the UI thread when called from WPF.
 /// </summary>
-public sealed class LearnEngine(ILlmService llm, IPromptLibrary prompts, TechBank? bank = null, Func<double>? random = null)
+public sealed class LearnEngine(ILlmService llm, IPromptLibrary prompts, TechBank? bank = null, Func<double>? random = null, ILearnHistory? history = null)
 {
     private enum Step { None, Generate, Coach }
 
@@ -130,6 +130,7 @@ public sealed class LearnEngine(ILlmService llm, IPromptLibrary prompts, TechBan
                 Current = prepared;
                 SetPhase(LearnPhase.Ready);
                 StartPrefetch();
+                await RecordShownAsync(prepared);
                 return;
             }
             // The background attempt failed or was cancelled; fall through and do it the normal way.
@@ -158,6 +159,7 @@ public sealed class LearnEngine(ILlmService llm, IPromptLibrary prompts, TechBan
             // A saved general answer: nothing to wait for.
             SetPhase(LearnPhase.Ready);
             StartPrefetch();
+            await RecordShownAsync(item);
             return;
         }
         await LoadAnswerAsync(item, ct, id);
@@ -247,6 +249,7 @@ public sealed class LearnEngine(ILlmService llm, IPromptLibrary prompts, TechBan
             Error = null;
             SetPhase(LearnPhase.Ready);
             if (!item.IsFollowUp) StartPrefetch();
+            await RecordShownAsync(item);
         }
         catch (LlmException ex)
         {
@@ -255,6 +258,35 @@ public sealed class LearnEngine(ILlmService llm, IPromptLibrary prompts, TechBan
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
             // superseded by Next/Back/Cancel
+        }
+    }
+
+    /// <summary>
+    /// Keeps the question and its answer for the library once both are on screen. Best effort: a problem saving a note about a
+    /// question must never interrupt practice, so any failure here is ignored.
+    /// </summary>
+    private async Task RecordShownAsync(LearnItem item)
+    {
+        if (history is null || item.Coach is null) return;
+        try
+        {
+            await history.RecordAsync(new LearnHistoryEntry
+            {
+                Question = item.Question,
+                QuestionType = item.QuestionType,
+                Technology = item.Technology,
+                Seniority = _profile.Seniority.ToString(),
+                Source = item.Source,
+                IsFollowUp = item.IsFollowUp,
+                ParentQuestion = item.ParentQuestion,
+                IsGeneral = item.IsGeneric,
+                ProfileName = item.IsGeneric ? null : _profile.Name,
+                Coach = item.Coach,
+            });
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // intentionally ignored, see above
         }
     }
 
