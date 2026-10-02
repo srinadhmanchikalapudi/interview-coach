@@ -120,7 +120,7 @@
                         <DataTemplate>
                             <StackPanel Orientation="Horizontal" Margin="0,4">
                                 <Border Background="{DynamicResource SystemFillColorAttentionBackgroundBrush}" BorderBrush="{DynamicResource AccentFillColorDefaultBrush}" BorderThickness="1" CornerRadius="14" Padding="13,5">
-                                    <TextBlock Text="{Binding Text}" />
+                                    <TextBlock Text="{Binding Text}" TextWrapping="Wrap" />
                                 </Border>
                                 <TextBlock Style="{StaticResource Glyph}" Text="&#xE76C;" FontSize="11" Margin="8,0"
                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"

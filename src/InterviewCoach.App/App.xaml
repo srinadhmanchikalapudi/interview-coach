@@ -14,6 +14,9 @@
         <DataTemplate DataType="{x:Type vm:LearnViewModel}">
             <views:LearnView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:LibraryViewModel}">
+            <views:LibraryView />
+        </DataTemplate>
         <DataTemplate DataType="{x:Type vm:CoachOutputViewModel}">
             <views:CoachOutputView />
         </DataTemplate>

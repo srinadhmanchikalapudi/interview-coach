@@ -14,6 +14,7 @@ public partial class LearnViewModel : ObservableObject
     private readonly ISettingsStore _settings;
     private readonly TechBank? _bank;
     private readonly Func<double>? _random;
+    private readonly ILearnHistory? _history;
 
     private LearnEngine? _engine;
     private CoachOutput? _coachSource;
@@ -22,13 +23,14 @@ public partial class LearnViewModel : ObservableObject
     [ObservableProperty] private CoachOutputViewModel? _coach;
     [ObservableProperty] private string? _unexpectedError;
 
-    public LearnViewModel(ILlmService llm, IPromptLibrary prompts, ISettingsStore settings, TechBank? bank = null, Func<double>? random = null)
+    public LearnViewModel(ILlmService llm, IPromptLibrary prompts, ISettingsStore settings, TechBank? bank = null, Func<double>? random = null, ILearnHistory? history = null)
     {
         _llm = llm;
         _prompts = prompts;
         _settings = settings;
         _bank = bank;
         _random = random;
+        _history = history;
     }
 
     /// <summary>Raised when the user asks to go back to the Home screen.</summary>
@@ -73,7 +75,7 @@ public partial class LearnViewModel : ObservableObject
     {
         _engine?.Cancel();
         // The technology bank is optional: with it off, every question is written by the model from the resume and job description.
-        _engine = new LearnEngine(_llm, _prompts, _settings.Current.ReuseGeneralAnswers ? _bank : null, _random) { PrefetchNext = true };
+        _engine = new LearnEngine(_llm, _prompts, _settings.Current.ReuseGeneralAnswers ? _bank : null, _random, _history) { PrefetchNext = true };
         _engine.Changed += Refresh;
         UnexpectedError = null;
         _coachSource = null;

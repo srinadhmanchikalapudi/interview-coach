@@ -196,25 +196,25 @@
                                 <TextBlock Text="Start a session" Style="{StaticResource CardHeading}" />
                                 <TextBlock Style="{StaticResource Hint}" Margin="0,2,0,16" Text="Choose how you want to practice." />
 
-                                <UniformGrid Columns="3" Margin="0,0,0,22">
-                                    <RadioButton Style="{StaticResource ModeCard}" IsEnabled="False" Margin="0,0,10,0" HorizontalContentAlignment="Stretch">
+                                <UniformGrid Columns="4" Margin="0,0,0,22">
+                                    <RadioButton Style="{StaticResource ModeCard}" IsEnabled="False" Margin="0,0,8,0" HorizontalContentAlignment="Stretch">
                                         <StackPanel>
                                             <TextBlock Style="{StaticResource Glyph}" Text="&#xE720;" FontSize="20" HorizontalAlignment="Left" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                            <TextBlock Text="Mock Interview" FontWeight="SemiBold" FontSize="15" Margin="0,10,0,2" />
+                                            <TextBlock Text="Mock Interview" FontWeight="SemiBold" FontSize="15" Margin="0,10,0,2" TextWrapping="Wrap" />
                                             <TextBlock Text="A full interview with a debrief at the end." TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                             <Border Style="{StaticResource Chip}" HorizontalAlignment="Left" Margin="0,10,0,0" Padding="9,2">
                                                 <TextBlock Text="Coming soon" FontSize="11" />
                                             </Border>
                                         </StackPanel>
                                     </RadioButton>
-                                    <RadioButton Style="{StaticResource ModeCard}" IsChecked="{Binding IsLearnMode, Mode=OneWay}" Margin="5,0" HorizontalContentAlignment="Stretch">
+                                    <RadioButton Style="{StaticResource ModeCard}" IsChecked="{Binding IsLearnMode, Mode=OneWay}" Margin="4,0" HorizontalContentAlignment="Stretch">
                                         <StackPanel>
                                             <TextBlock Style="{StaticResource Glyph}" Text="&#xE82F;" FontSize="20" HorizontalAlignment="Left" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
                                             <TextBlock Text="Learn" FontWeight="SemiBold" FontSize="15" Margin="0,10,0,2" />
                                             <TextBlock Text="See a question and how to answer it, straight away." TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                         </StackPanel>
                                     </RadioButton>
-                                    <RadioButton Style="{StaticResource ModeCard}" IsEnabled="False" Margin="10,0,0,0" HorizontalContentAlignment="Stretch">
+                                    <RadioButton Style="{StaticResource ModeCard}" IsEnabled="False" Margin="4,0" HorizontalContentAlignment="Stretch">
                                         <StackPanel>
                                             <TextBlock Style="{StaticResource Glyph}" Text="&#xE70F;" FontSize="20" HorizontalAlignment="Left" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                             <TextBlock Text="Practice" FontWeight="SemiBold" FontSize="15" Margin="0,10,0,2" />
@@ -222,6 +222,13 @@
                                             <Border Style="{StaticResource Chip}" HorizontalAlignment="Left" Margin="0,10,0,0" Padding="9,2">
                                                 <TextBlock Text="Coming soon" FontSize="11" />
                                             </Border>
+                                        </StackPanel>
+                                    </RadioButton>
+                                    <RadioButton Style="{StaticResource ModeCard}" Command="{Binding OpenLibraryCommand}" Margin="8,0,0,0" HorizontalContentAlignment="Stretch">
+                                        <StackPanel>
+                                            <TextBlock Style="{StaticResource Glyph}" Text="&#xE81C;" FontSize="20" HorizontalAlignment="Left" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                                            <TextBlock Text="Revisit" FontWeight="SemiBold" FontSize="15" Margin="0,10,0,2" />
+                                            <TextBlock Text="Go back to the questions and answers you have already seen." TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                         </StackPanel>
                                     </RadioButton>
                                 </UniformGrid>

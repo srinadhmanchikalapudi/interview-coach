@@ -1,0 +1,184 @@
+<UserControl x:Class="InterviewCoach.App.Views.LibraryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+    </UserControl.Resources>
+
+    <Grid Margin="32,28,32,24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Title -->
+        <Grid Grid.Row="0" Margin="0,0,0,18">
+            <StackPanel>
+                <TextBlock Text="Library" Style="{StaticResource PageTitle}" />
+                <TextBlock Style="{StaticResource PageSubtitle}" Text="Every question and answer you have seen in Learn mode, to go back to." />
+            </StackPanel>
+            <Button Command="{Binding BackCommand}" HorizontalAlignment="Right" VerticalAlignment="Top" Padding="14,7">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Style="{StaticResource Glyph}" Text="&#xE72B;" FontSize="12" Margin="0,0,8,0" />
+                    <TextBlock Text="Back to Home" />
+                </StackPanel>
+            </Button>
+        </Grid>
+
+        <!-- Nothing yet -->
+        <Border Grid.Row="1" Style="{StaticResource Card}" VerticalAlignment="Top" Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVis}}">
+            <StackPanel>
+                <TextBlock Text="Nothing here yet" Style="{StaticResource CardHeading}" />
+                <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0"
+                           Text="Every question and answer you see in Learn mode is kept here, so you can come back to it. Start a Learn session from Home and they will appear." />
+            </StackPanel>
+        </Border>
+
+        <!-- Could not read the saved questions -->
+        <Border Grid.Row="1" Style="{StaticResource Card}" VerticalAlignment="Top"
+                Background="{DynamicResource SystemFillColorCautionBackgroundBrush}" BorderBrush="{DynamicResource SystemFillColorCautionBrush}"
+                Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}">
+            <TextBlock Text="{Binding LoadError}" TextWrapping="Wrap" />
+        </Border>
+
+        <!-- The list and the open answer -->
+        <Grid Grid.Row="1" Visibility="{Binding HasEntries, Converter={StaticResource BoolToVis}}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MinWidth="300" MaxWidth="400" />
+                <ColumnDefinition Width="20" />
+                <ColumnDefinition Width="1.7*" MinWidth="300" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Left: find a question -->
+            <Border Grid.Column="0" Style="{StaticResource Card}" Margin="0" Padding="16,16,16,12">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Margin="0,0,0,10">
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="Search" />
+                        <TextBox Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}"
+                                 ToolTip="Search the question, the technology and the answer" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1" Margin="0,0,0,6">
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="Question type" />
+                        <ItemsControl ItemsSource="{Binding TypeFilters}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <RadioButton Style="{StaticResource ChipRadio}" Content="{Binding Text}" IsChecked="{Binding IsSelected}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                    <Grid Grid.Row="2" Margin="0,6,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="Sort by" />
+                            <ComboBox ItemsSource="{Binding SortChoices}" DisplayMemberPath="Label" SelectedValuePath="Value"
+                                      SelectedValue="{Binding Sort}" HorizontalAlignment="Stretch" />
+                        </StackPanel>
+                        <TextBlock Grid.Column="1" Text="{Binding CountText}" Style="{StaticResource Hint}" VerticalAlignment="Bottom" Margin="12,0,0,8" />
+                    </Grid>
+
+                    <Grid Grid.Row="3">
+                        <TextBlock Style="{StaticResource Hint}" Text="Nothing matches. Try a different type or search." Margin="2,10,0,0"
+                                   Visibility="{Binding NoMatches, Converter={StaticResource BoolToVis}}" />
+                        <ListBox ItemsSource="{Binding Rows}" SelectedItem="{Binding Selected}" HorizontalContentAlignment="Stretch"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="2,5">
+                                        <TextBlock Text="{Binding Question}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="64" FontWeight="SemiBold" />
+                                        <WrapPanel Margin="0,5,0,0">
+                                            <Border Style="{StaticResource Chip}" Visibility="{Binding HasType, Converter={StaticResource BoolToVis}}">
+                                                <TextBlock Text="{Binding TypeLabel}" FontSize="11" />
+                                            </Border>
+                                            <Border Style="{StaticResource AccentChip}" Visibility="{Binding HasTechnology, Converter={StaticResource BoolToVis}}">
+                                                <TextBlock Text="{Binding Technology}" FontSize="11" />
+                                            </Border>
+                                            <Border Style="{StaticResource Chip}" Visibility="{Binding IsFollowUp, Converter={StaticResource BoolToVis}}">
+                                                <TextBlock Text="Follow-up" FontSize="11" />
+                                            </Border>
+                                        </WrapPanel>
+                                        <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0">
+                                            <Run Text="{Binding When, Mode=OneWay}" /><Run Text="  ·  " /><Run Text="{Binding AnswerKind, Mode=OneWay}" />
+                                        </TextBlock>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <!-- Right: the question and its answer -->
+            <Grid Grid.Column="2">
+                <TextBlock Text="Pick a question on the left to read its answer again." Style="{StaticResource Hint}" FontSize="14"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Visibility="{Binding NothingSelected, Converter={StaticResource BoolToVis}}" />
+
+                <ScrollViewer x:Name="DetailScroller" VerticalScrollBarVisibility="Auto" Visibility="{Binding HasDetail, Converter={StaticResource BoolToVis}}">
+                    <StackPanel MaxWidth="860" Margin="0,0,10,0">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                            <Border Style="{StaticResource Chip}" Visibility="{Binding HasDetailType, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="{Binding DetailTypeLabel}" FontSize="12" />
+                            </Border>
+                            <Border Style="{StaticResource AccentChip}" Visibility="{Binding HasDetailTechnology, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="{Binding DetailTechnology}" FontSize="12" />
+                            </Border>
+                            <Border Style="{StaticResource Chip}" Visibility="{Binding DetailIsFollowUp, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="Follow-up" FontSize="12" />
+                            </Border>
+                        </StackPanel>
+
+                        <TextBlock Visibility="{Binding DetailIsFollowUp, Converter={StaticResource BoolToVis}}" TextWrapping="Wrap" Margin="0,0,0,10"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                            <Run Text="Follow-up to: " /><Run Text="{Binding DetailParent, Mode=OneWay}" />
+                        </TextBlock>
+
+                        <Border Style="{StaticResource Card}" Padding="0" Margin="0,0,0,10">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="6" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Column="0" Background="{StaticResource BrandGradient}" CornerRadius="10,0,0,10" />
+                                <TextBlock Grid.Column="1" Text="{Binding DetailQuestion}" FontSize="22" FontWeight="SemiBold" TextWrapping="Wrap" LineHeight="31" Margin="24,20,24,20" />
+                            </Grid>
+                        </Border>
+
+                        <TextBlock Text="{Binding DetailMeta}" Style="{StaticResource Hint}" Margin="2,0,0,14" />
+
+                        <Border Style="{StaticResource Card}" Background="{DynamicResource SystemFillColorCautionBackgroundBrush}"
+                                BorderBrush="{DynamicResource SystemFillColorCautionBrush}" Visibility="{Binding HasMessage, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />
+                        </Border>
+
+                        <ContentControl Content="{Binding Detail}" />
+
+                        <Button Command="{Binding DeleteSelectedCommand}" HorizontalAlignment="Left" Padding="14,7" Margin="0,2,0,24">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Style="{StaticResource Glyph}" Text="&#xE74D;" FontSize="13" Margin="0,0,8,0" Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
+                                <TextBlock Text="Remove from library" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>

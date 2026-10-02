@@ -86,12 +86,16 @@ internal static class ServiceRegistration
         s.AddSingleton<ITechBankRepository, RoutingTechBankRepository>(); // Demo mode uses a throwaway in-memory bank
         s.AddSingleton<TechBank>(sp => new TechBank(
             sp.GetRequiredService<ITechBankRepository>(), sp.GetRequiredService<ILlmService>(), sp.GetRequiredService<IPromptLibrary>()));
+        s.AddSingleton<LearnHistoryRepository>();
+        s.AddSingleton<InterviewCoach.Infrastructure.Fakes.InMemoryLearnHistory>(_ => new InterviewCoach.Infrastructure.Fakes.InMemoryLearnHistory());
+        s.AddSingleton<ILearnHistory, RoutingLearnHistory>(); // the library; Demo mode keeps it in memory only
         s.AddSingleton<IDocumentTextExtractor, ResumeTextExtractor>();
         s.AddSingleton<IDialogService, WpfDialogService>();
 
         s.AddSingleton<HomeViewModel>();
         s.AddSingleton<SettingsViewModel>();
         s.AddSingleton<LearnViewModel>();
+        s.AddSingleton<LibraryViewModel>();
         s.AddSingleton<MainViewModel>();
         s.AddSingleton<MainWindow>();
         return builder;

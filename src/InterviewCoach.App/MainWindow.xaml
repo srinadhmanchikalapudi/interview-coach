@@ -33,6 +33,9 @@
                 <StackPanel Grid.Row="1" Margin="0,32,0,0">
                     <ToggleButton Style="{StaticResource NavItem}" Content="Home" Tag="&#xE80F;"
                                   Command="{Binding ShowHomeCommand}" IsChecked="{Binding IsHomeSelected, Mode=OneWay}" />
+                    <ToggleButton Style="{StaticResource NavItem}" Content="Library" Tag="&#xE8F1;"
+                                  Visibility="{Binding HasLibrary, Converter={StaticResource BoolToVis}}"
+                                  Command="{Binding ShowLibraryCommand}" IsChecked="{Binding IsLibrarySelected, Mode=OneWay}" />
                     <ToggleButton Style="{StaticResource NavItem}" Content="Settings" Tag="&#xE713;"
                                   Command="{Binding ShowSettingsCommand}" IsChecked="{Binding IsSettingsSelected, Mode=OneWay}" />
                 </StackPanel>

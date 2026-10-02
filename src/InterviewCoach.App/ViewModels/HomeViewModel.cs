@@ -170,6 +170,12 @@ public partial class HomeViewModel : ObservableObject
     /// </summary>
     public event Action<LearnSessionRequest>? LearnRequested;
 
+    /// <summary>Raised when the user opens the library of questions and answers they have already seen.</summary>
+    public event Action? LibraryRequested;
+
+    [RelayCommand]
+    private void OpenLibrary() => LibraryRequested?.Invoke();
+
     public ObservableCollection<ProfileListItem> Profiles { get; } = [];
 
     // Mode options (spec 4.1). Only Learn exists so far; Practice and Mock Interview arrive in later milestones.

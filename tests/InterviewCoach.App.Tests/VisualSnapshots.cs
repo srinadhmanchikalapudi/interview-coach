@@ -63,7 +63,36 @@ public class VisualSnapshots
             home.InitializeAsync().GetAwaiter().GetResult();
             var learn = new LearnViewModel(llm, prompts, settings, bank, () => 0.0);
             var settingsVm = new SettingsViewModel(settings, llm, bank, new ScriptedDialogs());
-            var main = new MainViewModel(home, settingsVm, learn, settings);
+            var clock = DateTime.UtcNow.AddHours(-3);
+            var history = new InMemoryLearnHistory(() => clock);
+            CoachOutput Sample(string text, params FollowUp[] followUps) => new()
+            {
+                WhatTheyreTesting = "They want to know you understand how state works in function components, and when a hook is the right tool.",
+                ModelAnswer = text,
+                Shape = "Direct answer → how it works → a rule to remember → when not to use it",
+                FollowUps = [.. followUps],
+            };
+            void Add(string question, string type, string? technology, bool general, string answer, params FollowUp[] followUps)
+            {
+                history.RecordAsync(new LearnHistoryEntry
+                {
+                    Question = question, QuestionType = type, Technology = technology, Seniority = "Senior", Source = "fundamentals",
+                    IsGeneral = general, ProfileName = general ? null : "Claims platform", Coach = Sample(answer, followUps),
+                }).GetAwaiter().GetResult();
+                clock = clock.AddMinutes(25);
+            }
+            Add("What is a struct?", "technical_concept", "C#", true, "A struct is a value type, so it is copied on assignment and usually lives on the stack or inline in its container.");
+            Add("What's the difference between PUT and PATCH requests in REST?", "technical_concept", "REST", true, "PUT replaces the whole resource with what you send, while PATCH changes only the fields you name.");
+            Add("What does a hook do in React?", "technical_concept", "React", true,
+                "A hook lets a function component keep state or run effects without becoming a class. useState remembers a value between renders, and useEffect runs code after a render. The rule to remember is that hooks run in the same order on every render, so they cannot sit inside conditions or loops.",
+                new FollowUp { Question = "Why can hooks not be called in a condition?", Hint = "React tracks hooks by their call order." },
+                new FollowUp { Question = "When would you write a custom hook?", Hint = "Share stateful logic between components without sharing UI." });
+            Add("Why can hooks not be called in a condition?", "technical_concept", "React", true, "React matches each hook to its stored state by the order of the calls, so changing the order between renders gives the wrong state to the wrong hook.");
+            Add("Why did you choose Redis over Memcached for the claims cache?", "resume_deep_dive", null, false, "We needed expiry per key and a shared cache across several instances, and Redis gave us both along with simple data structures for the hot lookups.");
+            Add("Tell me about a time you pushed back on a deadline.", "behavioral", null, false, "On the claims migration the date was set before the data was clean. I showed the team the failure rate from a trial run and we moved the cutover by two weeks.");
+            Add("Design a notification service for a claims platform.", "system_design", null, false, "I would put a queue between the claims service and the senders, keep a preference store per user, and retry failed sends with backoff.");
+            var library = new LibraryViewModel(history, new ScriptedDialogs());
+            var main = new MainViewModel(home, settingsVm, learn, settings, library);
 
             var window = new MainWindow(main);
 
@@ -101,6 +130,11 @@ public class VisualSnapshots
                 openRouter.SelectedCatalogModel = openRouter.CatalogModels.First();
                 main.CurrentPage = openRouter;
                 Save(window, 1180, 1500, Path.Combine(dir, $"5-settings-openrouter-{name}.png"));
+
+                library.LoadAsync().GetAwaiter().GetResult();
+                library.Selected = library.Rows.First(r => r.Question.StartsWith("What does a hook"));
+                main.CurrentPage = library;
+                Save(window, 1180, 1100, Path.Combine(dir, $"6-library-{name}.png"));
             }
         });
     }
@@ -127,7 +161,15 @@ public class VisualSnapshots
         {
             var background = Application.Current.TryFindResource("SolidBackgroundFillColorBaseBrush") as Brush ?? Brushes.White;
             dc.DrawRectangle(background, null, new Rect(0, 0, width, height));
-            dc.DrawRectangle(new VisualBrush(root), null, new Rect(0, 0, width, height));
+            // Draw exactly the window's rectangle at its own scale. A plain VisualBrush stretches the bounds of every descendant,
+            // including scrolled-away content, into the picture, which rescales it.
+            var area = new Rect(0, 0, width, height);
+            var brush = new VisualBrush(root)
+            {
+                Stretch = Stretch.None, AlignmentX = AlignmentX.Left, AlignmentY = AlignmentY.Top,
+                ViewboxUnits = BrushMappingMode.Absolute, Viewbox = area, ViewportUnits = BrushMappingMode.Absolute, Viewport = area,
+            };
+            dc.DrawRectangle(brush, null, area);
         }
         var bitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
         bitmap.Render(visual);
