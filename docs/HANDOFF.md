@@ -31,7 +31,7 @@ background preparation of the next question; the technology bank (saved technica
 and seniority); By technology with an Other box; interviewer-style question length rules; full-time or contract role type with two
 extra question types; scroll-wheel behaviour on Home; app icon; a full visual redesign.
 
-Test status: **441 tests passing** (Core 178, Infrastructure 115, App 148). The last full verification was done with
+Test status: **461 tests passing** (Core 186, Infrastructure 120, App 155). The last full verification was done with
 `-c Release` because the user had the Debug build running (see section 2).
 
 **Version control.** The folder is a git repository (branch `main`). History is written to be read; see "Commit conventions" in `README.md`.
@@ -315,7 +315,7 @@ cache read about 0.1x, cache write about 1.25x; the user's balance drop was cons
 
 ## 10. Tests
 
-441 tests: Core 178, Infrastructure 115, App 148.
+461 tests: Core 186, Infrastructure 120, App 155.
 
 - **Core.Tests**: prompt rendering, engine behaviour (`LearnEngineTests`, `LearnEngineBankTests`, `LearnEngineTechnologyTests`,
   `EmploymentTypeTests`), bank service, answer length, question types, text helpers. Helpers in `TestDoubles.cs`:
@@ -406,9 +406,17 @@ OpenRouter key; the model id (`maker/model`, for example `anthropic/claude-sonne
   the user clicks **Load models**, so opening Settings never touches the network. The screen has search (every word must match the name or the
   id), **Cheapest first**, and three buttons that copy the selected id into the Question generator, the Coach or every role. Nothing is saved
   until **Save**.
-- **Not sent through OpenRouter:** thinking effort (`LlmService.OptionsFor` only sets it for Anthropic) and the cache markers
-  (`BuildSystemMessage` only splits for Anthropic), because the OpenAI adapter cannot carry Anthropic's `cache_control`. OpenRouter caches
-  automatically for some providers. A thinking model on OpenRouter will therefore think at its own default, so prefer a fast model.
+- **Thinking effort goes through OpenRouter's own field.** OpenRouter's documentation says it takes a `reasoning` object
+  (`"reasoning": {"effort": "low"}`) and not OpenAI's `reasoning_effort`. The OpenAI client has no setting for that, so
+  `OpenRouterReasoningPolicy` (a per-call pipeline policy) adds the field to each chat request body when the user chose Low, Medium or
+  High; with "Model default" nothing is added. `ChatClientFactory` includes the effort in its cache key so a change takes effect at once, and
+  takes an optional endpoint so tests can point it at a local stand-in server that records the request (path, bearer key, body).
+  `ChatOptions.Reasoning` is deliberately not set for OpenRouter (that would send the OpenAI-style field). **Verified:** what is sent.
+  **Not verified live:** that OpenRouter accepts it for every model; models that support only some efforts (the catalogue lists
+  `supported_efforts` per model, for example DeepSeek V4 lists only high and xhigh) may reject Low, which Test connection would show.
+  Reasoning tokens count as output tokens and, on most providers, against `max_tokens` (the app caps replies at 4096).
+- **Cache markers are still Anthropic-only** (`BuildSystemMessage`), because the OpenAI adapter cannot carry `cache_control`. OpenRouter
+  caches automatically for some providers.
 - **Measured:** the live catalogue on 2 October 2026 had 465 entries; the parser keeps 377 (the rest are batch copies and image or audio
   generators), 20 of them free, 4 with no price. Examples, per million tokens in/out: `anthropic/claude-sonnet-5.5` $2.00/$10.00,
   `anthropic/claude-haiku-4.5` $1.00/$5.00, `google/gemini-3.5-flash-lite` $0.30/$2.50, `deepseek/deepseek-v4-flash` $0.028/$0.056.
@@ -417,3 +425,26 @@ OpenRouter key; the model id (`maker/model`, for example `anthropic/claude-sonne
 - **Tests:** `OpenRouterSettingsTests` (Core), `OpenRouterTests` (Infrastructure: parsing, HTTP stub, factory, key encryption, no Anthropic-only
   features), `OpenRouterSettingsUiTests` (App: provider swap, search, sort, use buttons, real view without binding errors). `FakeCatalog` is in
   `Fakes.cs`; `VisualSnapshots` also writes `5-settings-openrouter-*.png`.
+
+### Recommended setups (added with the OpenRouter work)
+
+`ModelRecommendations.For(provider)` (Core) returns `RecommendedSetup`s: a model for each of the five roles, the thinking effort (Low for all),
+a summary, and whether it was `Tested` with this app. Anthropic has one; OpenRouter has two; OpenAI-compatible has none (its model names cannot
+be known). `SettingsViewModel.SetupCards` turns them into cards with a **Use this setup** button; applying fills the five boxes and sets
+Thinking effort, and nothing is saved until Save. For OpenRouter each row shows the live price from the loaded catalogue, or says the model is
+not in OpenRouter's current list (and the status line names any such models when the setup is applied), so a retired model id cannot go unnoticed.
+
+How the choices were made, so they can be revisited:
+
+- Question generator = the small model (`claude-haiku-4-5-20251001`, OpenRouter `anthropic/claude-haiku-4.5`); Coach, Planner and Debrief =
+  the strong one (`claude-sonnet-5-5`, `anthropic/claude-sonnet-5.5`); Interviewer = the fast one. These are the models the prompts were written
+  and measured against (see section 8). **Haiku was not faster than Sonnet in practice**; it is recommended for the question generator because it is
+  cheaper and its replies there are short.
+- Why Low effort is part of every setup: the live OpenRouter catalogue (2 October 2026) says `anthropic/claude-sonnet-5.5` has mandatory reasoning with
+  default effort **high**, the setup that made this app's Sonnet coach call take about 21 s instead of about 10 s at Low.
+- The **Lower cost** OpenRouter setup (`google/gemini-3.5-flash-lite` for the question generator and interviewer, `openai/gpt-5-mini` for the
+  rest) was chosen from the catalogue only: both list `low` among supported efforts, and prices were about $0.30/$2.50 and $0.25/$2.00 per million
+  tokens in/out. It is **not tried**: answer quality, JSON validity, speed and real cost are unmeasured. The UI says so. DeepSeek V4 models are
+  far cheaper but list only high and xhigh efforts and think by default, so they were left out of the suggestions.
+- Ids drift. If an id leaves OpenRouter's list the card says so after Load models. Update `ModelRecommendations` when models are retired, and
+  keep `OpenRouterSuggestions` in `SettingsViewModel` in step.

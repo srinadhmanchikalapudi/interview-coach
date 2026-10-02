@@ -8,7 +8,7 @@ architecture, decisions, measurements and traps. The code and tests are the trut
 
 ```
 dotnet run --project src/InterviewCoach.App
-dotnet test                                    # all tests (441 at last count)
+dotnet test                                    # all tests (461 at last count)
 dotnet build InterviewCoach.sln -c Release     # use -c Release when the user has the Debug exe running
 ```
 

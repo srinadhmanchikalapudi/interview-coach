@@ -12,7 +12,7 @@
 <p align="center">
   <img alt=".NET 10" src="https://img.shields.io/badge/.NET-10-512BD4">
   <img alt="WPF" src="https://img.shields.io/badge/UI-WPF%20%28MVVM%29-0078D4">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-441%20passing-2EA043">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-461%20passing-2EA043">
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%2010%2F11-lightgrey">
   <img alt="Status" src="https://img.shields.io/badge/status-Learn%20mode%20complete-blue">
 </p>
@@ -140,14 +140,33 @@ OpenRouter gives you **one key for many models** and you choose the model yourse
 
 1. Create a key at [openrouter.ai/keys](https://openrouter.ai/keys) and add credit.
 2. In **Settings**, set **Provider** to **OpenRouter** and paste the key (or set `OPENROUTER_API_KEY`).
-3. Under **Choose a model**, click **Load models**. Search by name (for example `claude`, `gemini flash`, `deepseek`), tick
+3. Click **Use this setup** under **Recommended** (see below), or choose models yourself: under **Choose a model**, click **Load models**. Search by name (for example `claude`, `gemini flash`, `deepseek`), tick
    **Cheapest first** if you like, select a model, and click **Question generator**, **Coach** or **Every role**.
    Each row shows the model name, its id, the price per million tokens and the context size.
 4. Click **Test connection**, then **Save**.
 
 OpenRouter model ids look like `anthropic/claude-sonnet-5.5`, so OpenRouter keeps its **own set of models**, separate from the
-Anthropic ones; switching provider swaps the boxes and never loses either set. Two Anthropic-only features are not used through
-OpenRouter: **Thinking effort** and **Prompt caching** (pick a model that is fast without thinking instead).
+Anthropic ones; switching provider swaps the boxes and never loses either set. **Thinking effort** is sent to OpenRouter in its
+own `reasoning` field. **Prompt caching** is not used through OpenRouter.
+
+**Recommended setups.** Settings shows ready-made choices for each provider; each row is one role with its model (and, for OpenRouter,
+the live price once you click **Load models**), and **Use this setup** fills in the boxes and sets Thinking effort to Low. Nothing is
+saved until **Save**.
+
+| Role | Recommended | Why |
+|---|---|---|
+| Question generator | `claude-haiku-4-5-20251001` (OpenRouter: `anthropic/claude-haiku-4.5`) | One short question per call, so a small, fast model is enough |
+| Coach | `claude-sonnet-5-5` (OpenRouter: `anthropic/claude-sonnet-5.5`) | Writes the answer you practise from, so quality matters most |
+| Planner, Debrief | the strong model | Used by Mock Interview, which is not built yet |
+| Interviewer | the fast model | Speaks live in Mock Interview, so speed matters |
+
+These are the models the prompts were written and measured against. For OpenRouter there is also a **Lower cost** setup
+(`google/gemini-3.5-flash-lite` for questions, `openai/gpt-5-mini` for the rest) that is clearly marked **not tried with this app yet**:
+it was picked from OpenRouter's published list (price, support for low thinking effort), not from this app's answers, so read a few
+answers before relying on it.
+
+Why Low thinking effort matters: on OpenRouter, Claude Sonnet 5.5 always thinks and defaults to *high* effort. In earlier
+measurements this app's coach call took about 21 seconds at the default and about 10 at Low.
 
 <img src="docs/images/settings-openrouter-light.png" alt="Settings with OpenRouter selected, light" width="560">
 
@@ -310,16 +329,16 @@ on its OpenRouter page if that matters to you. The model list for the OpenRouter
 ## Testing
 
 ```bash
-dotnet test                                     # all 441 tests
+dotnet test                                     # all 461 tests
 dotnet test tests/InterviewCoach.Core.Tests     # one project
 dotnet build InterviewCoach.sln -c Release      # use this if the Debug exe is running (it locks its DLLs)
 ```
 
 | Project | Tests | Covers |
 |---|---|---|
-| `InterviewCoach.Core.Tests` | 178 | Prompt rendering, engine behaviour, the bank, answer lengths, question types, text helpers, role type |
-| `InterviewCoach.Infrastructure.Tests` | 115 | JSON parsing, LLM service (retry, cache split, options), settings (DPAPI round trip, no plaintext), SQLite repositories on real files, file extractors, prompt guards, Demo-mode isolation |
-| `InterviewCoach.App.Tests` | 148 | View models and **real WPF views** on a shared STA dispatcher; fails on any binding error |
+| `InterviewCoach.Core.Tests` | 186 | Prompt rendering, engine behaviour, the bank, answer lengths, question types, text helpers, role type |
+| `InterviewCoach.Infrastructure.Tests` | 120 | JSON parsing, LLM service (retry, cache split, options), settings (DPAPI round trip, no plaintext), SQLite repositories on real files, file extractors, prompt guards, Demo-mode isolation |
+| `InterviewCoach.App.Tests` | 155 | View models and **real WPF views** on a shared STA dispatcher; fails on any binding error |
 
 Test names are sentences that describe behaviour. Scripted test doubles (`ScriptedLlmService`, `BankScript`) let tests control exactly
 what the model "says", including delays and failures.
