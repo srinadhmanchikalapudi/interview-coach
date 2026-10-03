@@ -15,6 +15,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ResumeTopicsEntity> ResumeTopics => Set<ResumeTopicsEntity>();
     public DbSet<RoleTechnologiesEntity> RoleTechnologies => Set<RoleTechnologiesEntity>();
     public DbSet<PracticeAttemptEntity> PracticeAttempts => Set<PracticeAttemptEntity>();
+    public DbSet<MockSessionEntity> MockSessions => Set<MockSessionEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -74,6 +75,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(a => a.AnswerText).IsRequired();
             e.Property(a => a.CoachJson).IsRequired();
             e.HasIndex(a => a.CreatedAt);
+        });
+
+        modelBuilder.Entity<MockSessionEntity>(e =>
+        {
+            e.ToTable("MockSessions");
+            e.HasKey(m => m.Id);
+            e.Property(m => m.TurnsJson).IsRequired();
+            e.HasIndex(m => m.StartedAt);
         });
 
         modelBuilder.Entity<ResumeTopicsEntity>(e =>

@@ -29,7 +29,7 @@ public sealed class FakeLlmService(Func<LlmRole, string, string>? responder = nu
     public Task<T> GetJsonAsync<T>(LlmRole role, string systemPrompt, IReadOnlyList<ChatTurn> messages, CancellationToken ct)
     {
         Calls.Add((role, systemPrompt, messages));
-        var json = (responder ?? DefaultResponder)(role, systemPrompt);
+        var json = responder is not null ? responder(role, systemPrompt) : DefaultResponder(role, systemPrompt, messages);
         return Task.FromResult(JsonResponseParser.Parse<T>(json));
     }
 
@@ -48,8 +48,11 @@ public sealed class FakeLlmService(Func<LlmRole, string, string>? responder = nu
     private static readonly System.Text.RegularExpressions.Regex FocusTechnology =
         new(@"<focus_technology>\s*(.+?)\s*</focus_technology>", System.Text.RegularExpressions.RegexOptions.Singleline);
 
-    private string DefaultResponder(LlmRole role, string systemPrompt)
+    private string DefaultResponder(LlmRole role, string systemPrompt, IReadOnlyList<ChatTurn> messages)
     {
+        if (role == LlmRole.Planner) return DemoPlanJson;
+        if (role == LlmRole.Interviewer) return NextInterviewerTurnJson(messages);
+        if (role == LlmRole.Debrief) return DemoDebriefJson;
         if (systemPrompt.Contains("List the major technologies a"))
             return "{\"technologies\": [\"C#\", \".NET\", \"SQL Server\", \"Docker\", \"Git\", \"REST APIs\", \"Azure\"]}";
         if (systemPrompt.Contains("List the main technologies this job actually requires"))
@@ -59,7 +62,7 @@ public sealed class FakeLlmService(Func<LlmRole, string, string>? responder = nu
             LlmRole.QuestionGenerator => FocusTechnology.Match(systemPrompt) is { Success: true } m && m.Groups[1].Value != "(none)"
                 ? NextTechnologyQuestionJson(m.Groups[1].Value)
                 : NextQuestionJson(),
-            LlmRole.Coach => DemoCoachJson,
+            LlmRole.Coach => systemPrompt.Contains("Mode: mock") ? DemoMockCoachJson : DemoCoachJson,
             _ => "{\"ok\": true}",
         };
     }
@@ -81,6 +84,69 @@ public sealed class FakeLlmService(Func<LlmRole, string, string>? responder = nu
         var q = DemoQuestions[(Interlocked.Increment(ref _questionCounter) - 1) % DemoQuestions.Length];
         return JsonSerializer.Serialize(new { question = q.Question, question_type = q.Type, source = q.Source, focus = q.Focus });
     }
+
+    // A short scripted interview for Demo mode: small talk, two main questions with a follow-up, the candidate's turn to ask, the close.
+    private static string NextInterviewerTurnJson(IReadOnlyList<ChatTurn> messages)
+    {
+        var answers = messages.Count(m => m.Role == ChatTurnRole.User);
+        var timeUp = messages.LastOrDefault(m => m.Role == ChatTurnRole.User)?.Content.Contains("Time is up") == true;
+        (string Say, string Type, string Phase, bool End) turn = timeUp || answers >= 6
+            ? ("Thanks, this was great to chat. The team will be in touch with next steps.", "closing", "candidate_questions", true)
+            : answers switch
+            {
+                1 => ("Hi, thanks for joining. How is your day going?", "smalltalk", "opener", false),
+                2 => ("Okay. Walk me through a project you are proud of.", "main_question", "resume_deep_dive", false),
+                3 => ("Got it. What was your part in that, specifically?", "follow_up", "resume_deep_dive", false),
+                4 => ("Makes sense. How would you track down a slow endpoint in production?", "main_question", "technical", false),
+                _ => ("Okay. Do you have any questions for me about the team or the role?", "candidate_questions", "candidate_questions", false),
+            };
+        return JsonSerializer.Serialize(new { say = turn.Say, turn_type = turn.Type, phase = turn.Phase, focus_area_id = "fa1", end_interview = turn.End });
+    }
+
+    private const string DemoPlanJson = """
+        {
+          "focus_areas": [
+            { "id": "fa1", "name": "Ownership of past work", "why": "Demo mode: a sample focus area, not planned from your resume.", "source": "resume" },
+            { "id": "fa2", "name": "Debugging in production", "why": "Demo mode: a sample focus area.", "source": "fundamentals" }
+          ],
+          "resume_claims_to_probe": [ { "claim": "A sample claim from the resume", "probe": "What was your part, specifically?" } ],
+          "phases": [
+            { "phase": "opener", "target_minutes": 2, "topics": ["introductions"] },
+            { "phase": "resume_deep_dive", "target_minutes": 6, "topics": ["a proud project"] },
+            { "phase": "technical", "target_minutes": 5, "topics": ["debugging"] },
+            { "phase": "candidate_questions", "target_minutes": 2, "topics": ["the team"] }
+          ],
+          "opening_line": "Hi, thanks for joining. How is your day going?"
+        }
+        """;
+
+    private const string DemoDebriefJson = """
+        {
+          "overall_summary": "Demo mode: this is a sample debrief, not a judgement of your answers. With a real key it rates you on the focus areas the interviewer planned and quotes what you said.",
+          "hire_signal": "lean_yes",
+          "focus_area_ratings": [
+            { "focus_area_id": "fa1", "name": "Ownership of past work", "rating": 3, "evidence": "Sample evidence." },
+            { "focus_area_id": "fa2", "name": "Debugging in production", "rating": null, "evidence": "This did not come up." }
+          ],
+          "strengths": ["A sample strength with evidence."],
+          "top_fixes": [ { "fix": "Say what you personally did.", "example": "A sample moment.", "how_to_practice": "Answer in three sentences: the problem, your part, the result." } ],
+          "practice_next": ["Tell me about a time you debugged a production issue."]
+        }
+        """;
+
+    private const string DemoMockCoachJson = """
+        {
+          "what_theyre_testing": "Demo mode: sample coaching for one question of the mock interview.",
+          "feedback": [
+            { "kind": "strength", "point": "A sample strength.", "quote": null },
+            { "kind": "fix", "point": "A sample fix: give the number.", "quote": null }
+          ],
+          "model_answer": "I started by measuring where the time went. At [Company] we had [a specific problem, with a number], and I [what you personally did]. The result was [your before and after metric].",
+          "shape": "Direct answer → what you did → result with a number",
+          "delivery": null,
+          "follow_ups": []
+        }
+        """;
 
     private const string DemoCoachJson = """
         {
