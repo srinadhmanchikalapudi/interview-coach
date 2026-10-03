@@ -8,7 +8,7 @@ architecture, decisions, measurements and traps. The code and tests are the trut
 
 ```
 dotnet run --project src/InterviewCoach.App
-dotnet test                                    # all tests (975 at last count)
+dotnet test                                    # all tests (1040 at last count)
 dotnet build InterviewCoach.sln -c Release     # use -c Release when the user has the Debug exe running
 ```
 
@@ -42,6 +42,6 @@ Prompts are files in `src/InterviewCoach.App/Prompts/`.
 
 ## Current status
 
-Milestones 1 to 6 are done (4 is Practice, typed; 5 is voice; 6 is Mock Interview with its debrief). 7 (history and polish; the Library is done; mock interviews are already stored in `MockSessions` but there is no History screen yet) is not started.
+All seven milestones are done (4 Practice, 5 voice, 6 Mock Interview with its debrief, 7 History, resuming, notice bar, shortcuts). What is left is in HANDOFF section 25 (known limits) and the ideas listed there.
 Practice and Mock Interview share `AnswerComposer` (the answer box with the microphone) and `Speaker` (the voice). Learn and Practice share `QuestionPicker`; both record to the Library (`LearnHistory`, `PracticeAttempts`).
 The Concepts page (sidebar) runs Learn or Practice on chosen technologies at a difficulty with no resume or job description; a role's technologies are fetched once and saved (`RoleTechnologies`). See HANDOFF section 23.

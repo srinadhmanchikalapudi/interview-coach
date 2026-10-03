@@ -12,7 +12,7 @@
 <p align="center">
   <img alt=".NET 10" src="https://img.shields.io/badge/.NET-10-512BD4">
   <img alt="WPF" src="https://img.shields.io/badge/UI-WPF%20%28MVVM%29-0078D4">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-975%20passing-2EA043">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-1040%20passing-2EA043">
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%2010%2F11-lightgrey">
   <img alt="Status" src="https://img.shields.io/badge/status-Learn%20mode%20complete-blue">
 </p>
@@ -122,7 +122,7 @@ To regenerate them, see [Testing](#testing).
 | 4. **Practice (typed)**: answer first, then get feedback; try again with comparison; follow-ups | Done |
 | 5. **Voice**: dictate answers, hear questions, read answers aloud (Azure, OpenAI, Windows voices) | Done (the real services are untested against live keys; see HANDOFF section 22) |
 | 6. **Mock Interview**: planned round, live interviewer who speaks and listens, time pacing, debrief, Markdown export | Done (the voice parts are untested against live services; see HANDOFF section 24) |
-| 7. History and polish | Partly: the **Library** of questions and answers you have seen is built (see below); a history of mock interviews and the final polish are not started |
+| 7. **History and polish**: History of mock interviews, resuming a round you left, a bar for problems and a missing key, keyboard shortcuts | Done (what you learned and practised is in the Library) |
 
 Beyond the original spec, these were added during the build: scenario questions, answer-length control, technology bank,
 By technology and Other, prompt caching and prefetching, thinking-effort setting, full-time or contract role type, an OpenRouter provider with a model browser, a new icon and
@@ -285,11 +285,39 @@ Choose **Mock Interview** on Home, then the **round**, its **length** (15, 30, 4
 3. The interviewer reacts to what you actually said: usually one or two follow-ups per main question, a hint if you are stuck, your own questions near the end. Nothing here is graded or hinted; **no feedback of any kind appears until the round is over**.
 4. The round ends when the interviewer closes it, when you click **End interview** (after a confirmation; no closing line is spoken), or when it is five minutes over its length (the interviewer is then told to wrap up). **Conversation so far** (collapsed) shows the dialogue.
 5. The **debrief** opens as soon as it is written: how the round went with a hire-signal badge, ratings of 1 to 4 per focus area with what you said as evidence (or "Not covered"), strengths, top fixes with a drill each, and what to practise next. Below it is a card for every question you were asked, with the exchange and the coach's view of it (what they were testing, what landed, a strong answer, follow-ups). The cards fill in as their coaching finishes (three at a time); one that fails has **Try again**.
-6. **Practise this question** opens a card's question in Practice (leaving Practice returns to the debrief), and a follow-up from the coaching opens as a follow-up. **Export to Markdown** saves the whole debrief. Finished interviews are kept in the database (`MockSessions`) for a History screen.
+6. **Practise this question** opens a card's question in Practice (leaving Practice returns to the debrief), and a follow-up from the coaching opens as a follow-up. **Export to Markdown** saves the whole debrief. Interviews are kept in the database (`MockSessions`) as they go, and shown on the **History** screen (see below).
 
-If the interviewer or the debrief fails, the screen says why and **Retry** repeats just that step; the conversation so far is kept. Opening another page during an interview ends its voice and microphone and the interview is abandoned (it is not recorded).
+If the interviewer or the debrief fails, the screen says why and **Retry** repeats just that step; the conversation so far is kept. Opening another page during an interview ends its voice and microphone, but what was said is kept: the interview waits on History and Home to be picked up again.
 
 <img src="docs/images/mock-interview-light.png" alt="Mock interview" width="460"> <img src="docs/images/debrief-light.png" alt="Debrief" width="460">
+
+### History and resuming
+
+**History** (sidebar, Ctrl+4) lists every mock interview, newest first: the role, the profile, the date, the round and length, the time spent, and its state.
+
+- **Finished** (with the hire signal): **Open debrief** shows the stored debrief, with the coaching of each question and **Back to History**. Questions can be practised from it as from a fresh debrief, as long as the profile still exists (it is used as saved now).
+- **Unfinished** (you left the round midway): **Resume** carries on where it stopped. The interviewer says the line it was on again (or answers the last thing you said, if its reply never arrived), the whole earlier conversation goes back to the model as it was, and the clock continues from where it was left: the time away does not count.
+- **No debrief yet** (the round ended but the debrief failed, or the app was closed): **Write the debrief** writes it now, and the questions are coached again.
+- The trash button deletes an interview after a confirmation. **Open the Library** goes to the questions you learned and the answers you practised.
+
+Home shows the newest unfinished round (or one without a debrief) as a notice with **Resume** and **Discard**. A round whose profile has been deleted cannot be resumed, and says so. The interview is written after every turn, so even a crash loses at most the last answer.
+
+<img src="docs/images/history-light.png" alt="History" width="460"> <img src="docs/images/home-resume-light.png" alt="Home with a round to resume" width="460">
+
+### Notices and keyboard shortcuts
+
+A bar above the page tells you when there is something to know: **no key yet** for the selected provider (with **Open Settings**; it is not shown on Settings itself, in Demo mode, or for an OpenAI-compatible server with an address), or **a problem nobody expected**, shown there instead of a dialog so the work on screen is not lost. Both can be dismissed.
+
+<img src="docs/images/no-key-light.png" alt="The no-key bar" width="560">
+
+| Keys | Does |
+|---|---|
+| Ctrl+1 to Ctrl+5 | Home, Concepts, Library, History, Settings |
+| F2 | Start or stop the microphone (Practice, Mock Interview) |
+| Ctrl+Enter | Send your answer |
+| Ctrl+N | Next question (Learn, Practice) |
+| Ctrl+R | Say the question or the interviewer's last line again (Practice, Mock Interview) |
+| F1 / Esc | Show / close the list of shortcuts |
 
 ### In a session
 
@@ -419,21 +447,21 @@ on its OpenRouter page if that matters to you. The model list for the OpenRouter
 
 **Key fallbacks** when a Settings field is empty: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION`.
 
-**Database tables:** `Profiles`, `TechQuestions`, `TechAnswers`, `JdTechnologies`, `RoleTechnologies` (the technologies of a job role, fetched once), `ResumeTopics` (employers and projects read from a resume), `LearnHistory` and `PracticeAttempts` (the Library), `MockSessions` (finished mock interviews: plan, conversation, debrief and the coaching of each question as JSON).
+**Database tables:** `Profiles`, `TechQuestions`, `TechAnswers`, `JdTechnologies`, `RoleTechnologies` (the technologies of a job role, fetched once), `ResumeTopics` (employers and projects read from a resume), `LearnHistory` and `PracticeAttempts` (the Library), `MockSessions` (mock interviews, written as they go: plan, conversation with the interview's own clock, debrief and the coaching of each question as JSON, the profile and role type).
 
 ## Testing
 
 ```bash
-dotnet test                                     # all 975 tests
+dotnet test                                     # all 1040 tests
 dotnet test tests/InterviewCoach.Core.Tests     # one project
 dotnet build InterviewCoach.sln -c Release      # use this if the Debug exe is running (it locks its DLLs)
 ```
 
 | Project | Tests | Covers |
 |---|---|---|
-| `InterviewCoach.Core.Tests` | 417 | Prompt rendering, engine behaviour, the bank, answer lengths, question types, text helpers, role type |
-| `InterviewCoach.Infrastructure.Tests` | 213 | JSON parsing, LLM service (retry, cache split, options), settings (DPAPI round trip, no plaintext), SQLite repositories on real files, file extractors, prompt guards, Demo-mode isolation |
-| `InterviewCoach.App.Tests` | 345 | View models and **real WPF views** on a shared STA dispatcher; fails on any binding error |
+| `InterviewCoach.Core.Tests` | 437 | Prompt rendering, engine behaviour, the bank, answer lengths, question types, text helpers, role type |
+| `InterviewCoach.Infrastructure.Tests` | 218 | JSON parsing, LLM service (retry, cache split, options), settings (DPAPI round trip, no plaintext), SQLite repositories on real files, file extractors, prompt guards, Demo-mode isolation |
+| `InterviewCoach.App.Tests` | 385 | View models and **real WPF views** on a shared STA dispatcher; fails on any binding error |
 
 Test names are sentences that describe behaviour. Scripted test doubles (`ScriptedLlmService`, `BankScript`) let tests control exactly
 what the model "says", including delays and failures.
