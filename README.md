@@ -12,7 +12,7 @@
 <p align="center">
   <img alt=".NET 10" src="https://img.shields.io/badge/.NET-10-512BD4">
   <img alt="WPF" src="https://img.shields.io/badge/UI-WPF%20%28MVVM%29-0078D4">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-670%20passing-2EA043">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-725%20passing-2EA043">
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%2010%2F11-lightgrey">
   <img alt="Status" src="https://img.shields.io/badge/status-Learn%20mode%20complete-blue">
 </p>
@@ -64,7 +64,7 @@ Things that make it more than a question generator:
 | **Saved technical questions** | Technical-concept questions and their general answers are saved per technology and seniority, so repeats cost nothing and survive edits to your resume. When a technology runs out of saved questions the model writes ten common ones in a single call (most common first, spread over different areas, mixed phrasing) instead of one at a time. |
 | **Questions spread across your resume** | Resume questions take turns between your employers and projects (the least used first, then a different highlight each time) instead of always asking about the current job, and each starts with a different word. A question that repeats an earlier one in other words is sent back once. |
 | **Practice (typed)** | Answer a question yourself, with a live word count and an answer timer, then get feedback that quotes your own words, what the interviewer is testing, a strong answer and a delivery comment. Try again passes your last answer to the coach so it can say what changed; follow-ups become the next question. |
-| **Library (Revisit)** | Every question and answer you see is kept, so you can go back to it: filter by question type, search, sort, reopen the full answer, remove an entry. |
+| **Library (Revisit)** | Every question you learn and every answer you practise is kept, so you can go back to it: filter by Learned or Practised and by question type, search (including your own words), sort, reopen the full answer with your feedback, remove an entry. |
 | **Tailor to my resume** | Turn any general answer into one built from your own experience, on demand. |
 | **Answer length control** | Short, Medium, Long or a custom word count. By default the model aims for the same range the screen shows. |
 | **Interviewer-style phrasing** | Technical questions are short and direct ("What's the difference between checked and unchecked exceptions?"), not essay prompts. |
@@ -224,16 +224,17 @@ you see the error with **Retry** rather than a silent substitute.
 
 ### Library (Revisit)
 
-Every question and answer Learn mode shows is kept, so you can come back to it. Open it from the **Revisit** card next to Practice on Home,
+Every question and answer Learn mode shows, and every answer you give in Practice with its feedback, is kept, so you can come back to it. Open it from the **Revisit** card next to Practice on Home,
 or from **Library** in the sidebar.
 
+- **Filter by kind** (once you have practised): All, Learned or Practised, with a count on each.
 - **Filter by question type.** Chips for All and for each type you have seen, with a count on each.
 - **Search** the question, the technology, the question type and the answer text (every word must match).
 - **Sort** by newest, oldest, question (A to Z) or question type.
-- **Open an entry** to read its full answer again: what they are testing, the answer, its shape and the follow-ups. A follow-up you opened
+- **Open an entry** to read it again: what they are testing, the answer, its shape and the follow-ups. For a practice answer you also see what you wrote and the feedback on it (what worked, what to fix, what was missing, with your quoted words). A follow-up you opened
   before opens its own saved answer; one you never opened says so.
 - **Remove from library** deletes an entry (it is added back if you see that question again).
-- The same question seen again is one entry (it moves to the top and counts how many times you saw it). A general answer and one tailored to
+- A learned question seen again is one entry (it moves to the top and counts how many times you saw it). Every practice answer is its own entry, so you can see how a retry improved. A general answer and one tailored to
   your resume are separate entries.
 - Questions you already had saved as technical questions are carried over the first time the new version starts, so the library is not empty.
   Anything seen before that and not saved cannot be recovered.
@@ -254,7 +255,7 @@ click **Try it myself** in Learn mode to practise the question you are looking a
    puts it back in the box), click a **follow-up** to answer it (the coach sees the earlier questions and answers), or **Next question**.
 5. If the coach call fails, your answer stays on screen: **Retry** sends it again, or **Edit my answer** reopens the box.
 
-Practice attempts are not saved to the Library yet; the Library shows what Learn mode showed.
+Every answer you submit is kept in the Library with its feedback (see below), including each try and each follow-up.
 
 ### In a session
 
@@ -381,21 +382,21 @@ on its OpenRouter page if that matters to you. The model list for the OpenRouter
 
 **Key fallbacks** when a Settings field is empty: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION`.
 
-**Database tables:** `Profiles`, `TechQuestions`, `TechAnswers`, `JdTechnologies`, `ResumeTopics` (employers and projects read from a resume), `LearnHistory` (the Library).
+**Database tables:** `Profiles`, `TechQuestions`, `TechAnswers`, `JdTechnologies`, `ResumeTopics` (employers and projects read from a resume), `LearnHistory` and `PracticeAttempts` (the Library).
 
 ## Testing
 
 ```bash
-dotnet test                                     # all 670 tests
+dotnet test                                     # all 725 tests
 dotnet test tests/InterviewCoach.Core.Tests     # one project
 dotnet build InterviewCoach.sln -c Release      # use this if the Debug exe is running (it locks its DLLs)
 ```
 
 | Project | Tests | Covers |
 |---|---|---|
-| `InterviewCoach.Core.Tests` | 293 | Prompt rendering, engine behaviour, the bank, answer lengths, question types, text helpers, role type |
-| `InterviewCoach.Infrastructure.Tests` | 159 | JSON parsing, LLM service (retry, cache split, options), settings (DPAPI round trip, no plaintext), SQLite repositories on real files, file extractors, prompt guards, Demo-mode isolation |
-| `InterviewCoach.App.Tests` | 218 | View models and **real WPF views** on a shared STA dispatcher; fails on any binding error |
+| `InterviewCoach.Core.Tests` | 319 | Prompt rendering, engine behaviour, the bank, answer lengths, question types, text helpers, role type |
+| `InterviewCoach.Infrastructure.Tests` | 167 | JSON parsing, LLM service (retry, cache split, options), settings (DPAPI round trip, no plaintext), SQLite repositories on real files, file extractors, prompt guards, Demo-mode isolation |
+| `InterviewCoach.App.Tests` | 239 | View models and **real WPF views** on a shared STA dispatcher; fails on any binding error |
 
 Test names are sentences that describe behaviour. Scripted test doubles (`ScriptedLlmService`, `BankScript`) let tests control exactly
 what the model "says", including delays and failures.

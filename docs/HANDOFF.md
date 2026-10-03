@@ -20,7 +20,7 @@ every change made after the spec was written and overrides the spec where they d
 | 1 Skeleton: solution, DI host, settings with DPAPI keys, demo mode, prompts, LLM service, Test connection | Done |
 | 2 Profiles: CRUD, JD and resume paste or file load (PDF, DOCX, TXT, MD), SQLite and migrations | Done |
 | 3 Learn mode (text): question generator, coach, coach cards | Done |
-| 4 Practice mode (typed): composer, submit, coach with the answer, retry with comparison, follow-ups | Done (attempts are not saved yet) |
+| 4 Practice mode (typed): composer, submit, coach with the answer, retry with comparison, follow-ups | Done (attempts are saved to the Library) |
 | 5 Voice: speech to text, text to speech (Azure, OpenAI, Windows), mic in composer, barge-in, timer, auto-listen | **Not started** (fakes and settings fields exist) |
 | 6 Mock Interview: planner, interviewer loop, thread building, parallel coaching, debrief, Markdown export | **Not started** (prompts `planner.md`, `interviewer.md`, `debrief.md` exist, unused) |
 | 7 History and polish | **Not started** |
@@ -31,7 +31,7 @@ background preparation of the next question; the technology bank (saved technica
 and seniority); By technology with an Other box; interviewer-style question length rules; full-time or contract role type with two
 extra question types; scroll-wheel behaviour on Home; app icon; a full visual redesign.
 
-Test status: **670 tests passing** (Core 293, Infrastructure 159, App 218). The last full verification was done with
+Test status: **725 tests passing** (Core 319, Infrastructure 167, App 239). The last full verification was done with
 `-c Release` because the user had the Debug build running (see section 2).
 
 **Version control.** The folder is a git repository (branch `main`). History is written to be read; see "Commit conventions" in `README.md`.
@@ -315,7 +315,7 @@ cache read about 0.1x, cache write about 1.25x; the user's balance drop was cons
 
 ## 10. Tests
 
-670 tests: Core 293, Infrastructure 159, App 218.
+725 tests: Core 319, Infrastructure 167, App 239.
 
 - **Core.Tests**: prompt rendering, engine behaviour (`LearnEngineTests`, `LearnEngineBankTests`, `LearnEngineTechnologyTests`,
   `EmploymentTypeTests`), bank service, answer length, question types, text helpers. Helpers in `TestDoubles.cs`:
@@ -333,8 +333,7 @@ cache read about 0.1x, cache write about 1.25x; the user's balance drop was cons
 
 ## 11. Open items and next steps
 
-1. ~~Milestone 4, Practice (typed)~~: done, see section 19. Still open from it: Practice attempts are not saved (no Session, PracticeItem or Attempt
-   tables), so the Library does not show them.
+1. ~~Milestone 4, Practice (typed)~~: done, see sections 19 to 21.
 2. **Milestone 5, Voice**: `ISpeechToText` and `ITextToSpeech` implementations (Azure first, then OpenAI, then Windows offline TTS),
    composer mic with F2, barge-in, auto-listen, silence auto-submit, voice settings with Test mic and Test voice, "Read answer aloud".
    Interfaces, fakes and settings fields already exist.
@@ -669,3 +668,32 @@ happens if you update a column used in a WHERE clause mid-transaction?"), and fo
 three times, "Explain the difference between" once; the limit is three "What's the difference between"). Changes: the batch prompt now says to ask only about things that
 exist in the technology as named, and has a third Too long / Right pair for the denormalize question. A saved question that is wrong stays in the bank until the
 user clears it in Settings.
+
+---
+
+## 21. Second Practice log, and saving Practice to the Library
+
+**The second Practice log** (2 October 2026, SQL Server; four answers including one Try again and one follow-up). Findings:
+
+- The delivery fix worked: `delivery` was null for every typed answer.
+- **Try again with an unchanged answer.** The retry was word for word the first answer (123 words). It was sent, and the coach did not say nothing had changed (it ignored
+  the rule that the first point is about what changed). Now `SubmitAsync` returns `SubmitResult.Unchanged` for an identical answer on a retry (whitespace and case ignored,
+  retries only) and the box explains; nothing is sent. The first-point-about-change behaviour is therefore still **not observed on a real changed retry**.
+- **Follow-up transcript worked:** the prompt carried "Interviewer: ... / You: ..." for the earlier question, and the coach judged the one-line SQL answer correctly.
+- **The string "null" as a quote.** Three feedback points had `"quote": "null"` (the string), not a JSON null; shown as is it would read as something the candidate said.
+  `CoachText.CleanOptional` now maps null, none, n/a, nil, undefined and empty text to nothing; `ForPractice` applies it to every quote and the delivery, and
+  `CoachOutputViewModel` applies it again.
+- All other quotes were grounded (verbatim or elided fragments of the answer). Replies were 5.8 to 7.7 s with 790 to 950 output tokens.
+
+**Practice answers in the Library.** New table `PracticeAttempts` (migration `AddPracticeAttempts`), `IPracticeHistory` with `PracticeHistoryRepository`,
+`InMemoryPracticeHistory` and `RoutingPracticeHistory` (Demo mode), `PracticeRecord` (Core). `PracticeEngine` records through `RecordAttemptAsync` (best effort,
+exceptions swallowed) once the feedback is on screen, so every attempt is a row and nothing is kept for a failed call or an unchanged answer. It is a separate table from
+`LearnHistory` on purpose: a learned question is one upserted entry per question and answer kind, a practice answer is always a new row, and the existing library keys and
+the carry-over migration stay untouched.
+
+`LibraryViewModel` now works on `LibraryItem` (a neutral record built from either source; `Key` is "L12" or "P7" because the two tables number separately). New: `KindFilters`
+(All, Learned, Practised; shown by `HasKindFilter` only once something was practised), a Practice tag, a "Your answer" detail card (`DetailAnswer`, `DetailAnswerMeta`), the
+feedback cards for practice entries (the detail uses `ForPractice()`, learned entries still use `ForLearning()`), search over the answer text, and delete routed to the right
+repository. Follow-up lookup picks the saved follow-up of the same kind as the open entry, then the newest, from either table. `LibraryViewModel` takes `IPracticeHistory`
+as an optional fourth constructor argument; without it the library behaves as before. Not done: no export, no "practise this question again" button from the library, no chart
+of how retries improved.
