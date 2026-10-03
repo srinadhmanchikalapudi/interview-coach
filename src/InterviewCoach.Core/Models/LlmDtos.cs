@@ -24,6 +24,19 @@ public class BatchQuestionDto
     public string Area { get; init; } = "";
 }
 
+/// <summary>Reply from resume_topics.md: the employers or projects on a resume and what was done on each.</summary>
+public class ResumeTopicsDto
+{
+    public List<ResumeTopicEntryDto> Topics { get; init; } = [];
+}
+
+public class ResumeTopicEntryDto
+{
+    public string Employer { get; init; } = "";
+    public string Project { get; init; } = "";
+    public List<string> Highlights { get; init; } = [];
+}
+
 public class FeedbackPoint
 {
     /// <summary>strength | fix | missing</summary>

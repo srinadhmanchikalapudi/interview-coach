@@ -58,6 +58,39 @@ public sealed class TechBank(ITechBankRepository repository, ILlmService llm, IP
         return technologies;
     }
 
+    /// <summary>Employers kept from a resume, and highlights kept per employer.</summary>
+    public const int MaxEmployers = 8;
+    public const int MaxHighlights = 5;
+
+    /// <summary>
+    /// What the resume says was done, grouped by employer and project, so resume questions can take turns across all of them. One
+    /// cheap call per distinct resume text; the answer is remembered (identified by a fingerprint of the text), so using the same
+    /// resume again, or editing only the job description, costs nothing.
+    /// </summary>
+    public async Task<IReadOnlyList<ResumeTopic>> GetResumeTopicsAsync(CandidateProfile profile, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(profile.ResumeText)) return [];
+
+        var fingerprint = TextTools.Fingerprint(profile.ResumeText);
+        if (await repository.GetResumeTopicsAsync(fingerprint, ct) is { } known) return known;
+
+        var system = prompts.Render(PromptName.ResumeTopics, PromptVars.ForProfile(profile));
+        var reply = await llm.GetJsonAsync<ResumeTopicsDto>(
+            LlmRole.QuestionGenerator, system, [new ChatTurn(ChatTurnRole.User, PromptName.ResumeTopics.UserMessage()!)], ct);
+
+        var topics = new List<ResumeTopic>();
+        foreach (var entry in reply.Topics.Take(MaxEmployers))
+        {
+            var employer = entry.Employer?.Trim() ?? "";
+            if (employer.Length == 0) employer = "Other work";
+            var project = entry.Project?.Trim() ?? "";
+            foreach (var highlight in (entry.Highlights ?? []).Select(h => h?.Trim() ?? "").Where(h => h.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).Take(MaxHighlights))
+                topics.Add(new ResumeTopic(employer, project, highlight));
+        }
+        await repository.SaveResumeTopicsAsync(fingerprint, topics, ct);
+        return topics;
+    }
+
     /// <summary>How many questions one batch call asks for.</summary>
     public const int BatchSize = 10;
 
@@ -111,7 +144,7 @@ public sealed class TechBank(ITechBankRepository repository, ILlmService llm, IP
             foreach (var item in batch.Questions.Take(BatchSize + 5))
             {
                 var text = item.Question?.Trim() ?? "";
-                if (text.Length == 0 || avoid.Any(a => TextTools.SameQuestion(a, text))) continue;
+                if (text.Length == 0 || avoid.Any(a => TextTools.IsNearDuplicate(a, text))) continue;
                 added.Add(await repository.AddQuestionAsync(technology, seniority, text, item.Area ?? "", ct));
                 avoid.Add(text);
                 if (added.Count == BatchSize) break;
@@ -165,6 +198,7 @@ public sealed class TechBank(ITechBankRepository repository, ILlmService llm, IP
         vars["EMPLOYMENT_TYPE"] = null; // saved questions are general, shared by every kind of interview
         vars["ALREADY_ASKED"] = PromptVars.AlreadyAsked(avoid);
         vars["FOCUS_TECHNOLOGY"] = technology;
+        vars["RESUME_FOCUS"] = null; // saved questions are general and never about a resume
         return prompts.Render(name, vars);
     }
 }

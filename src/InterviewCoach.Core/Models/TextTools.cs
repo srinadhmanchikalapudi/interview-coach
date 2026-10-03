@@ -18,6 +18,35 @@ public static partial class TextTools
 
     public static bool SameQuestion(string a, string b) => NormalizeQuestion(a) == NormalizeQuestion(b);
 
+    // Words that carry no topic, so two questions are compared by what they are about and not by how they are phrased.
+    private static readonly HashSet<string> FillerWords = new(StringComparer.Ordinal)
+    {
+        "a", "an", "the", "and", "or", "of", "to", "in", "on", "for", "with", "is", "are", "was", "were", "be", "been", "do", "does", "did",
+        "you", "your", "we", "our", "it", "its", "this", "that", "what", "why", "how", "when", "which", "who", "would", "could", "should",
+        "can", "will", "at", "as", "by", "from", "about", "into", "than", "then", "there", "their", "they", "them", "have", "has", "had",
+        "not", "no", "if", "so", "but", "vs", "versus", "between", "difference", "different", "over", "under", "up", "out", "ve", "re", "ll",
+        "don", "didn", "isn", "me", "my", "any", "some", "one", "other", "tell", "walk", "through", "actually", "really", "specific",
+    };
+
+    private static HashSet<string> TopicWords(string question)
+        => NormalizeQuestion(question).Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Where(w => w.Length >= 2 && !FillerWords.Contains(w)).ToHashSet(StringComparer.Ordinal);
+
+    /// <summary>
+    /// True when two questions ask about the same thing in different words, for example "Why did you choose RabbitMQ over Service Bus
+    /// for specific workloads?" and "How would you choose between RabbitMQ and Service Bus for a new workload?". They count as the same
+    /// when they share at least four topic words and those make up at least half of the shorter question's topic words.
+    /// </summary>
+    public static bool IsNearDuplicate(string a, string b)
+    {
+        if (SameQuestion(a, b)) return true;
+        var first = TopicWords(a);
+        var second = TopicWords(b);
+        if (first.Count == 0 || second.Count == 0) return false;
+        var shared = first.Count(second.Contains);
+        return shared >= 4 && shared >= 0.5 * Math.Min(first.Count, second.Count);
+    }
+
     [System.Text.RegularExpressions.GeneratedRegex(@"\s+")]
     private static partial System.Text.RegularExpressions.Regex Whitespace();
 

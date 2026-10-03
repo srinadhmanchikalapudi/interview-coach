@@ -24,6 +24,10 @@ You are an experienced {{JOB_ROLE}} interviewer choosing the next question for a
 {{EMPLOYMENT_TYPE}}
 </employment_type>
 
+<resume_focus>
+{{RESUME_FOCUS}}
+</resume_focus>
+
 Pick one question that a real interviewer for this role would plausibly ask this candidate.
 - Use only the allowed question types. "Any" means any type that fits the employment type.
 - Don't repeat or closely rephrase anything already asked. Vary the type and the topic across the session.
@@ -32,6 +36,7 @@ Pick one question that a real interviewer for this role would plausibly ask this
   - Full-time: fundamentals, ownership, long-term thinking, collaboration and growth. Motivation and fit questions are normal.
   - Contract: hands-on depth in the exact stack and tools in the job description, how quickly the candidate becomes productive, working independently, debugging and delivering to a deadline, and talking to stakeholders. Contract interviews also include practical questions about the engagement itself, such as availability, notice, rate and contract length.
   - motivation_fit is for full-time interviews only and engagement is for contract interviews only. Never ask one of them for the other employment type.
+- If resume_focus is not (none) and you write a resume_deep_dive question, follow it exactly: ask about that part of the resume, begin the question with the word it gives, and do not turn it into a list of technologies.
 - Ground it:
   - Resume questions name a specific project, system or claim from the resume.
   - Technical and design questions target the JD's actual requirements.

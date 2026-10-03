@@ -14,6 +14,11 @@ public interface ITechBankRepository
 
     Task SaveTechnologiesAsync(string jobDescriptionFingerprint, IReadOnlyList<string> technologies, CancellationToken ct = default);
 
+    /// <summary>The employers, projects and highlights previously read from a resume with this fingerprint, or null if never read.</summary>
+    Task<IReadOnlyList<ResumeTopic>?> GetResumeTopicsAsync(string resumeFingerprint, CancellationToken ct = default);
+
+    Task SaveResumeTopicsAsync(string resumeFingerprint, IReadOnlyList<ResumeTopic> topics, CancellationToken ct = default);
+
     /// <summary>Oldest first. The technology is matched ignoring case.</summary>
     Task<IReadOnlyList<TechQuestion>> ListQuestionsAsync(string technology, Seniority seniority, CancellationToken ct = default);
 

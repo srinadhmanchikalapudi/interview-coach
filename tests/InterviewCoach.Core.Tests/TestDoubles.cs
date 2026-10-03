@@ -31,7 +31,8 @@ internal sealed class ScriptedLlmService(Func<LlmCall, Task<object>> handler) : 
     public IEnumerable<LlmCall> BankQuestionCalls => To(LlmRole.QuestionGenerator).Where(c => BankScript.FocusOf(c) != "(none)");
     public IEnumerable<LlmCall> BatchCalls => BankQuestionCalls.Where(c => c.Prompt.Contains(BankScript.BatchMarker));
     public IEnumerable<LlmCall> SingleQuestionCalls => BankQuestionCalls.Where(c => !c.Prompt.Contains(BankScript.BatchMarker));
-    public IEnumerable<LlmCall> ModelQuestionCalls => To(LlmRole.QuestionGenerator).Where(c => !c.Prompt.Contains(BankScript.TagsMarker) && BankScript.FocusOf(c) == "(none)");
+    public IEnumerable<LlmCall> ModelQuestionCalls => To(LlmRole.QuestionGenerator).Where(c => !c.Prompt.Contains(BankScript.TagsMarker) && !c.Prompt.Contains(BankScript.ResumeTopicsMarker) && BankScript.FocusOf(c) == "(none)");
+    public IEnumerable<LlmCall> ResumeTopicCalls => To(LlmRole.QuestionGenerator).Where(c => c.Prompt.Contains(BankScript.ResumeTopicsMarker));
     public IEnumerable<LlmCall> GeneralAnswerCalls => To(LlmRole.Coach).Where(c => c.Prompt.Contains(TechBank.GeneralAnswerNote));
     public IEnumerable<LlmCall> TailoredAnswerCalls => To(LlmRole.Coach).Where(c => !c.Prompt.Contains(TechBank.GeneralAnswerNote));
 }
@@ -44,10 +45,16 @@ internal sealed partial class BankScript
 {
     public const string TagsMarker = "List the main technologies this job actually requires";
     public const string BatchMarker = "preparing a bank of technical screening questions";
+    public const string ResumeTopicsMarker = "List the employers and projects on this resume";
 
     public string[] Technologies { get; set; } = ["C#", "SQL Server"];
     public bool FailTags { get; set; }
     public bool FailBankQuestions { get; set; }
+    /// <summary>What reading the resume returns. Empty by default, which means no resume focus, so most tests are not affected.</summary>
+    public List<ResumeTopicEntryDto> ResumeEntries { get; set; } = [];
+    public bool FailResumeTopics { get; set; }
+    /// <summary>The type the model reports for questions it writes itself.</summary>
+    public string ModelQuestionType { get; set; } = "behavioral";
     /// <summary>When the bank runs out the app asks for a batch; this many questions come back (the app asks for 10).</summary>
     public int BatchCount { get; set; } = 1;
     /// <summary>Makes the batch call fail, so the app falls back to writing one question.</summary>
@@ -68,6 +75,12 @@ internal sealed partial class BankScript
         {
             if (FailTags) throw new LlmException("tag extraction failed");
             return Task.FromResult<object>(new TechTagsDto { Technologies = [.. Technologies] });
+        }
+
+        if (call.Prompt.Contains(ResumeTopicsMarker))
+        {
+            if (FailResumeTopics) throw new LlmException("reading the resume failed");
+            return Task.FromResult<object>(new ResumeTopicsDto { Topics = [.. ResumeEntries] });
         }
 
         if (call.Prompt.Contains(BatchMarker))
@@ -96,7 +109,7 @@ internal sealed partial class BankScript
             }
             return Task.FromResult<object>(new QuestionDto
             {
-                Question = $"Model question {++_modelQuestions}?", QuestionType = "behavioral", Source = "resume", Focus = "ownership",
+                Question = $"Model question {++_modelQuestions}?", QuestionType = ModelQuestionType, Source = "resume", Focus = "ownership",
             });
         }
 

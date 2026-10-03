@@ -62,6 +62,8 @@ public sealed class LearnEngine(ILlmService llm, IPromptLibrary prompts, TechBan
     private string? _lastTechnology;
     private readonly List<string> _asked = [];
     private readonly Stack<LearnItem> _trail = new();
+    private IReadOnlyList<ResumeTopic>? _resumeTopics;
+    private ResumeFocusPicker _focusPicker = new(Random.Shared.NextDouble);
     private IReadOnlyList<string>? _technologies;
     private CancellationTokenSource? _cts;
     private int _operation;
@@ -104,6 +106,8 @@ public sealed class LearnEngine(ILlmService llm, IPromptLibrary prompts, TechBan
         _lastTechnology = null;
         _asked.Clear();
         _technologies = null;
+        _resumeTopics = null;
+        _focusPicker = new ResumeFocusPicker(_random);
         DiscardPrefetch();
         return NextAsync();
     }
@@ -421,16 +425,28 @@ public sealed class LearnEngine(ILlmService llm, IPromptLibrary prompts, TechBan
 
     private async Task<LearnItem> GenerateQuestionAsync(IReadOnlyCollection<QuestionType> allowed, string? focusTechnology, CancellationToken ct)
     {
+        var focus = await PickResumeFocusAsync(allowed, focusTechnology, ct);
         QuestionDto question = new();
-        // The prompt already gets the list of earlier questions. If the model repeats one word for word anyway, ask once more.
+        // The prompt already gets the list of earlier questions. If the model asks the same thing again anyway, in the same or in
+        // other words, it is told so and asked once more.
         for (var attempt = 0; attempt < 2; attempt++)
         {
+            List<ChatTurn> turns = [UserTurn(PromptName.QuestionGenerator)];
+            if (attempt > 0)
+            {
+                turns.Add(new ChatTurn(ChatTurnRole.Assistant, System.Text.Json.JsonSerializer.Serialize(new { question = question.Question })));
+                turns.Add(new ChatTurn(ChatTurnRole.User, "That is too close to a question you already asked. Give a different one, about a different topic."));
+            }
             question = await llm.GetJsonAsync<QuestionDto>(
-                LlmRole.QuestionGenerator, RenderGeneratorPrompt(allowed, focusTechnology), [UserTurn(PromptName.QuestionGenerator)], ct);
+                LlmRole.QuestionGenerator, RenderGeneratorPrompt(allowed, focusTechnology, focus), turns, ct);
             if (string.IsNullOrWhiteSpace(question.Question))
                 throw new LlmException("The model returned an empty question.");
-            if (!WasAsked(question.Question)) break;
+            if (!IsRepeat(question.Question)) break;
         }
+
+        // The employer and highlight are used up only by a question that was really about the resume.
+        if (focus is not null && question.QuestionType.Equals(QuestionType.ResumeDeepDive.Id(), StringComparison.OrdinalIgnoreCase))
+            _focusPicker.Commit(focus);
 
         return new LearnItem
         {
@@ -442,12 +458,33 @@ public sealed class LearnEngine(ILlmService llm, IPromptLibrary prompts, TechBan
         };
     }
 
-    private string RenderGeneratorPrompt(IReadOnlyCollection<QuestionType> allowed, string? focusTechnology)
+    /// <summary>
+    /// What a resume question should be about: the least used employer and highlight, so the whole resume gets its turn. Only when
+    /// resume questions are possible, the technology bank is in use (it remembers the topics) and the model is writing the question
+    /// freely. Reading the topics costs one cheap call per resume; if it fails the question is written without a focus.
+    /// </summary>
+    private async Task<ResumeFocus?> PickResumeFocusAsync(IReadOnlyCollection<QuestionType> allowed, string? focusTechnology, CancellationToken ct)
+    {
+        if (bank is null || focusTechnology is not null) return null;
+        if (allowed.Count > 0 && !allowed.Contains(QuestionType.ResumeDeepDive)) return null;
+
+        if (_resumeTopics is null)
+        {
+            try { _resumeTopics = await bank.GetResumeTopicsAsync(_profile, ct); }
+            catch (LlmException) { _resumeTopics = []; }
+        }
+        return _focusPicker.Pick(_resumeTopics);
+    }
+
+    private bool IsRepeat(string question) => _asked.Any(a => TextTools.IsNearDuplicate(a, question));
+
+    private string RenderGeneratorPrompt(IReadOnlyCollection<QuestionType> allowed, string? focusTechnology, ResumeFocus? focus)
     {
         var vars = PromptVars.ForProfile(_profile);
         vars["QUESTION_TYPES"] = QuestionTypes.RenderFilter(allowed);
         vars["ALREADY_ASKED"] = PromptVars.AlreadyAsked(_asked);
         vars["FOCUS_TECHNOLOGY"] = focusTechnology; // null renders as "(none)"
+        vars["RESUME_FOCUS"] = focus?.Describe();
         vars["EMPLOYMENT_TYPE"] = _employment.PromptValue();
         return prompts.Render(PromptName.QuestionGenerator, vars);
     }
