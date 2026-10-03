@@ -26,6 +26,8 @@ public enum SubmitResult
     Sent,
     /// <summary>Nothing was written. Nothing was sent.</summary>
     Empty,
+    /// <summary>On a second or later try, the answer is the same as the last one. Nothing was sent: there would be nothing to compare.</summary>
+    Unchanged,
     /// <summary>There is no question waiting for an answer right now. Nothing was sent.</summary>
     NotReady,
 }
@@ -145,6 +147,9 @@ public sealed class PracticeEngine(ILlmService llm, IPromptLibrary prompts, Tech
         if (string.IsNullOrWhiteSpace(answer)) return SubmitResult.Empty;
 
         var text = answer.Trim();
+        // On a retry, the same words again would send a whole Coach call to say nothing changed (the log showed the coach not even
+        // noticing). Ignoring spacing and case, an identical answer is not sent.
+        if (_previousAttempt is not null && Same(_previousAttempt, text)) return SubmitResult.Unchanged;
         _pending = new Submission(text, inputMethod, Math.Max(0, durationSeconds), AnswerLength.CountWords(text));
         Error = null;
         var (ct, id) = BeginOperation();
@@ -315,6 +320,10 @@ public sealed class PracticeEngine(ILlmService llm, IPromptLibrary prompts, Tech
         ParentQuestion = item.ParentQuestion,
         Hint = item.Hint,
     };
+
+    private static bool Same(string a, string b)
+        => string.Equals(string.Join(' ', a.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)),
+                         string.Join(' ', b.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)), StringComparison.OrdinalIgnoreCase);
 
     private static ChatTurn UserTurn(PromptName name) => new(ChatTurnRole.User, name.UserMessage()!);
 

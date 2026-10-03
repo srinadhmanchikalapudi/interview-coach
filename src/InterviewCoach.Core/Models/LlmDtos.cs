@@ -82,10 +82,10 @@ public class CoachOutput
     public CoachOutput ForPractice() => new()
     {
         WhatTheyreTesting = WhatTheyreTesting,
-        Feedback = Feedback,
+        Feedback = Feedback.Select(f => new FeedbackPoint { Kind = f.Kind, Point = f.Point, Quote = CoachText.CleanOptional(f.Quote) }).ToList(),
         ModelAnswer = CoachText.WithoutOpeningFiller(ModelAnswer),
         Shape = Shape,
-        Delivery = Delivery,
+        Delivery = CoachText.CleanOptional(Delivery),
         FollowUps = FollowUps,
     };
 

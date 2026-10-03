@@ -19,6 +19,7 @@ public partial class PracticeViewModel : ObservableObject
     public const int RedSeconds = 210;
 
     public const string EmptyAnswerMessage = "Say or type something first. 'I don't know' is a fine answer too.";
+    public const string UnchangedAnswerMessage = "That is the same as your last answer. Change something, then submit, so the feedback can say what improved.";
 
     private readonly ILlmService _llm;
     private readonly IPromptLibrary _prompts;
@@ -192,6 +193,11 @@ public partial class PracticeViewModel : ObservableObject
         if (result == SubmitResult.Empty)
         {
             EmptyMessage = EmptyAnswerMessage;
+            return;
+        }
+        if (result == SubmitResult.Unchanged)
+        {
+            EmptyMessage = UnchangedAnswerMessage;
             return;
         }
         if (result == SubmitResult.Sent) FreezeTimer(seconds);

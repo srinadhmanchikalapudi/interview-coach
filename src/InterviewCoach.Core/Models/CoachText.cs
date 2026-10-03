@@ -21,6 +21,20 @@ public static partial class CoachText
     private static partial Regex OpeningFiller();
 
     /// <summary>
+    /// A text the model was meant to leave out: the JSON null, an empty string, or the word "null", "none" or "n/a" written as if it
+    /// were the value (the log showed three feedback points whose quote was the string "null", which the screen would have shown as
+    /// something the candidate said). Returns null for those and the trimmed text otherwise.
+    /// </summary>
+    public static string? CleanOptional(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return null;
+        var trimmed = text.Trim();
+        return trimmed.Trim('"', '\'', '(', ')', '.', ' ').ToLowerInvariant() is "null" or "none" or "n/a" or "na" or "nil" or "undefined"
+            ? null
+            : trimmed;
+    }
+
+    /// <summary>
     /// Removes warm-up words from the start of a spoken answer ("Sure. Short version: ...", "Yeah, so ..."), then capitalises
     /// what is left. The prompt asks the model not to write them; this catches the ones that slip through and the ones
     /// already saved. An answer that would be left almost empty is returned unchanged.

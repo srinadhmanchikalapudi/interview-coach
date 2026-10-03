@@ -86,6 +86,58 @@ public class OpeningFillerTests
         Assert.Equal("At [Company] we moved to [the new approach] and cut allocations.", cleaned);
     }
 
+    // ---- the word "null" written as a value (seen three times in the log of 2 October 2026)
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("null")]
+    [InlineData("NULL")]
+    [InlineData(" Null ")]
+    [InlineData("\"null\"")]
+    [InlineData("none")]
+    [InlineData("(none)")]
+    [InlineData("N/A")]
+    [InlineData("undefined")]
+    public void An_empty_or_null_looking_text_is_no_text(string? value)
+    {
+        Assert.Null(CoachText.CleanOptional(value));
+    }
+
+    [Theory]
+    [InlineData("cut p99 from 300ms to 80ms")]
+    [InlineData("I said none of that")]
+    [InlineData("null pointer exceptions")]
+    [InlineData("  a real quote  ")]
+    public void A_real_text_is_kept_and_trimmed(string value)
+    {
+        Assert.Equal(value.Trim(), CoachText.CleanOptional(value));
+    }
+
+    [Fact]
+    public void For_practice_turns_a_null_string_quote_or_delivery_into_nothing_and_keeps_real_ones()
+    {
+        var output = new CoachOutput
+        {
+            ModelAnswer = "Sure. Short version: a struct is a value type, a class is a reference type.",
+            Feedback =
+            [
+                new FeedbackPoint { Kind = "strength", Point = "Good.", Quote = "a real quote" },
+                new FeedbackPoint { Kind = "fix", Point = "Fix it.", Quote = "null" },
+                new FeedbackPoint { Kind = "missing", Point = "Add it.", Quote = null },
+            ],
+            Delivery = "null",
+        }.ForPractice();
+
+        Assert.Equal("a real quote", output.Feedback[0].Quote);
+        Assert.Null(output.Feedback[1].Quote);
+        Assert.Null(output.Feedback[2].Quote);
+        Assert.Null(output.Delivery);
+        Assert.Equal(3, output.Feedback.Count);
+        Assert.Equal("A struct is a value type, a class is a reference type.", output.ModelAnswer);
+    }
+
     // ---- Where it is applied
 
     private static CoachOutput Reply(string answer) => new()

@@ -8,7 +8,7 @@ public record ShapeStep(string Text, bool ShowArrow);
 
 public record FeedbackItem(string Kind, string Icon, string Label, string Point, string? Quote)
 {
-    public bool HasQuote => !string.IsNullOrWhiteSpace(Quote);
+    public bool HasQuote => CoachText.CleanOptional(Quote) is not null;
 }
 
 public record FollowUpItem(string Question, string Hint, ICommand OpenCommand);
@@ -24,7 +24,7 @@ public sealed class CoachOutputViewModel
         WordCount = AnswerLength.CountWords(coach.ModelAnswer);
         var expected = AnswerLength.Expectation(questionTypeId);
         ExpectationText = expected is { } range ? "Interviewers typically expect " + AnswerLength.DescribeExpectation(range) + " for this kind of question." : null;
-        Delivery = string.IsNullOrWhiteSpace(coach.Delivery) ? null : coach.Delivery.Trim();
+        Delivery = CoachText.CleanOptional(coach.Delivery);
 
         var steps = CoachText.SplitShape(coach.Shape);
         ShapeSteps = steps.Select((s, i) => new ShapeStep(s, i < steps.Count - 1)).ToList();

@@ -238,6 +238,38 @@ public class PracticeTests
         Assert.Equal(1, llm.Calls.Count(c => c.Role == LlmRole.QuestionGenerator)); // the same question, not a new one
     }
 
+    [Fact]
+    public async Task Submitting_the_same_answer_again_says_so_and_sends_nothing()
+    {
+        var vm = Started(out var llm, out _);
+        vm.AnswerText = "We cut p99 to 80ms by caching.";
+        await vm.SubmitCommand.ExecuteAsync(null);
+        vm.TryAgainCommand.Execute(null);
+        vm.UsePreviousAnswerCommand.Execute(null);     // the same text back in the box
+
+        await vm.SubmitCommand.ExecuteAsync(null);
+
+        Assert.True(vm.HasEmptyMessage);
+        Assert.Equal(PracticeViewModel.UnchangedAnswerMessage, vm.EmptyMessage);
+        Assert.True(vm.IsAnswering);
+        Assert.Single(llm.CoachPrompts);
+
+        vm.AnswerText += " Then we measured it.";
+        Assert.False(vm.HasEmptyMessage);               // the message goes as soon as something is changed
+        await vm.SubmitCommand.ExecuteAsync(null);
+        Assert.True(vm.IsFeedback);
+        Assert.Equal(2, llm.CoachPrompts.Count());
+    }
+
+    [Fact]
+    public void A_quote_that_is_the_word_null_is_not_shown_as_a_quotation()
+    {
+        var coach = new CoachOutputViewModel(
+            new CoachOutput { Feedback = [new FeedbackPoint { Kind = "fix", Point = "Add more.", Quote = "null" }], ModelAnswer = "x", Shape = "a" }, _ => { });
+
+        Assert.False(coach.Feedback[0].HasQuote);
+    }
+
     // ---- follow-ups and the next question
 
     [Fact]

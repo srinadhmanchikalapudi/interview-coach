@@ -267,6 +267,46 @@ public class PracticeEngineTests
         Assert.Single(rig.Llm.To(LlmRole.QuestionGenerator)); // no new question was written
     }
 
+    [Theory]
+    [InlineData("first try")]
+    [InlineData("  first try  ")]
+    [InlineData("FIRST   TRY")]
+    [InlineData("first\ntry")]
+    public async Task The_same_answer_again_on_a_second_try_is_not_sent(string again)
+    {
+        // The log of 2 October 2026: a retry that was word for word the first answer cost a Coach call and the coach did not notice.
+        var rig = new Rig();
+        var engine = rig.NewEngine();
+        await engine.StartAsync(Profile(), Behavioral);
+        await engine.SubmitAsync("first try");
+        engine.TryAgain();
+
+        var result = await engine.SubmitAsync(again);
+
+        Assert.Equal(SubmitResult.Unchanged, result);
+        Assert.Equal(PracticePhase.Answering, engine.Phase);
+        Assert.Single(CoachCalls(rig));                   // no second call
+        Assert.Equal(2, engine.AttemptNumber);
+
+        Assert.Equal(SubmitResult.Sent, await engine.SubmitAsync("first try, with one more sentence"));
+        Assert.Equal(2, CoachCalls(rig).Count());
+    }
+
+    [Fact]
+    public async Task The_same_words_are_fine_for_a_different_question_or_a_follow_up()
+    {
+        var rig = new Rig();
+        var engine = rig.NewEngine();
+        await engine.StartAsync(Profile(), Behavioral);
+        await engine.SubmitAsync("the same words");
+        engine.AnswerFollowUp(engine.LastAttempt!.Coach.FollowUps[0]);
+
+        Assert.Equal(SubmitResult.Sent, await engine.SubmitAsync("the same words"));   // a follow-up is not a retry
+
+        await engine.NextAsync();
+        Assert.Equal(SubmitResult.Sent, await engine.SubmitAsync("the same words"));   // nor is a new question
+    }
+
     [Fact]
     public async Task A_third_try_is_compared_with_the_second_not_the_first()
     {
