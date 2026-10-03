@@ -28,6 +28,16 @@ public sealed class InMemoryMockHistory : IMockHistory
             return Task.FromResult<IReadOnlyList<MockRecord>>(_records.OrderByDescending(r => r.StartedAt).ThenByDescending(r => r.Id).ToList());
     }
 
+    /// <summary>Swaps a stored record for another (tests use it to make a record as an older version of the app wrote it).</summary>
+    public void Replace(MockRecord old, MockRecord replacement)
+    {
+        lock (_gate)
+        {
+            var index = _records.IndexOf(old);
+            if (index >= 0) _records[index] = replacement;
+        }
+    }
+
     public Task DeleteAsync(int id, CancellationToken ct = default)
     {
         lock (_gate) _records.RemoveAll(r => r.Id == id);

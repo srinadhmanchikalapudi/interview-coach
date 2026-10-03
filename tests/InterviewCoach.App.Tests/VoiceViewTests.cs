@@ -111,8 +111,7 @@ public class VoiceViewTests
             Assert.Contains("Speak", buttons);
             Assert.Contains("Repeat", buttons);
             Assert.Contains("Submit", buttons);
-            var f2 = Assert.Single(view.InputBindings.OfType<KeyBinding>());
-            Assert.Equal(Key.F2, f2.Key);
+            Assert.Contains(view.InputBindings.OfType<KeyBinding>(), b => b.Key == Key.F2 && b.Modifiers == ModifierKeys.None);
         });
 
         Assert.Equal("", WpfHost.TakeBindingErrors());

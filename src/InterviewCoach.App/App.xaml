@@ -17,6 +17,9 @@
         <DataTemplate DataType="{x:Type vm:PracticeViewModel}">
             <views:PracticeView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:HistoryViewModel}">
+            <views:HistoryView />
+        </DataTemplate>
         <DataTemplate DataType="{x:Type vm:MockViewModel}">
             <views:MockView />
         </DataTemplate>

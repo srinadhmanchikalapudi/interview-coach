@@ -31,7 +31,12 @@ public record LearnSessionRequest(
 
 /// <summary>Everything Start hands over to begin a Mock Interview.</summary>
 public record MockSessionRequest(
-    CandidateProfile Profile, RoundType Round, int DurationMinutes, bool ShowQuestionText, EmploymentType Employment);
+    CandidateProfile Profile, RoundType Round, int DurationMinutes, bool ShowQuestionText, EmploymentType Employment)
+{
+    /// <summary>The request that picks a stored interview up again: its own round, length and role type, with the profile as it is saved now.</summary>
+    public static MockSessionRequest From(MockRecord record, CandidateProfile profile, bool showQuestionText)
+        => new(profile, MockRecords.RoundOf(record.RoundType), record.DurationMinutes, showQuestionText, MockRecords.EmploymentOf(record.Employment));
+}
 
 /// <summary>One choice among several shown as chips (a round type, a length). Choosing one raises the callback.</summary>
 public partial class SelectOption<T>(T value, string label, Action<SelectOption<T>> selected) : ObservableObject
@@ -93,6 +98,7 @@ public partial class HomeViewModel : ObservableObject
     private readonly IDocumentTextExtractor _extractor;
     private readonly IDialogService _dialogs;
     private readonly TechBank? _bank;
+    private readonly IMockHistory? _mockHistory;
     private readonly SynchronizationContext? _ui = SynchronizationContext.Current;
 
     private List<CandidateProfile> _profiles = [];
@@ -105,8 +111,9 @@ public partial class HomeViewModel : ObservableObject
 
     public HomeViewModel(
         IProfileRepository repository, IDocumentTextExtractor extractor, IDialogService dialogs, TechBank? bank = null,
-        ISettingsStore? settings = null)
+        ISettingsStore? settings = null, IMockHistory? mockHistory = null)
     {
+        _mockHistory = mockHistory;
         _repository = repository;
         _extractor = extractor;
         _dialogs = dialogs;
@@ -121,6 +128,78 @@ public partial class HomeViewModel : ObservableObject
         TypeOptions = new ObservableCollection<TypeOption>(
             QuestionTypes.Applicable(EmploymentType).Select(t => new TypeOption(t, OnTypeOptionChanged)));
         InitMockOptions();
+    }
+
+    // ---- an interview that was left, or that has no debrief yet
+
+    /// <summary>Raised to pick the pending interview up again (or to write its debrief), with the request that starts it.</summary>
+    public event Action<MockSessionRequest, MockRecord>? MockResumeRequested;
+
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(HasPendingMock), nameof(PendingMockText), nameof(PendingMockResumeLabel), nameof(CanResumePendingMock))]
+    private MockRecord? _pendingMock;
+
+    public bool HasPendingMock => PendingMock is not null;
+
+    public string PendingMockResumeLabel => PendingMock?.NeedsDebrief == true ? "Write the debrief" : "Resume";
+
+    /// <summary>The saved profile the pending interview was for. It cannot be picked up again if that profile has been deleted.</summary>
+    public bool CanResumePendingMock => PendingMock is { } record && FindProfileFor(record) is not null;
+
+    public string PendingMockText
+    {
+        get
+        {
+            if (PendingMock is not { } r) return "";
+            if (FindProfileFor(r) is null)
+                return $"There is a {r.RoundType.ToLowerInvariant()} interview that was not finished, but the profile it was for has been deleted, so it cannot be resumed.";
+            return r.NeedsDebrief
+                ? $"Your {r.RoundType.ToLowerInvariant()} interview for {r.JobRole} ended before its debrief was written."
+                : $"You left a {r.RoundType.ToLowerInvariant()} interview for {r.JobRole} unfinished ({r.ElapsedSeconds / 60}:{r.ElapsedSeconds % 60:00} of {r.DurationMinutes}:00 used). Pick it up where it stopped?";
+        }
+    }
+
+    private CandidateProfile? FindProfileFor(MockRecord record)
+        => _profiles.FirstOrDefault(p => record.ProfileId != 0 ? p.Id == record.ProfileId : p.Name == record.ProfileName);
+
+    /// <summary>Looks for the newest interview that was left or has no debrief. Called when Home opens; failures leave the notice off.</summary>
+    public async Task RefreshMockStatusAsync()
+    {
+        if (_mockHistory is null) return;
+        try
+        {
+            var records = await _mockHistory.ListAsync();
+            PendingMock = records.FirstOrDefault(r => r.IsUnfinished || r.NeedsDebrief);
+        }
+        catch (Exception ex) when (ex is IOException or Microsoft.EntityFrameworkCore.DbUpdateException or InvalidOperationException)
+        {
+            PendingMock = null;
+        }
+    }
+
+    [RelayCommand]
+    private void ResumePendingMock()
+    {
+        if (PendingMock is not { } record || FindProfileFor(record) is not { } profile) return;
+        var request = MockSessionRequest.From(record, profile.Clone(), _settings?.Current.ShowQuestionTextDefault ?? true);
+        PendingMock = null;
+        MockResumeRequested?.Invoke(request, record);
+    }
+
+    [RelayCommand]
+    private async Task DiscardPendingMockAsync()
+    {
+        if (PendingMock is not { } record || _mockHistory is null) return;
+        if (!_dialogs.Confirm("Discard interview", "Discard this interview? What was said so far is deleted and cannot be brought back.")) return;
+        try
+        {
+            await _mockHistory.DeleteAsync(record.Id);
+        }
+        catch (Exception ex) when (ex is IOException or Microsoft.EntityFrameworkCore.DbUpdateException)
+        {
+            Status = $"Could not discard the interview: {ex.Message}";
+            return;
+        }
+        await RefreshMockStatusAsync();
     }
 
     // ---- Mock Interview options: the round, its length, and whether the interviewer's words are shown
@@ -644,6 +723,7 @@ public partial class HomeViewModel : ObservableObject
     public async Task InitializeAsync()
     {
         await RefreshAsync(selectId: null);
+        await RefreshMockStatusAsync();
     }
 
     private async Task RefreshAsync(int? selectId)

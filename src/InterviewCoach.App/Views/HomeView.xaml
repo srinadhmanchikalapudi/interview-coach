@@ -114,6 +114,24 @@
                             </Border>
                         </Grid>
 
+                        <!-- An interview that was left, or that has no debrief yet -->
+                        <Border Style="{StaticResource Card}" Background="{DynamicResource SystemFillColorAttentionBackgroundBrush}"
+                                BorderBrush="{DynamicResource AccentFillColorDefaultBrush}"
+                                Visibility="{Binding HasPendingMock, Converter={StaticResource BoolToVis}}">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                    <TextBlock Style="{StaticResource Glyph}" Text="&#xE916;" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" Margin="0,0,10,0" />
+                                    <TextBlock Text="Mock interview" FontWeight="SemiBold" />
+                                </StackPanel>
+                                <TextBlock Text="{Binding PendingMockText}" TextWrapping="Wrap" />
+                                <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                                    <Button Content="{Binding PendingMockResumeLabel}" Command="{Binding ResumePendingMockCommand}" Padding="20,7"
+                                            Style="{DynamicResource AccentButtonStyle}" IsEnabled="{Binding CanResumePendingMock}" />
+                                    <Button Content="Discard" Command="{Binding DiscardPendingMockCommand}" Padding="18,7" Margin="10,0,0,0" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
                         <!-- Profile -->
                         <Border Style="{StaticResource Card}">
                             <StackPanel>

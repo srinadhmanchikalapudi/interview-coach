@@ -90,6 +90,13 @@ public partial class MockViewModel : ObservableObject
 
     /// <summary>Starts a mock interview for a saved profile: plans the round, then the interviewer speaks first.</summary>
     public void Begin(MockSessionRequest request)
+        => Start(request, engine => engine.StartAsync(request.Profile, request.Round, request.DurationMinutes, request.Employment));
+
+    /// <summary>Picks a stored interview up where it stopped, or writes the debrief of one that ended without it.</summary>
+    public void Resume(MockSessionRequest request, MockRecord record)
+        => Start(request, engine => engine.ResumeAsync(request.Profile, record));
+
+    private void Start(MockSessionRequest request, Func<MockEngine, Task> begin)
     {
         Abandon();
         _request = request;
@@ -105,7 +112,8 @@ public partial class MockViewModel : ObservableObject
         Composer.SetText("");
         ShowQuestionText = request.ShowQuestionText;
         Refresh();
-        _ = RunAsync(() => _engine.StartAsync(request.Profile, request.Round, request.DurationMinutes, request.Employment));
+        var engine = _engine;
+        _ = RunAsync(() => begin(engine));
     }
 
     // ---- what is on screen

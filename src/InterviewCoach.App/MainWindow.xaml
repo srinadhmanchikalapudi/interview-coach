@@ -3,6 +3,15 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Interview Coach" Height="820" Width="1220" MinHeight="580" MinWidth="900"
         Icon="pack://application:,,,/InterviewCoach.App;component/Assets/app.ico">
+    <Window.InputBindings>
+        <KeyBinding Key="D1" Modifiers="Control" Command="{Binding ShowHomeCommand}" />
+        <KeyBinding Key="D2" Modifiers="Control" Command="{Binding ShowConceptsCommand}" />
+        <KeyBinding Key="D3" Modifiers="Control" Command="{Binding ShowLibraryCommand}" />
+        <KeyBinding Key="D4" Modifiers="Control" Command="{Binding ShowHistoryCommand}" />
+        <KeyBinding Key="D5" Modifiers="Control" Command="{Binding ShowSettingsCommand}" />
+        <KeyBinding Key="F1" Command="{Binding ToggleShortcutsCommand}" />
+        <KeyBinding Key="Escape" Command="{Binding CloseShortcutsCommand}" />
+    </Window.InputBindings>
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
     </Window.Resources>
@@ -39,6 +48,9 @@
                     <ToggleButton Style="{StaticResource NavItem}" Content="Library" Tag="&#xE8F1;"
                                   Visibility="{Binding HasLibrary, Converter={StaticResource BoolToVis}}"
                                   Command="{Binding ShowLibraryCommand}" IsChecked="{Binding IsLibrarySelected, Mode=OneWay}" />
+                    <ToggleButton Style="{StaticResource NavItem}" Content="History" Tag="&#xE81C;"
+                                  Visibility="{Binding HasHistory, Converter={StaticResource BoolToVis}}"
+                                  Command="{Binding ShowHistoryCommand}" IsChecked="{Binding IsHistorySelected, Mode=OneWay}" />
                     <ToggleButton Style="{StaticResource NavItem}" Content="Settings" Tag="&#xE713;"
                                   Command="{Binding ShowSettingsCommand}" IsChecked="{Binding IsSettingsSelected, Mode=OneWay}" />
                 </StackPanel>
@@ -54,7 +66,93 @@
             </Grid>
         </Border>
 
-        <!-- Page -->
-        <ContentControl Grid.Column="1" Content="{Binding CurrentPage}" />
+        <!-- Page, with a bar above it for a problem or a missing key -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" Padding="24,10" BorderThickness="0,0,0,1" Visibility="{Binding HasNotice, Converter={StaticResource BoolToVis}}"
+                    BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Background" Value="{DynamicResource SystemFillColorAttentionBackgroundBrush}" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Notice.Level}" Value="Warning">
+                                <Setter Property="Background" Value="{DynamicResource SystemFillColorCautionBackgroundBrush}" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Notice.Level}" Value="Error">
+                                <Setter Property="Background" Value="{DynamicResource SystemFillColorCriticalBackgroundBrush}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Style="{StaticResource Glyph}" Text="&#xE7BA;" Margin="0,0,12,0" />
+                    <TextBlock Grid.Column="1" Text="{Binding Notice.Text}" TextWrapping="Wrap" VerticalAlignment="Center" AutomationProperties.Name="Notice" />
+                    <Button Grid.Column="2" Content="{Binding Notice.ActionLabel}" Command="{Binding RunNoticeActionCommand}" Padding="16,5" Margin="12,0,0,0">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Notice.ActionLabel}" Value="{x:Null}">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Button Grid.Column="3" Command="{Binding DismissNoticeCommand}" Padding="10,5" Margin="8,0,0,0" ToolTip="Dismiss" AutomationProperties.Name="Dismiss">
+                        <TextBlock Style="{StaticResource Glyph}" Text="&#xE711;" FontSize="12" />
+                    </Button>
+                </Grid>
+            </Border>
+
+            <ContentControl Grid.Row="1" Content="{Binding CurrentPage}" />
+
+            <!-- Keyboard shortcuts (F1) -->
+            <Border Grid.Row="0" Grid.RowSpan="2" Background="#99000000" Visibility="{Binding ShowShortcuts, Converter={StaticResource BoolToVis}}">
+                <Border Style="{StaticResource Card}" MaxWidth="520" Padding="28,24" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="32">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,14">
+                            <TextBlock Text="Keyboard shortcuts" Style="{StaticResource CardHeading}" FontSize="18" />
+                            <Button Command="{Binding CloseShortcutsCommand}" HorizontalAlignment="Right" Padding="10,4" AutomationProperties.Name="Close">
+                                <TextBlock Style="{StaticResource Glyph}" Text="&#xE711;" FontSize="12" />
+                            </Button>
+                        </Grid>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Ctrl+1 to Ctrl+5" FontWeight="SemiBold" Margin="0,0,0,8" />
+                                <TextBlock Text="F2" FontWeight="SemiBold" Margin="0,0,0,8" />
+                                <TextBlock Text="Ctrl+Enter" FontWeight="SemiBold" Margin="0,0,0,8" />
+                                <TextBlock Text="Ctrl+N" FontWeight="SemiBold" Margin="0,0,0,8" />
+                                <TextBlock Text="Ctrl+R" FontWeight="SemiBold" Margin="0,0,0,8" />
+                                <TextBlock Text="F1" FontWeight="SemiBold" Margin="0,0,0,8" />
+                                <TextBlock Text="Esc" FontWeight="SemiBold" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="Home, Concepts, Library, History, Settings" Margin="0,0,0,8" TextWrapping="Wrap" />
+                                <TextBlock Text="Start or stop the microphone (Practice and Mock Interview)" Margin="0,0,0,8" TextWrapping="Wrap" />
+                                <TextBlock Text="Send your answer (Practice and Mock Interview)" Margin="0,0,0,8" TextWrapping="Wrap" />
+                                <TextBlock Text="Next question (Learn and Practice)" Margin="0,0,0,8" TextWrapping="Wrap" />
+                                <TextBlock Text="Say the question again (Practice, Mock Interview)" Margin="0,0,0,8" TextWrapping="Wrap" />
+                                <TextBlock Text="Show or hide this list" Margin="0,0,0,8" TextWrapping="Wrap" />
+                                <TextBlock Text="Close this list" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </Border>
+        </Grid>
     </Grid>
 </Window>

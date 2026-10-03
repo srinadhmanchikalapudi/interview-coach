@@ -463,8 +463,7 @@ public class DebriefTests
             Assert.Contains("Speak", buttons);
             Assert.Contains("Repeat", buttons);
             Assert.Contains(Descendants<TextBox>(view), b => Shown(b) && b.AcceptsReturn);
-            var f2 = Assert.Single(view.InputBindings.OfType<KeyBinding>());
-            Assert.Equal(Key.F2, f2.Key);
+            Assert.Contains(view.InputBindings.OfType<KeyBinding>(), b => b.Key == Key.F2 && b.Modifiers == ModifierKeys.None);
             Assert.DoesNotContain(texts, t => t.StartsWith("WHAT THEY"));                    // no coaching on this screen
         });
 

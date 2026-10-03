@@ -56,9 +56,13 @@ public partial class App : Application
         base.OnExit(e);
     }
 
-    private static void OnUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+    // Something nobody expected: shown above the page (so the work on screen is not lost behind a dialog) when the window is up, in a dialog before that.
+    private void OnUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
-        MessageBox.Show(e.Exception.Message, "Interview Coach", MessageBoxButton.OK, MessageBoxImage.Error);
+        if (_host?.Services.GetService<MainViewModel>() is { } main && MainWindow is { IsLoaded: true })
+            main.ReportError($"Something unexpected went wrong: {e.Exception.Message}");
+        else
+            MessageBox.Show(e.Exception.Message, "Interview Coach", MessageBoxButton.OK, MessageBoxImage.Error);
         e.Handled = true;
     }
 }
@@ -106,6 +110,7 @@ internal static class ServiceRegistration
         s.AddSingleton<PracticeViewModel>();
         s.AddSingleton<ConceptsViewModel>();
         s.AddSingleton<MockViewModel>();
+        s.AddSingleton<HistoryViewModel>();
         s.AddSingleton<MainViewModel>();
         s.AddSingleton<MainWindow>();
         return builder;

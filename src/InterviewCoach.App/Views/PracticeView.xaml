@@ -4,6 +4,8 @@
              xmlns:ctl="clr-namespace:InterviewCoach.App.Controls">
     <UserControl.InputBindings>
         <KeyBinding Key="F2" Command="{Binding ToggleMicCommand}" />
+        <KeyBinding Key="N" Modifiers="Control" Command="{Binding NextCommand}" />
+        <KeyBinding Key="R" Modifiers="Control" Command="{Binding RepeatQuestionCommand}" />
     </UserControl.InputBindings>
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />

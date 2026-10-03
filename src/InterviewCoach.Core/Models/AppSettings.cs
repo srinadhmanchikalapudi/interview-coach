@@ -119,6 +119,15 @@ public class AppSettings
     [JsonIgnore] public string? EffectiveAzureSpeechKey => Pick(AzureSpeechKey, "AZURE_SPEECH_KEY");
     [JsonIgnore] public string? EffectiveAzureSpeechRegion => Pick(AzureSpeechRegion, "AZURE_SPEECH_REGION");
 
+    /// <summary>True when the selected language-model provider has what it needs to be called: a key, or for an OpenAI-compatible server an address (local servers need no key).</summary>
+    [JsonIgnore]
+    public bool HasLlmCredentials => Provider switch
+    {
+        LlmProvider.Anthropic => !string.IsNullOrWhiteSpace(EffectiveAnthropicKey),
+        LlmProvider.OpenRouter => !string.IsNullOrWhiteSpace(EffectiveOpenRouterKey),
+        _ => !string.IsNullOrWhiteSpace(EffectiveOpenAiKey) || !string.IsNullOrWhiteSpace(OpenAiBaseUrl),
+    };
+
     public AppSettings Clone() => (AppSettings)MemberwiseClone();
 
     private static string? Pick(string? stored, string envVar)

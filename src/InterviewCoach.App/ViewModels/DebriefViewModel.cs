@@ -17,6 +17,15 @@ public record FixRow(string Fix, string Example, string HowToPractice)
     public bool HasHowToPractice => !string.IsNullOrWhiteSpace(HowToPractice);
 }
 
+/// <summary>
+/// Everything a debrief screen shows, from a live interview or from a stored one. <see cref="Engine"/> is set for a live interview: its
+/// coaching may still be arriving and a failed card can be retried. <see cref="Profile"/> is null when the stored interview's profile no
+/// longer exists, in which case its questions cannot be practised.
+/// </summary>
+public sealed record DebriefSource(
+    DebriefDto Debrief, IReadOnlyList<MockThread> Threads, string JobRole, RoundType Round, int DurationMinutes, int ElapsedSeconds, DateTime When,
+    CandidateProfile? Profile, EmploymentType Employment, MockEngine? Engine = null);
+
 /// <summary>One question of the interview on the debrief: the exchange, and the Coach's view of it once that is written.</summary>
 public sealed partial class ThreadCardViewModel : ObservableObject
 {
@@ -24,18 +33,23 @@ public sealed partial class ThreadCardViewModel : ObservableObject
     private readonly Action<ThreadCardViewModel> _practice;
     private readonly Action<ThreadCardViewModel> _retry;
     private readonly Action<ThreadCardViewModel, FollowUp> _followUp;
+    private readonly bool _canPractise;
+    private readonly bool _canRetry;
 
     public ThreadCardViewModel(
-        int number, MockThread thread, Action<ThreadCardViewModel> practice, Action<ThreadCardViewModel> retry, Action<ThreadCardViewModel, FollowUp> followUp)
+        int number, MockThread thread, Action<ThreadCardViewModel> practice, Action<ThreadCardViewModel> retry, Action<ThreadCardViewModel, FollowUp> followUp,
+        bool canPractise = true, bool canRetry = true)
     {
         Number = number;
         _thread = thread;
         _practice = practice;
         _retry = retry;
         _followUp = followUp;
+        _canPractise = canPractise;
+        _canRetry = canRetry;
         Turns = thread.Turns.Select(t => new ConversationLine(t.Speaker == MockSpeaker.Interviewer ? "Interviewer" : "You", t.Text, t.Speaker == MockSpeaker.Interviewer)).ToList();
-        PracticeCommand = new RelayCommand(() => _practice(this));
-        RetryCommand = new RelayCommand(() => _retry(this), () => IsFailed);
+        PracticeCommand = new RelayCommand(() => _practice(this), () => _canPractise);
+        RetryCommand = new RelayCommand(() => _retry(this), () => IsFailed && _canRetry);
     }
 
     public int Number { get; }
@@ -52,6 +66,12 @@ public sealed partial class ThreadCardViewModel : ObservableObject
     public bool IsNotAnswered => Status == ThreadStatus.NotAnswered;
     public string? Error => _thread.Error;
 
+    /// <summary>False for a stored interview whose profile is gone: Practice needs a profile to coach against.</summary>
+    public bool CanPractise => _canPractise;
+
+    /// <summary>False for a stored interview: only a live one can ask the Coach again.</summary>
+    public bool CanRetry => _canRetry;
+
     [ObservableProperty] private CoachOutputViewModel? _coach;
 
     public IRelayCommand PracticeCommand { get; }
@@ -61,7 +81,15 @@ public sealed partial class ThreadCardViewModel : ObservableObject
     public void Refresh()
     {
         if (_thread.Status == ThreadStatus.Done && _thread.Coach is { } coach && Coach is null)
-            Coach = new CoachOutputViewModel(coach, f => _followUp(this, f), null, "Click one to practise it.");
+        {
+            // Without a profile there is nothing to practise against, so the follow-ups are not offered as buttons that go nowhere.
+            var shown = _canPractise ? coach : new CoachOutput
+            {
+                WhatTheyreTesting = coach.WhatTheyreTesting, Feedback = coach.Feedback, ModelAnswer = coach.ModelAnswer, Shape = coach.Shape,
+                Delivery = coach.Delivery, FollowUps = [],
+            };
+            Coach = new CoachOutputViewModel(shown, f => _followUp(this, f), null, "Click one to practise it.");
+        }
         OnPropertyChanged(nameof(Status));
         OnPropertyChanged(nameof(IsCoaching));
         OnPropertyChanged(nameof(IsFailed));
@@ -72,25 +100,27 @@ public sealed partial class ThreadCardViewModel : ObservableObject
 
 /// <summary>
 /// The debrief screen (spec 4.3): the overall summary with a hire-signal badge, ratings for the focus areas, strengths, top fixes, what to
-/// practise next, and one card per question with the Coach's view of the exchange. The cards fill in as their Coach calls finish.
+/// practise next, and one card per question with the Coach's view of the exchange. For a live interview the cards fill in as their Coach
+/// calls finish; for a stored one (from History) everything is already there.
 /// </summary>
 public sealed partial class DebriefViewModel : ObservableObject
 {
-    private readonly MockEngine _engine;
-    private readonly MockSessionRequest _request;
+    private readonly DebriefSource _source;
     private readonly IDialogService? _dialogs;
-    private readonly Func<DateTime> _now;
-    private readonly DateTime _when;
 
     public DebriefViewModel(MockEngine engine, MockSessionRequest request, IDialogService? dialogs = null, Func<DateTime>? now = null)
+        : this(new DebriefSource(
+            engine.Debrief ?? new DebriefDto(), engine.Threads, request.Profile.JobRole, request.Round, request.DurationMinutes, engine.ElapsedSeconds,
+            (now ?? (() => DateTime.UtcNow))(), request.Profile, request.Employment, engine), dialogs)
     {
-        _engine = engine;
-        _request = request;
-        _dialogs = dialogs;
-        _now = now ?? (() => DateTime.UtcNow);
-        _when = _now();
+    }
 
-        var debrief = engine.Debrief ?? new DebriefDto();
+    public DebriefViewModel(DebriefSource source, IDialogService? dialogs = null)
+    {
+        _source = source;
+        _dialogs = dialogs;
+
+        var debrief = source.Debrief;
         Summary = debrief.OverallSummary;
         SignalLabel = HireSignals.Label(debrief.HireSignal);
         Tone = HireSignals.Tone(debrief.HireSignal);
@@ -99,16 +129,20 @@ public sealed partial class DebriefViewModel : ObservableObject
         Fixes = debrief.TopFixes.Select(f => new FixRow(f.Fix, f.Example, f.HowToPractice)).ToList();
         PracticeNext = debrief.PracticeNext;
         Threads = new ObservableCollection<ThreadCardViewModel>(
-            engine.Threads.Select((t, i) => new ThreadCardViewModel(i + 1, t, OnPractice, card => _ = RetryThreadAsync(card), OnFollowUp)));
+            source.Threads.Select((t, i) => new ThreadCardViewModel(
+                i + 1, t, OnPractice, card => _ = RetryThreadAsync(card), OnFollowUp, canPractise: source.Profile is not null, canRetry: source.Engine is not null)));
         foreach (var card in Threads) card.Refresh();
-        engine.Changed += OnEngineChanged;
+        if (source.Engine is not null) source.Engine.Changed += OnEngineChanged;
     }
 
     /// <summary>Raised when the user wants to practise one of the questions: Practice opens on it (spec 4.3).</summary>
     public event Action<LearnSessionRequest, LearnItem>? PracticeRequested;
 
-    /// <summary>Raised when the user goes back Home.</summary>
+    /// <summary>Raised when the user goes back (Home after an interview, History when it was opened from there).</summary>
     public event Action? ExitRequested;
+
+    /// <summary>The text of the Back button.</summary>
+    [ObservableProperty] private string _backLabel = "Back to Home";
 
     public string Summary { get; }
     public string SignalLabel { get; }
@@ -129,12 +163,17 @@ public sealed partial class DebriefViewModel : ObservableObject
     public bool HasPracticeNext => PracticeNext.Count > 0;
     public bool HasThreads => Threads.Count > 0;
 
+    /// <summary>True for a stored interview whose profile has been deleted, so its questions cannot be practised.</summary>
+    public bool ProfileMissing => _source.Profile is null;
+
+    public string DateText => _source.When.ToLocalTime().ToString("d MMMM yyyy, HH:mm");
+
     public string RoleLine
     {
         get
         {
-            var spent = _engine.ElapsedSeconds;
-            return $"{_request.Profile.JobRole} · {_request.Round.Label()} · {_request.DurationMinutes} min planned · {spent / 60}:{spent % 60:00} spent";
+            var spent = _source.Engine?.ElapsedSeconds ?? _source.ElapsedSeconds;
+            return $"{_source.JobRole} · {_source.Round.Label()} · {_source.DurationMinutes} min planned · {spent / 60}:{spent % 60:00} spent";
         }
     }
 
@@ -153,36 +192,42 @@ public sealed partial class DebriefViewModel : ObservableObject
         OnPropertyChanged(nameof(IsStillCoaching));
     }
 
-    private Task RetryThreadAsync(ThreadCardViewModel card) => _engine.RetryThreadAsync(card.Thread);
+    private Task RetryThreadAsync(ThreadCardViewModel card) => _source.Engine?.RetryThreadAsync(card.Thread) ?? Task.CompletedTask;
 
     private static string TypeIdOf(MockThread thread)
         => QuestionTypes.All.Cast<QuestionType?>().FirstOrDefault(t => t!.Value.Id().Equals(thread.Phase?.Trim(), StringComparison.OrdinalIgnoreCase))?.Id() ?? "";
 
-    private LearnSessionRequest PracticeRequest() => new(_request.Profile, [], null, [], _request.Employment);
+    private LearnSessionRequest? PracticeRequest() => _source.Profile is null ? null : new(_source.Profile, [], null, [], _source.Employment);
 
     private void OnPractice(ThreadCardViewModel card)
-        => PracticeRequested?.Invoke(PracticeRequest(), new LearnItem { Question = card.Question, QuestionType = TypeIdOf(card.Thread), Source = "mock" });
+    {
+        if (PracticeRequest() is not { } request) return;
+        PracticeRequested?.Invoke(request, new LearnItem { Question = card.Question, QuestionType = TypeIdOf(card.Thread), Source = "mock" });
+    }
 
     // A follow-up the Coach suggested becomes the next question in Practice, as it does there.
     private void OnFollowUp(ThreadCardViewModel card, FollowUp followUp)
-        => PracticeRequested?.Invoke(PracticeRequest(), new LearnItem
+    {
+        if (PracticeRequest() is not { } request) return;
+        PracticeRequested?.Invoke(request, new LearnItem
         {
             Question = followUp.Question, QuestionType = TypeIdOf(card.Thread), Source = "mock", IsFollowUp = true, ParentQuestion = card.Question, Hint = followUp.Hint,
         });
+    }
 
     /// <summary>Writes the debrief to a Markdown file the user chooses.</summary>
     [RelayCommand]
     private void Export()
     {
-        if (_engine.Debrief is not { } debrief) return;
-        var name = $"mock-debrief-{_when:yyyy-MM-dd-HHmm}.md";
+        var name = $"mock-debrief-{_source.When.ToLocalTime():yyyy-MM-dd-HHmm}.md";
         var path = _dialogs?.PickSaveFile("Export debrief", "Markdown (*.md)|*.md|All files (*.*)|*.*", name);
         if (path is null) return;
 
         try
         {
             var markdown = DebriefMarkdown.Render(
-                _request.Profile.JobRole, _request.Round, _request.DurationMinutes, _when.ToLocalTime(), _engine.ElapsedSeconds, debrief, _engine.Threads);
+                _source.JobRole, _source.Round, _source.DurationMinutes, _source.When.ToLocalTime(), _source.Engine?.ElapsedSeconds ?? _source.ElapsedSeconds,
+                _source.Debrief, _source.Threads);
             File.WriteAllText(path, markdown, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
             ExportStatus = IsStillCoaching
                 ? $"Saved to {path}. Some questions were still being coached, so they say so in the file."

@@ -40,7 +40,12 @@
             <StackPanel Margin="32,28,32,28" MaxWidth="900">
 
                 <TextBlock Text="Your debrief" Style="{StaticResource PageTitle}" />
-                <TextBlock Text="{Binding RoleLine}" Style="{StaticResource PageSubtitle}" Margin="0,4,0,20" />
+                <TextBlock Text="{Binding RoleLine}" Style="{StaticResource PageSubtitle}" Margin="0,4,0,2" />
+                <TextBlock Text="{Binding DateText}" Style="{StaticResource Hint}" Margin="0,0,0,18" />
+                <Border Style="{StaticResource InsetCard}" Margin="0,0,0,16" Background="{DynamicResource SystemFillColorCautionBackgroundBrush}"
+                        Visibility="{Binding ProfileMissing, Converter={StaticResource BoolToVis}}">
+                    <TextBlock TextWrapping="Wrap" Text="The profile for this interview has been deleted, so its questions cannot be practised from here." />
+                </Border>
 
                 <!-- 1. The summary and the signal -->
                 <Border Style="{StaticResource Card}">
@@ -187,7 +192,8 @@
                                         <StackPanel Visibility="{Binding IsFailed, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
                                             <TextBlock Text="{Binding Error, StringFormat='The coaching for this question could not be written: {0}'}" TextWrapping="Wrap"
                                                        Foreground="{DynamicResource SystemFillColorCautionBrush}" />
-                                            <Button Content="Try again" Command="{Binding RetryCommand}" Padding="16,5" Margin="0,8,0,0" HorizontalAlignment="Left" />
+                                            <Button Content="Try again" Command="{Binding RetryCommand}" Padding="16,5" Margin="0,8,0,0" HorizontalAlignment="Left"
+                                                    Visibility="{Binding CanRetry, Converter={StaticResource BoolToVis}}" />
                                         </StackPanel>
                                         <StackPanel Visibility="{Binding IsCoaching, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
                                             <ProgressBar IsIndeterminate="True" Height="3" Margin="0,0,0,8" />
@@ -196,7 +202,8 @@
 
                                         <ContentControl Content="{Binding Coach}" />
 
-                                        <Button Command="{Binding PracticeCommand}" Padding="18,7" HorizontalAlignment="Left">
+                                        <Button Command="{Binding PracticeCommand}" Padding="18,7" HorizontalAlignment="Left"
+                                                Visibility="{Binding CanPractise, Converter={StaticResource BoolToVis}}">
                                             <StackPanel Orientation="Horizontal">
                                                 <TextBlock Style="{StaticResource Glyph}" Text="&#xE70F;" FontSize="13" Margin="0,0,8,0" />
                                                 <TextBlock Text="Practise this question" />
@@ -221,7 +228,7 @@
                 <Button Grid.Column="0" Command="{Binding BackCommand}" Padding="18,8">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Style="{StaticResource Glyph}" Text="&#xE72B;" FontSize="12" Margin="0,0,9,0" />
-                        <TextBlock Text="Back to Home" />
+                        <TextBlock Text="{Binding BackLabel}" />
                     </StackPanel>
                 </Button>
                 <TextBlock Grid.Column="1" Text="{Binding ExportStatus}" Margin="18,0" VerticalAlignment="Center" TextWrapping="Wrap"
