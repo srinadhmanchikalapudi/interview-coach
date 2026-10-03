@@ -92,6 +92,9 @@ public class VisualSnapshots
             Add("Tell me about a time you pushed back on a deadline.", "behavioral", null, false, "On the claims migration the date was set before the data was clean. I showed the team the failure rate from a trial run and we moved the cutover by two weeks.");
             Add("Design a notification service for a claims platform.", "system_design", null, false, "I would put a queue between the claims service and the senders, keep a preference store per user, and retry failed sends with backoff.");
             var library = new LibraryViewModel(history, new ScriptedDialogs());
+            var practiceClock = new DateTime(2026, 10, 3, 12, 0, 0, DateTimeKind.Utc);
+            var practiceLlm = new StubLlm { QuestionText = "Tell me about a time you pushed back on a deadline." };
+            var practiceVm = new PracticeViewModel(practiceLlm, prompts, settings, null, () => 0.0, () => practiceClock);
             var main = new MainViewModel(home, settingsVm, learn, settings, library);
 
             var window = new MainWindow(main);
@@ -135,6 +138,17 @@ public class VisualSnapshots
                 library.Selected = library.Rows.First(r => r.Question.StartsWith("What does a hook"));
                 main.CurrentPage = library;
                 Save(window, 1180, 1100, Path.Combine(dir, $"6-library-{name}.png"));
+
+                practiceClock = new DateTime(2026, 10, 3, 12, 0, 0, DateTimeKind.Utc);
+                practiceVm.Begin(new LearnSessionRequest(repo.ListAsync().GetAwaiter().GetResult()[0], [QuestionType.Behavioral], null, [], EmploymentType.FullTime));
+                practiceVm.AnswerText = "On the claims migration the date was set before the data was clean. I ran a trial cutover, showed the team a four percent failure rate, and proposed moving the date by two weeks while we fixed the mapping. We moved it, and the real cutover had no failed claims.";
+                practiceClock = practiceClock.AddSeconds(102);
+                practiceVm.Tick();
+                main.CurrentPage = practiceVm;
+                Save(window, 1180, 760, Path.Combine(dir, $"7-practice-answering-{name}.png"));
+
+                practiceVm.SubmitCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+                Save(window, 1180, 1850, Path.Combine(dir, $"8-practice-feedback-{name}.png"));
             }
         });
     }

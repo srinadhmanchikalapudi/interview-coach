@@ -16,8 +16,9 @@ public record FollowUpItem(string Question, string Hint, ICommand OpenCommand);
 /// <summary>Display model for one Coach reply (spec 4.7). Immutable: a new instance is made for each reply.</summary>
 public sealed class CoachOutputViewModel
 {
-    public CoachOutputViewModel(CoachOutput coach, Action<FollowUp> openFollowUp, string? questionTypeId = null)
+    public CoachOutputViewModel(CoachOutput coach, Action<FollowUp> openFollowUp, string? questionTypeId = null, string? followUpPrompt = null)
     {
+        FollowUpPrompt = followUpPrompt ?? "Click one to see how to answer it.";
         WhatTheyreTesting = coach.WhatTheyreTesting;
         ModelAnswer = coach.ModelAnswer;
         WordCount = AnswerLength.CountWords(coach.ModelAnswer);
@@ -35,6 +36,8 @@ public sealed class CoachOutputViewModel
             .ToList();
     }
 
+    /// <summary>The line under the follow-ups: in Learn they show how to answer, in Practice they become the next question.</summary>
+    public string FollowUpPrompt { get; }
     public string WhatTheyreTesting { get; }
     public string ModelAnswer { get; }
     public int WordCount { get; }

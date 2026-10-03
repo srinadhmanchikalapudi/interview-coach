@@ -87,3 +87,38 @@ public Task<IReadOnlyList<OpenRouterModel>> GetModelsAsync(bool refresh, Cancell
     return Task.FromResult<IReadOnlyList<OpenRouterModel>>(models);
 }
 }
+
+/// <summary>A model that answers questions and coaching with fixed, readable output, for the Practice tests and screenshots.</summary>
+internal sealed class StubLlm : ILlmService
+{
+    public List<(LlmRole Role, string Prompt)> Calls { get; } = [];
+    public string QuestionType { get; set; } = "behavioral";
+    /// <summary>The question to ask; empty means "Practice question N?".</summary>
+    public string QuestionText { get; set; } = "";
+    public bool FailCoach { get; set; }
+    public bool ThrowUnexpected { get; set; }
+    private int _questions;
+
+    public IEnumerable<string> CoachPrompts => Calls.Where(c => c.Role == LlmRole.Coach).Select(c => c.Prompt);
+
+    public Task<T> GetJsonAsync<T>(LlmRole role, string systemPrompt, IReadOnlyList<ChatTurn> messages, CancellationToken ct)
+    {
+        Calls.Add((role, systemPrompt));
+        if (role == LlmRole.QuestionGenerator)
+            return Task.FromResult((T)(object)new QuestionDto { Question = QuestionText.Length > 0 ? QuestionText : $"Practice question {++_questions}?", QuestionType = QuestionType, Focus = "ownership", Source = "resume" });
+
+        if (ThrowUnexpected) throw new InvalidOperationException("something unexpected");
+        if (FailCoach) throw new LlmException("the coach is unavailable");
+        return Task.FromResult((T)(object)new CoachOutput
+        {
+            WhatTheyreTesting = "ownership and results",
+            Feedback = [new FeedbackPoint { Kind = "strength", Point = "You gave a number.", Quote = "cut p99 to 80ms" }, new FeedbackPoint { Kind = "fix", Point = "Say what you chose." }],
+            ModelAnswer = "I cut p99 by caching the hot lookups.",
+            Shape = "Direct answer → the constraint → result",
+            Delivery = "A good length.",
+            FollowUps = [new FollowUp { Question = "Why Redis?", Hint = "Name the alternative." }, new FollowUp { Question = "How did you measure it?", Hint = "Say the metric." }],
+        });
+    }
+
+    public Task<IReadOnlyList<ConnectionTestResult>> TestConnectionAsync(AppSettings settings, CancellationToken ct) => throw new NotSupportedException();
+}

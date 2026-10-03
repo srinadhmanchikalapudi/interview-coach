@@ -15,7 +15,9 @@ public partial class MainViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsHomeSelected), nameof(IsSettingsSelected), nameof(IsLibrarySelected))]
     private object _currentPage;
 
-    public MainViewModel(HomeViewModel home, SettingsViewModel settings, LearnViewModel learn, ISettingsStore store, LibraryViewModel? library = null)
+    public MainViewModel(
+        HomeViewModel home, SettingsViewModel settings, LearnViewModel learn, ISettingsStore store, LibraryViewModel? library = null,
+        PracticeViewModel? practice = null)
     {
         _home = home;
         _settings = settings;
@@ -30,6 +32,20 @@ public partial class MainViewModel : ObservableObject
             CurrentPage = learn;
         };
         learn.ExitRequested += () => CurrentPage = _home;
+        if (practice is not null)
+        {
+            home.PracticeRequested += request =>
+            {
+                practice.Begin(request);
+                CurrentPage = practice;
+            };
+            learn.TryItMyselfRequested += (request, question) =>
+            {
+                practice.BeginFrom(request, question);
+                CurrentPage = practice;
+            };
+            practice.ExitRequested += () => CurrentPage = _home;
+        }
         if (library is not null)
         {
             home.LibraryRequested += ShowLibrary;

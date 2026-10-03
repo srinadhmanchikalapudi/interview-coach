@@ -166,6 +166,19 @@ public sealed class PracticeEngine(ILlmService llm, IPromptLibrary prompts, Tech
     }
 
     /// <summary>
+    /// After a failed Coach call, goes back to the answer so it can be changed before it is sent again. The answer itself is kept
+    /// (<see cref="PendingAnswer"/>), so nothing the candidate wrote is ever lost.
+    /// </summary>
+    public void EditAnswer()
+    {
+        if (Phase != PracticePhase.Failed || _failedStep != Step.Coach || _pending is null) return;
+        BeginOperation();
+        Error = null;
+        _failedStep = Step.None;
+        SetPhase(PracticePhase.Answering);
+    }
+
+    /// <summary>
     /// Answers the same question again. The last answer is passed to the Coach with the next one, so the feedback can say what
     /// changed. No LLM call happens here.
     /// </summary>

@@ -122,7 +122,7 @@ public class ViewSmokeTests
                 Assert.True(selected.IsEnabled, $"visit {visit}: the selected card must be the usable one");
                 Assert.Equal(2, ((Border)selected.Template.FindName("Card", selected)).BorderThickness.Left); // drawn as selected
                 Assert.Equal(Visibility.Visible, ((Border)selected.Template.FindName("Check", selected)).Visibility);
-                Assert.Equal(2, cards.Count(c => !c.IsEnabled)); // Mock Interview and Practice are not available yet
+                Assert.Equal(1, cards.Count(c => !c.IsEnabled)); // only Mock Interview is not available yet
             }
         });
     }

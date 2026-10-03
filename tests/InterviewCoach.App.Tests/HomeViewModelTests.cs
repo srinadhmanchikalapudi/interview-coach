@@ -134,7 +134,7 @@ public class HomeViewModelTests
 
         Assert.Null(vm.AnswerWords);
         Assert.False(vm.CanStart);
-        Assert.False(vm.StartLearnCommand.CanExecute(null));
+        Assert.False(vm.StartCommand.CanExecute(null));
         Assert.Contains("number from 30 to 600", vm.StartHint);
     }
 
@@ -146,7 +146,7 @@ public class HomeViewModelTests
         int? requested = null;
         vm.LearnRequested += r => requested = r.AnswerWords;
 
-        vm.StartLearnCommand.Execute(null);
+        vm.StartCommand.Execute(null);
 
         Assert.Equal(80, requested);
     }
@@ -159,7 +159,7 @@ public class HomeViewModelTests
         var (vm, _, _) = await CreateAsync();
 
         Assert.False(vm.CanStart);
-        Assert.False(vm.StartLearnCommand.CanExecute(null));
+        Assert.False(vm.StartCommand.CanExecute(null));
         Assert.Contains("profile", vm.StartHint);
     }
 
@@ -169,7 +169,7 @@ public class HomeViewModelTests
         var (vm, _, _) = await CreateAsync(Samples.CompleteProfile());
 
         Assert.True(vm.CanStart);
-        Assert.True(vm.StartLearnCommand.CanExecute(null));
+        Assert.True(vm.StartCommand.CanExecute(null));
         Assert.Equal("", vm.StartHint);
     }
 
@@ -207,7 +207,7 @@ public class HomeViewModelTests
         int? words = -1;
         vm.LearnRequested += r => (profile, types, words) = (r.Profile, r.Types, r.AnswerWords);
 
-        vm.StartLearnCommand.Execute(null);
+        vm.StartCommand.Execute(null);
 
         Assert.Equal("Senior Backend Engineer", profile!.JobRole);
         Assert.NotEqual(0, profile.Id);

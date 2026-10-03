@@ -123,6 +123,12 @@
                             Visibility="{Binding CanGoBack, Converter={StaticResource BoolToVis}}">
                         <TextBlock Text="Back to the main question" />
                     </Button>
+                    <Button Command="{Binding TryItMyselfCommand}" Padding="18,8" Margin="0,0,10,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource Glyph}" Text="&#xE70F;" FontSize="12" Margin="0,0,9,0" />
+                            <TextBlock Text="Try it myself" />
+                        </StackPanel>
+                    </Button>
                     <Button Command="{Binding NextCommand}" Padding="26,8" Style="{DynamicResource AccentButtonStyle}">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="Next question" FontWeight="SemiBold" />

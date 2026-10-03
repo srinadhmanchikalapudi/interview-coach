@@ -18,7 +18,10 @@ public record ProfileListItem(int Id, string Title, string Subtitle)
 
 public enum AnswerLengthChoice { InterviewerNorm, Short, Medium, Long, Custom }
 
-/// <summary>Everything Start hands over to begin a Learn session.</summary>
+/// <summary>The kind of session Start begins. Mock Interview arrives in a later milestone.</summary>
+public enum SessionMode { Learn, Practice }
+
+/// <summary>Everything Start hands over to begin a Learn or Practice session.</summary>
 public record LearnSessionRequest(
     CandidateProfile Profile,
     IReadOnlyCollection<QuestionType> Types,
@@ -170,6 +173,9 @@ public partial class HomeViewModel : ObservableObject
     /// </summary>
     public event Action<LearnSessionRequest>? LearnRequested;
 
+    /// <summary>Raised by Start in Practice mode with the same details as <see cref="LearnRequested"/>.</summary>
+    public event Action<LearnSessionRequest>? PracticeRequested;
+
     /// <summary>Raised when the user opens the library of questions and answers they have already seen.</summary>
     public event Action? LibraryRequested;
 
@@ -215,11 +221,22 @@ public partial class HomeViewModel : ObservableObject
     // ---- By technology: questions about technologies picked from the job description
 
     /// <summary>
-    /// Learn is the only mode that can be chosen so far, so its card is always shown as selected. This is bound instead of using
-    /// a radio group, because a group's state is shared between view instances and the card came back unselected whenever the
-    /// Home view was created again after visiting another page.
+    /// The chosen mode, Learn or Practice. The cards are bound to it (through <see cref="IsLearnMode"/> and
+    /// <see cref="IsPracticeMode"/>) instead of using a radio group, because a group's state is shared between view instances and
+    /// the Learn card once came back unselected whenever the Home view was created again after visiting another page.
     /// </summary>
-    public bool IsLearnMode => true;
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(IsLearnMode), nameof(IsPracticeMode), nameof(StartLabel))]
+    private SessionMode _mode = SessionMode.Learn;
+
+    public bool IsLearnMode => Mode == SessionMode.Learn;
+    public bool IsPracticeMode => Mode == SessionMode.Practice;
+    public string StartLabel => IsPracticeMode ? "Start Practice" : "Start Learn";
+
+    [RelayCommand]
+    private void SelectLearn() => Mode = SessionMode.Learn;
+
+    [RelayCommand]
+    private void SelectPractice() => Mode = SessionMode.Practice;
 
     /// <summary>The By technology option needs the technology bank, which also finds the technologies in a job description.</summary>
     public bool HasTechnologyOption => _bank is not null;
@@ -351,7 +368,7 @@ public partial class HomeViewModel : ObservableObject
         OnPropertyChanged(nameof(CanStart));
         OnPropertyChanged(nameof(StartHint));
         OnPropertyChanged(nameof(SelectedTechnologies));
-        StartLearnCommand.NotifyCanExecuteChanged();
+        StartCommand.NotifyCanExecuteChanged();
     }
 
     public IReadOnlyCollection<QuestionType> AllowedTypes =>
@@ -421,11 +438,14 @@ public partial class HomeViewModel : ObservableObject
         : "";
 
     [RelayCommand(CanExecute = nameof(CanStart))]
-    private void StartLearn()
+    private void Start()
     {
         var saved = _profiles.FirstOrDefault(p => p.Id == EditingId);
-        if (saved is not null)
-            LearnRequested?.Invoke(new LearnSessionRequest(saved.Clone(), AllowedTypes, AnswerWords, SelectedTechnologies, EmploymentType));
+        if (saved is null) return;
+
+        var request = new LearnSessionRequest(saved.Clone(), AllowedTypes, AnswerWords, SelectedTechnologies, EmploymentType);
+        if (Mode == SessionMode.Practice) PracticeRequested?.Invoke(request);
+        else LearnRequested?.Invoke(request);
     }
 
     public IReadOnlyList<Choice<Seniority>> SeniorityChoices { get; } =
@@ -512,7 +532,7 @@ public partial class HomeViewModel : ObservableObject
         OnPropertyChanged(nameof(IsReady));
         OnPropertyChanged(nameof(CanStart));
         OnPropertyChanged(nameof(StartHint));
-        StartLearnCommand.NotifyCanExecuteChanged();
+        StartCommand.NotifyCanExecuteChanged();
         SaveCommand.NotifyCanExecuteChanged();
         RevertCommand.NotifyCanExecuteChanged();
         DeleteCommand.NotifyCanExecuteChanged();

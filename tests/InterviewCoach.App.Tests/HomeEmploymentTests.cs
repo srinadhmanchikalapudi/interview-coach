@@ -231,7 +231,7 @@ public class HomeEmploymentTests
         LearnSessionRequest? request = null;
         vm.LearnRequested += r => request = r;
 
-        vm.StartLearnCommand.Execute(null);
+        vm.StartCommand.Execute(null);
 
         Assert.NotNull(request);
         Assert.Equal(EmploymentType.Contract, request.Employment);
@@ -245,7 +245,7 @@ public class HomeEmploymentTests
         LearnSessionRequest? request = null;
         vm.LearnRequested += r => request = r;
 
-        vm.StartLearnCommand.Execute(null);
+        vm.StartCommand.Execute(null);
 
         Assert.Equal(EmploymentType.FullTime, request!.Employment);
     }

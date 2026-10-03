@@ -166,7 +166,7 @@ public class HomeTechnologyTests
         IReadOnlyList<string>? technologies = null;
         vm.LearnRequested += r => (types, technologies) = (r.Types, r.Technologies);
 
-        vm.StartLearnCommand.Execute(null);
+        vm.StartCommand.Execute(null);
 
         Assert.Empty(types!);
         Assert.Equal(["C#", "SQL Server"], technologies);
@@ -184,7 +184,7 @@ public class HomeTechnologyTests
         IReadOnlyList<string>? technologies = null;
         vm.LearnRequested += r => (types, technologies) = (r.Types, r.Technologies);
 
-        vm.StartLearnCommand.Execute(null);
+        vm.StartCommand.Execute(null);
 
         Assert.Equal([QuestionType.Scenario], types);
         Assert.Equal(["C#"], technologies);
@@ -201,7 +201,7 @@ public class HomeTechnologyTests
         IReadOnlyList<string>? technologies = null;
         vm.LearnRequested += r => technologies = r.Technologies;
 
-        vm.StartLearnCommand.Execute(null);
+        vm.StartCommand.Execute(null);
 
         Assert.Empty(technologies!);
     }
@@ -359,7 +359,7 @@ public class HomeTechnologyTests
         IReadOnlyList<string>? technologies = null;
         vm.LearnRequested += r => technologies = r.Technologies;
 
-        vm.StartLearnCommand.Execute(null);
+        vm.StartCommand.Execute(null);
 
         Assert.Equal([".NET", "Kafka"], technologies);
     }

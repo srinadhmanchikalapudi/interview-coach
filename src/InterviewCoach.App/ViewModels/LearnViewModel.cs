@@ -17,6 +17,7 @@ public partial class LearnViewModel : ObservableObject
     private readonly ILearnHistory? _history;
 
     private LearnEngine? _engine;
+    private LearnSessionRequest? _request;
     private CoachOutput? _coachSource;
     private LearnItem? _shownItem;
 
@@ -35,6 +36,9 @@ public partial class LearnViewModel : ObservableObject
 
     /// <summary>Raised when the user asks to go back to the Home screen.</summary>
     public event Action? ExitRequested;
+
+    /// <summary>Raised when the user wants to answer the question on screen themselves: Practice mode on the same question.</summary>
+    public event Action<LearnSessionRequest, LearnItem>? TryItMyselfRequested;
 
     /// <summary>Raised when a different question (or follow-up) becomes the one on screen; the view scrolls back to the top.</summary>
     public event Action? QuestionChanged;
@@ -74,6 +78,7 @@ public partial class LearnViewModel : ObservableObject
         IReadOnlyList<string>? technologies = null, EmploymentType employment = EmploymentType.FullTime)
     {
         _engine?.Cancel();
+        _request = new LearnSessionRequest(profile, allowedTypes, answerWords, technologies ?? [], employment);
         // The technology bank is optional: with it off, every question is written by the model from the resume and job description.
         _engine = new LearnEngine(_llm, _prompts, _settings.Current.ReuseGeneralAnswers ? _bank : null, _random, _history) { PrefetchNext = true };
         _engine.Changed += Refresh;
@@ -101,6 +106,15 @@ public partial class LearnViewModel : ObservableObject
 
     [RelayCommand(CanExecute = nameof(CanGoBack))]
     private void Back() => _engine?.Back();
+
+    /// <summary>Practice mode on the question on screen, without its model answer: write your own, then get feedback.</summary>
+    [RelayCommand(CanExecute = nameof(CanTryItMyself))]
+    private void TryItMyself()
+    {
+        if (_request is not null && Item is { } item) TryItMyselfRequested?.Invoke(_request, item);
+    }
+
+    public bool CanTryItMyself => _request is not null && Item is not null;
 
     [RelayCommand]
     private void Exit()
@@ -146,5 +160,6 @@ public partial class LearnViewModel : ObservableObject
         NextCommand.NotifyCanExecuteChanged();
         BackCommand.NotifyCanExecuteChanged();
         PersonalizeCommand.NotifyCanExecuteChanged();
+        TryItMyselfCommand.NotifyCanExecuteChanged();
     }
 }

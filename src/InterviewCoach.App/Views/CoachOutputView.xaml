@@ -170,7 +170,7 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-                <TextBlock Style="{StaticResource Hint}" Text="Click one to see how to answer it." />
+                <TextBlock Style="{StaticResource Hint}" Text="{Binding FollowUpPrompt}" />
             </StackPanel>
         </Border>
     </StackPanel>

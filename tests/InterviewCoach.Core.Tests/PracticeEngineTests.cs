@@ -408,6 +408,41 @@ public class PracticeEngineTests
     }
 
     [Fact]
+    public async Task After_a_failure_the_answer_can_be_reopened_changed_and_sent_again()
+    {
+        var rig = new Rig { FailCoach = true };
+        var engine = rig.NewEngine();
+        await engine.StartAsync(Profile(), Behavioral);
+        await engine.SubmitAsync("my first wording");
+
+        engine.EditAnswer();
+
+        Assert.Equal(PracticePhase.Answering, engine.Phase);
+        Assert.Equal("my first wording", engine.PendingAnswer);   // still there to put back in the box
+        Assert.Null(engine.Error);
+
+        rig.FailCoach = false;
+        await engine.SubmitAsync("my better wording");
+
+        Assert.Equal(PracticePhase.ShowingFeedback, engine.Phase);
+        Assert.Equal("my better wording", engine.LastAttempt!.AnswerText);
+        Assert.Contains("my better wording", Prompt(rig));
+    }
+
+    [Fact]
+    public async Task Reopening_an_answer_only_works_after_a_failed_coach_call()
+    {
+        var rig = new Rig();
+        var engine = rig.NewEngine();
+        await engine.StartAsync(Profile(), Behavioral);
+        await engine.SubmitAsync("an answer");
+
+        engine.EditAnswer();   // feedback is showing: nothing happens
+
+        Assert.Equal(PracticePhase.ShowingFeedback, engine.Phase);
+    }
+
+    [Fact]
     public async Task A_failed_first_question_is_retried_by_writing_it_again()
     {
         var rig = new Rig();
