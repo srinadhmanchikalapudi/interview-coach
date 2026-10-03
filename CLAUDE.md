@@ -8,7 +8,7 @@ architecture, decisions, measurements and traps. The code and tests are the trut
 
 ```
 dotnet run --project src/InterviewCoach.App
-dotnet test                                    # all tests (610 at last count)
+dotnet test                                    # all tests (668 at last count)
 dotnet build InterviewCoach.sln -c Release     # use -c Release when the user has the Debug exe running
 ```
 
@@ -42,4 +42,5 @@ Prompts are files in `src/InterviewCoach.App/Prompts/`.
 
 ## Current status
 
-Milestones 1 to 3 are done. 4 (Practice, typed), 5 (voice), 6 (Mock Interview), 7 (history and polish) are not started.
+Milestones 1 to 4 are done (4 is Practice, typed). 5 (voice), 6 (Mock Interview) and 7 (history and polish; the Library of Learn questions is done) are not started.
+Learn and Practice share `QuestionPicker`; Practice attempts are not saved yet.

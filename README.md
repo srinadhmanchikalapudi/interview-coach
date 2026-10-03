@@ -12,7 +12,7 @@
 <p align="center">
   <img alt=".NET 10" src="https://img.shields.io/badge/.NET-10-512BD4">
   <img alt="WPF" src="https://img.shields.io/badge/UI-WPF%20%28MVVM%29-0078D4">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-610%20passing-2EA043">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-668%20passing-2EA043">
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%2010%2F11-lightgrey">
   <img alt="Status" src="https://img.shields.io/badge/status-Learn%20mode%20complete-blue">
 </p>
@@ -63,6 +63,7 @@ Things that make it more than a question generator:
 | **By technology** | Reads the technologies out of the job description (or lets you type your own under **Other**) and asks questions about the ones you pick. |
 | **Saved technical questions** | Technical-concept questions and their general answers are saved per technology and seniority, so repeats cost nothing and survive edits to your resume. When a technology runs out of saved questions the model writes ten common ones in a single call (most common first, spread over different areas, mixed phrasing) instead of one at a time. |
 | **Questions spread across your resume** | Resume questions take turns between your employers and projects (the least used first, then a different highlight each time) instead of always asking about the current job, and each starts with a different word. A question that repeats an earlier one in other words is sent back once. |
+| **Practice (typed)** | Answer a question yourself, with a live word count and an answer timer, then get feedback that quotes your own words, what the interviewer is testing, a strong answer and a delivery comment. Try again passes your last answer to the coach so it can say what changed; follow-ups become the next question. |
 | **Library (Revisit)** | Every question and answer you see is kept, so you can go back to it: filter by question type, search, sort, reopen the full answer, remove an entry. |
 | **Tailor to my resume** | Turn any general answer into one built from your own experience, on demand. |
 | **Answer length control** | Short, Medium, Long or a custom word count. By default the model aims for the same range the screen shows. |
@@ -87,6 +88,12 @@ Rendered from the real views by the repository's own snapshot test, in Demo mode
 |---|---|
 | <img src="docs/images/learn-light.png" alt="Learn, light"> | <img src="docs/images/learn-dark.png" alt="Learn, dark"> |
 
+**Practice: type your answer, then read feedback that quotes it**
+
+| Answering (light) | Feedback (dark) |
+|---|---|
+| <img src="docs/images/practice-answer-light.png" alt="Practice, answering"> | <img src="docs/images/practice-feedback-dark.png" alt="Practice, feedback"> |
+
 **Library: go back to every question and answer you have seen**
 
 | Light | Dark |
@@ -106,7 +113,7 @@ To regenerate them, see [Testing](#testing).
 | 1. Skeleton: solution, DI host, encrypted settings, Demo mode, prompt files, LLM service, Test connection | Done |
 | 2. Profiles: create, edit, delete; paste or load JD and resume; SQLite with migrations | Done |
 | 3. **Learn mode**: question generator, coach, coach cards, follow-ups | Done |
-| 4. Practice (typed): answer first, then get feedback; retry with comparison | Not started |
+| 4. **Practice (typed)**: answer first, then get feedback; try again with comparison; follow-ups | Done |
 | 5. Voice: speech to text and text to speech (Azure, OpenAI, Windows), mic in the composer | Not started (settings and fakes exist) |
 | 6. Mock Interview: planned interview, live interviewer, parallel coaching, debrief, Markdown export | Not started (prompts exist) |
 | 7. History and polish | Partly: the **Library** of questions and answers you have seen is built (see below); a history of mock interviews and the final polish are not started |
@@ -232,6 +239,22 @@ or from **Library** in the sidebar.
   Anything seen before that and not saved cannot be recovered.
 - It is stored locally in `app.db` (table `LearnHistory`). In Demo mode it is kept in memory only.
 
+### Practice
+
+Choose **Practice** on Home (the same role type, question types, technologies and answer length apply), then **Start Practice**. You can also
+click **Try it myself** in Learn mode to practise the question you are looking at, without its model answer.
+
+1. A question appears and the answer box opens. **Nothing is coached until you submit**: the app enforces that in the engine, not just on screen.
+2. Type your answer. The box shows a live word count and a timer that starts at your first keystroke. For behavioral and project questions the
+   timer turns amber past 2:30 and red past 3:30. **Ctrl+Enter** or **Submit** sends it; an empty answer is not sent ("I don't know" is fine).
+3. The coach replies with **how your answer landed** (what worked, what to fix, what was missing, quoting your words), what the interviewer was testing,
+   a strong answer, its shape, a delivery comment and likely follow-ups.
+4. Then **Try again** (same question; your last answer is passed to the coach, so the feedback starts with what changed; **Start from my last answer**
+   puts it back in the box), click a **follow-up** to answer it (the coach sees the earlier questions and answers), or **Next question**.
+5. If the coach call fails, your answer stays on screen: **Retry** sends it again, or **Edit my answer** reopens the box.
+
+Practice attempts are not saved to the Library yet; the Library shows what Learn mode showed.
+
 ### In a session
 
 - **Next question** moves on; the following question is prepared in the background, so it usually appears instantly.
@@ -305,7 +328,7 @@ build time and also embedded in Infrastructure as a fallback. You can edit the c
 | File | Used by | Purpose |
 |---|---|---|
 | `question_generator.md` | Learn; the bank when it writes a question | Writes one question; per-type length rules; role-type rule; optional focus technology |
-| `coach.md` | Learn (later Practice and Mock) | Writes the answer, the shape, and the follow-ups |
+| `coach.md` | Learn and Practice (Mock later) | Writes the answer, the shape, and the follow-ups; in Practice also feedback on your answer |
 | `tech_tags.md` | By technology | Extracts up to eight technologies from a job description |
 | `question_batch.md` | The technology bank | Writes ten common questions about one technology in one call, for the bank |
 | `resume_topics.md` | Resume questions | Lists the employers and projects on a resume with what was done on each, once per resume, so questions can be spread over them |
@@ -362,16 +385,16 @@ on its OpenRouter page if that matters to you. The model list for the OpenRouter
 ## Testing
 
 ```bash
-dotnet test                                     # all 610 tests
+dotnet test                                     # all 668 tests
 dotnet test tests/InterviewCoach.Core.Tests     # one project
 dotnet build InterviewCoach.sln -c Release      # use this if the Debug exe is running (it locks its DLLs)
 ```
 
 | Project | Tests | Covers |
 |---|---|---|
-| `InterviewCoach.Core.Tests` | 262 | Prompt rendering, engine behaviour, the bank, answer lengths, question types, text helpers, role type |
+| `InterviewCoach.Core.Tests` | 292 | Prompt rendering, engine behaviour, the bank, answer lengths, question types, text helpers, role type |
 | `InterviewCoach.Infrastructure.Tests` | 158 | JSON parsing, LLM service (retry, cache split, options), settings (DPAPI round trip, no plaintext), SQLite repositories on real files, file extractors, prompt guards, Demo-mode isolation |
-| `InterviewCoach.App.Tests` | 190 | View models and **real WPF views** on a shared STA dispatcher; fails on any binding error |
+| `InterviewCoach.App.Tests` | 218 | View models and **real WPF views** on a shared STA dispatcher; fails on any binding error |
 
 Test names are sentences that describe behaviour. Scripted test doubles (`ScriptedLlmService`, `BankScript`) let tests control exactly
 what the model "says", including delays and failures.

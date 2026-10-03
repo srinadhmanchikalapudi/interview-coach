@@ -20,7 +20,7 @@ every change made after the spec was written and overrides the spec where they d
 | 1 Skeleton: solution, DI host, settings with DPAPI keys, demo mode, prompts, LLM service, Test connection | Done |
 | 2 Profiles: CRUD, JD and resume paste or file load (PDF, DOCX, TXT, MD), SQLite and migrations | Done |
 | 3 Learn mode (text): question generator, coach, coach cards | Done |
-| 4 Practice mode (typed): composer, submit, coach with the answer, retry with comparison, follow-ups | **Not started** |
+| 4 Practice mode (typed): composer, submit, coach with the answer, retry with comparison, follow-ups | Done (attempts are not saved yet) |
 | 5 Voice: speech to text, text to speech (Azure, OpenAI, Windows), mic in composer, barge-in, timer, auto-listen | **Not started** (fakes and settings fields exist) |
 | 6 Mock Interview: planner, interviewer loop, thread building, parallel coaching, debrief, Markdown export | **Not started** (prompts `planner.md`, `interviewer.md`, `debrief.md` exist, unused) |
 | 7 History and polish | **Not started** |
@@ -31,7 +31,7 @@ background preparation of the next question; the technology bank (saved technica
 and seniority); By technology with an Other box; interviewer-style question length rules; full-time or contract role type with two
 extra question types; scroll-wheel behaviour on Home; app icon; a full visual redesign.
 
-Test status: **610 tests passing** (Core 262, Infrastructure 158, App 190). The last full verification was done with
+Test status: **668 tests passing** (Core 292, Infrastructure 158, App 218). The last full verification was done with
 `-c Release` because the user had the Debug build running (see section 2).
 
 **Version control.** The folder is a git repository (branch `main`). History is written to be read; see "Commit conventions" in `README.md`.
@@ -315,7 +315,7 @@ cache read about 0.1x, cache write about 1.25x; the user's balance drop was cons
 
 ## 10. Tests
 
-610 tests: Core 262, Infrastructure 158, App 190.
+668 tests: Core 292, Infrastructure 158, App 218.
 
 - **Core.Tests**: prompt rendering, engine behaviour (`LearnEngineTests`, `LearnEngineBankTests`, `LearnEngineTechnologyTests`,
   `EmploymentTypeTests`), bank service, answer length, question types, text helpers. Helpers in `TestDoubles.cs`:
@@ -333,10 +333,8 @@ cache read about 0.1x, cache write about 1.25x; the user's balance drop was cons
 
 ## 11. Open items and next steps
 
-1. **Milestone 4, Practice (typed)**: composer with timer and word count; submit; coach with the answer (`MODE = practice`, `INPUT_METHOD`,
-   `DURATION_SECONDS`, `WORD_COUNT`); retry passes `PREVIOUS_ATTEMPT`; "Answer a follow-up". The engine must **never call the coach before
-   submit** (spec section 6.3). Needs Session, PracticeItem and Attempt tables and a migration. The coach output view already hides
-   "How your answer landed" when there is no feedback and shows it when there is. Add the "Try it myself" button to Learn.
+1. ~~Milestone 4, Practice (typed)~~: done, see section 19. Still open from it: Practice attempts are not saved (no Session, PracticeItem or Attempt
+   tables), so the Library does not show them.
 2. **Milestone 5, Voice**: `ISpeechToText` and `ITextToSpeech` implementations (Azure first, then OpenAI, then Windows offline TTS),
    composer mic with F2, barge-in, auto-listen, silence auto-submit, voice settings with Test mic and Test voice, "Read answer aloud".
    Interfaces, fakes and settings fields already exist.
@@ -605,3 +603,42 @@ three-turn conversation (the first request, the model's own question as the assi
 rather than looping. The batch writer uses the same test against the bank and the session. Bank questions served from the saved bank still use the exact
 check, so the same bank question is not blocked by a similar one from another technology. Limits: it compares words, not meaning, so a paraphrase with
 different vocabulary passes; the topic-word list is English only.
+
+---
+
+## 19. Practice mode (typed), milestone 4
+
+**What was built.** `PracticeEngine` (Core), `PracticeViewModel` and `PracticeView` (App), a Practice choice on Home (`SessionMode`, `IsPracticeMode`,
+`SelectPracticeCommand`, `StartCommand` replacing the old `StartLearnCommand`, `PracticeRequested`), navigation in `MainViewModel`, and a "Try it myself" button
+on the Learn screen (`LearnViewModel.TryItMyselfRequested`). Rules and flow are in SPEC section 14; this section is how it is put together.
+
+- **Shared question source.** `QuestionPicker` was extracted from `LearnEngine` first (a pure refactor; all 610 tests passed unchanged). It owns the
+  session's asked list, technologies, resume topics and focus rotation and returns the next question without any answer. `LearnEngine` adds the saved general
+  answer to a saved technical question, the coach, follow-ups, tailoring and library recording; `PracticeEngine` adds the answering flow. A saved model
+  answer carried by a picked question is dropped in Practice (`AsQuestion`).
+- **The rule that matters.** Phase `Answering` never calls the Coach. `PracticeEngine.SubmitAsync` is the only entry (besides `RetryAsync` for a failed
+  submit); it returns `SubmitResult.Empty` for blank text and `NotReady` when not in `Answering` (so a double click during `Coaching` sends nothing). The
+  pending submission (answer, method, seconds, word count) is kept until feedback arrives, so a failure never loses the answer: `RetryAsync` re-sends it,
+  `EditAnswer` reopens the box (`PendingAnswer` is the text to put back).
+- **Follow-ups and retries.** `TryAgain` sets `_previousAttempt` to the latest answer and increments `AttemptNumber`; `AnswerFollowUp` appends the
+  question and answer to `_thread` (transcript lines "Interviewer: ... / You: ...", spec section 9), clears `_previousAttempt`, resets the attempt count and
+  adds the follow-up to the picker's asked list. Neither calls the model. `NextAsync` clears the thread. Stale replies are dropped by operation id as in Learn.
+- **Coach output.** `CoachOutput.ForPractice()` keeps feedback and delivery and strips an opening warm-up from the model answer (Learn uses `ForLearning()`, which
+  also drops feedback). The coach prompt already supported practice mode, so no prompt change was needed. `CoachOutputViewModel` gained `FollowUpPrompt` ("Click
+  one to answer it." in Practice).
+- **Screen.** Question card as in Learn; an answer card (`TextBox` with `AcceptsReturn`, `WheelScrolling.PassToPage`, a Ctrl+Enter key binding, live word count, a
+  timer); after a submit a "Your answer" card with the words and time, then the Coach cards; an action bar with Back to Home, Try again (feedback only) and
+  Next question. The timer lives in the view model (`Tick()` is called once a second by a `DispatcherTimer` in the view; the clock is injectable for tests);
+  it starts at the first non-empty text, freezes at submit and resets on a new question or try. `TimerLevel` is amber from 150 s and red from 210 s for
+  `behavioral` and `resume_deep_dive` only. The box is focused when it appears. Switching to the next question raises `QuestionChanged` twice (when the old
+  one goes and when the new one arrives); harmless.
+- **Home.** The mode cards are bound to `Mode`, not a radio group (see the trap in section 9); `IsChecked` is one-way with a command, and the three cards are one
+  automatic group in a `UniformGrid`, which is why clicking one unchecks the others visually until the view model catches up. The Start card is shared by both
+  modes. The existing card test now expects one disabled card (Mock Interview).
+- **Tests.** 28 engine tests (`PracticeEngineTests`, with a rig that holds or fails the coach), 28 App tests (`PracticeTests`: box, counters, timer colours, empty
+  and spaces-only submits, feedback, try again, follow-up transcript, failures, `BeginFrom`, real views without binding errors, Ctrl+Enter, Home mode switching, navigation
+  and Try it myself). `StubLlm` lives in `Fakes.cs`; `VisualSnapshots` renders `7-practice-answering-*` and `8-practice-feedback-*`.
+- **Not done, on purpose.** No persistence of attempts (spec section 7 has Session, PracticeItem, Attempt; they belong with History), so the Library does not
+  list Practice. No voice (milestone 5): `INPUT_METHOD` is always `typed`, and `AnswerInputMethod` already has `Voice` and `Mixed`. No prefetch of the next
+  question while the user is answering (a question takes about 1 to 2 s). **Not yet measured live:** how the real coach's feedback reads against real answers; send a
+  debug log after a Practice session and check it quotes the answer and that Try again's first point is about what changed.
