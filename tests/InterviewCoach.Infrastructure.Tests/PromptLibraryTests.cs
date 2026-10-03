@@ -9,7 +9,7 @@ public class PromptLibraryTests
     [
         "JOB_ROLE", "SENIORITY", "JOB_DESCRIPTION", "RESUME", "ROUND_TYPE", "DURATION", "PLAN_JSON", "QUESTION_TYPES",
         "ALREADY_ASKED", "FOCUS_TECHNOLOGY", "RESUME_FOCUS", "QUESTION_TYPE", "EMPLOYMENT_TYPE", "MODE", "QUESTION", "TRANSCRIPT", "CANDIDATE_ANSWER", "PREVIOUS_ATTEMPT", "INPUT_METHOD", "ANSWER_LENGTH",
-        "DURATION_SECONDS", "WORD_COUNT", "MAX_TECHNOLOGIES",
+        "DURATION_SECONDS", "WORD_COUNT", "MAX_TECHNOLOGIES", "ROUND_FACTS",
     ];
 
     private static Dictionary<string, string?> FullVars() => AllVars.ToDictionary(v => v, v => (string?)$"<<{v}>>");
@@ -61,6 +61,51 @@ public class PromptLibraryTests
         Assert.Contains("A typed answer has no speaking time, so never comment on pace or seconds for it", rendered);
         Assert.Contains("about 130 words a minute", rendered);
         Assert.DoesNotContain("\"delivery\" is null unless the answer has a duration or came from voice", rendered);
+    }
+
+    [Fact]
+    public void The_interviewer_is_told_to_ask_open_questions_keep_recaps_short_and_not_invent_a_name()
+    {
+        // The first real mock interview log (3 October 2026): two follow-ups listed the possible answers ("parallel tasks, thread pool
+        // tuning, or something else?"; "SemaphoreSlim, or a channel, or a custom queue?") and the candidate then repeated one of them.
+        var rendered = EmbeddedOnly().Render(PromptName.Interviewer, FullVars());
+
+        Assert.Contains("Never list the possible answers inside your question", rendered);
+        Assert.Contains("at most a few words", rendered);
+        Assert.Contains("never write a placeholder such as [Interviewer Name]", rendered);
+    }
+
+    [Fact]
+    public void The_planner_is_told_the_opening_line_is_spoken_as_written_so_it_has_no_placeholder_and_one_source_per_area()
+    {
+        var rendered = EmbeddedOnly().Render(PromptName.Planner, FullVars());
+
+        Assert.Contains("no bracketed placeholder such as [Interviewer Name]", rendered);
+        Assert.Contains("\"source\" is the single best of: jd, resume, fundamentals, behavioral", rendered);
+        Assert.DoesNotContain("\"jd | resume | fundamentals | behavioral\"", rendered);
+    }
+
+    [Fact]
+    public void The_debrief_gets_the_round_facts_and_is_told_not_to_blame_a_short_round_or_mis_heard_words()
+    {
+        // The same log: the candidate ended the round after 4 of 15 minutes and the debrief still listed React and CI/CD as fixes.
+        var rendered = EmbeddedOnly().Render(PromptName.Debrief, FullVars());
+
+        Assert.Contains("<round_facts>\n<<ROUND_FACTS>>\n</round_facts>", rendered.Replace("\r\n", "\n"));
+        Assert.Contains("A topic that never came up is \"not covered\", not a weakness", rendered);
+        Assert.Contains("hire_signal can be at most lean_yes or lean_no", rendered);
+        Assert.Contains("almost certainly mis-heard", rendered);
+    }
+
+    [Fact]
+    public void The_coach_is_told_a_mis_heard_word_is_not_a_mistake_and_that_a_mock_duration_is_a_total()
+    {
+        // The same log: "bounded cube pattern" (queue) was quoted as imprecise wording, and the 2:47 total of three answers was read as one.
+        var rendered = EmbeddedOnly().Render(PromptName.Coach, FullVars());
+
+        Assert.Contains("A word that makes no sense in context is a mis-heard word, not the candidate's mistake", rendered);
+        Assert.Contains("labelled with how long it took", rendered);
+        Assert.Contains("never on the total as if it were one answer", rendered);
     }
 
     [Fact]

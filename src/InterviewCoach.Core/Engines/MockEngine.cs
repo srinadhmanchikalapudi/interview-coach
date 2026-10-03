@@ -289,6 +289,7 @@ public sealed class MockEngine(ILlmService llm, IPromptLibrary prompts, Func<Dat
 
         var vars = RoundVars();
         vars["TRANSCRIPT"] = MockText.Transcript(_turns);
+        vars["ROUND_FACTS"] = RoundFacts();
         try
         {
             var debrief = await llm.GetJsonAsync<DebriefDto>(
@@ -378,13 +379,35 @@ public sealed class MockEngine(ILlmService llm, IPromptLibrary prompts, Func<Dat
         vars["TRANSCRIPT"] = null;
         vars["QUESTION_TYPE"] = type?.Id();
         vars["EMPLOYMENT_TYPE"] = _employment.PromptValue();
-        vars["ANSWER_LENGTH"] = null;
-        vars["CANDIDATE_ANSWER"] = thread.Transcript; // the whole exchange for this question, follow-ups included (coach.md, mock mode)
+        vars["ANSWER_LENGTH"] = AnswerLength.Describe(null, type?.Id()); // the usual length for this kind of question, as in Practice
+        vars["CANDIDATE_ANSWER"] = thread.CoachTranscript; // the whole exchange for this question, follow-ups included (coach.md, mock mode)
         vars["PREVIOUS_ATTEMPT"] = null;
         vars["INPUT_METHOD"] = thread.InputMethod;
         vars["DURATION_SECONDS"] = thread.SpokenSeconds > 0 ? thread.SpokenSeconds.ToString() : null; // typing time says nothing about delivery
         vars["WORD_COUNT"] = thread.WordCount.ToString();
         return prompts.Render(PromptName.Coach, vars);
+    }
+
+    /// <summary>
+    /// What the debrief must know about how the round went besides what was said: how long it ran against its plan, who ended it, and how many
+    /// questions got an answer, so a round that was cut short is judged on what it covered and not on what was never asked.
+    /// </summary>
+    private string RoundFacts()
+    {
+        var elapsed = ElapsedSeconds;
+        var planned = DurationMinutes * 60;
+        var percent = planned == 0 ? 100 : (int)Math.Round(100.0 * elapsed / planned);
+        var threads = _threads.Count;
+        var answered = _threads.Count(t => t.HasAnswer);
+        var facts = new List<string>
+        {
+            $"Planned length: {DurationMinutes} minutes. The round lasted {elapsed / 60}:{elapsed % 60:00}, which is {percent}% of the planned time.",
+            _userEnded ? "The candidate ended the round before the interviewer closed it." : "The interviewer closed the round.",
+            $"{threads} main question{(threads == 1 ? " was" : "s were")} asked and {answered} {(answered == 1 ? "has" : "have")} an answer.",
+        };
+        if (percent < 50) facts.Add("Less than half of the planned time was used.");
+        if (IsOvertime) facts.Add("The round ran past its planned length.");
+        return string.Join(" ", facts);
     }
 
     // ---- recording

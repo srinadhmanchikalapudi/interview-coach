@@ -186,6 +186,12 @@ public sealed class MockThread
     /// <summary>The exchange as "Interviewer: ... / You: ..." lines (spec 9), which is what the Coach is given.</summary>
     public string Transcript => MockText.Transcript(Turns);
 
+    /// <summary>
+    /// The exchange for the Coach: like <see cref="Transcript"/>, but each answer that was spoken is labelled with how long it took
+    /// ("You (52s): ..."), so the total duration is not mistaken for the length of one answer.
+    /// </summary>
+    public string CoachTranscript => MockText.Transcript(Turns, withSpeakingTime: true);
+
     /// <summary>"typed", "voice" or "mixed" over every answer in the thread.</summary>
     public string InputMethod
     {
@@ -204,8 +210,13 @@ public sealed class MockThread
 
 public static class MockText
 {
-    public static string Transcript(IEnumerable<MockTurn> turns)
-        => string.Join("\n", turns.Select(t => $"{(t.Speaker == MockSpeaker.Interviewer ? "Interviewer" : "You")}: {t.Text}"));
+    public static string Transcript(IEnumerable<MockTurn> turns, bool withSpeakingTime = false)
+        => string.Join("\n", turns.Select(t =>
+        {
+            if (t.Speaker == MockSpeaker.Interviewer) return $"Interviewer: {t.Text}";
+            var spoken = withSpeakingTime && (t.InputMethod ?? AnswerInputMethod.Typed) != AnswerInputMethod.Typed && t.DurationSeconds > 0;
+            return spoken ? $"You ({t.DurationSeconds}s): {t.Text}" : $"You: {t.Text}";
+        }));
 
     /// <summary>
     /// Groups the interview into question threads (spec 6.1): each main question starts one; the follow-ups, hints and clarifications after

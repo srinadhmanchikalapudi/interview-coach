@@ -25,7 +25,7 @@ Decide:
    - behavioral
    - candidate_questions
    Recruiter screens are mostly background, motivation and logistics-style questions. Hiring manager rounds lean on ownership, judgment and behavioral questions. Technical and system design rounds still start with a short opener.
-4. OPENING LINE. Write the first thing the interviewer says: a brief, natural greeting and a one-line intro of themselves and the format. Don't ask a question yet unless it's "How's your day going?"-level small talk.
+4. OPENING LINE. Write the first thing the interviewer says: a brief, natural greeting and a one-line intro of themselves and the format. Don't ask a question yet unless it's "How's your day going?"-level small talk. You do not know the interviewer's name, so use no name and no bracketed placeholder such as [Interviewer Name]; it is spoken aloud exactly as written.
 
 Calibrate to {{SENIORITY}}:
 - Junior: fundamentals, learning, finishing things.
@@ -33,10 +33,12 @@ Calibrate to {{SENIORITY}}:
 - Senior: ambiguity, design decisions and their costs, influence, mentoring, business impact.
 - Staff and above: cross-team direction, long-term bets, org-level impact.
 
+For each focus area, "source" is the single best of: jd, resume, fundamentals, behavioral.
+
 Reply with only JSON in exactly this shape:
 {
   "focus_areas": [
-    { "id": "fa1", "name": "short label", "why": "one sentence on why it matters for this role", "source": "jd | resume | fundamentals | behavioral" }
+    { "id": "fa1", "name": "short label", "why": "one sentence on why it matters for this role", "source": "jd" }
   ],
   "resume_claims_to_probe": [
     { "claim": "the resume line, paraphrased", "probe": "the question or angle that tests it" }
