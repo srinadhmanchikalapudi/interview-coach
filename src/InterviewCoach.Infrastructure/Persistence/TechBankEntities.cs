@@ -26,6 +26,14 @@ public class TechAnswerEntity
     public DateTime CreatedAt { get; set; }
 }
 
+/// <summary>The employers, projects and highlights read from one resume, identified by a fingerprint of its text.</summary>
+public class ResumeTopicsEntity
+{
+    public string Fingerprint { get; set; } = "";
+    public string TopicsJson { get; set; } = "[]";
+    public DateTime CreatedAt { get; set; }
+}
+
 /// <summary>The technologies found in one job description, identified by a fingerprint of its text.</summary>
 public class JdTechnologiesEntity
 {

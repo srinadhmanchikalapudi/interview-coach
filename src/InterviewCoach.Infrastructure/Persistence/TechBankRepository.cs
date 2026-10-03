@@ -29,6 +29,33 @@ public sealed class TechBankRepository(IDbContextFactory<AppDbContext> factory, 
         await db.SaveChangesAsync(ct);
     }
 
+    public async Task<IReadOnlyList<ResumeTopic>?> GetResumeTopicsAsync(string resumeFingerprint, CancellationToken ct = default)
+    {
+        await using var db = await factory.CreateDbContextAsync(ct);
+        var row = await db.ResumeTopics.AsNoTracking().FirstOrDefaultAsync(r => r.Fingerprint == resumeFingerprint, ct);
+        if (row is null) return null;
+        try
+        {
+            return JsonSerializer.Deserialize<List<ResumeTopic>>(row.TopicsJson) ?? [];
+        }
+        catch (JsonException)
+        {
+            return null; // unreadable: treated as never read, so it is read again
+        }
+    }
+
+    public async Task SaveResumeTopicsAsync(string resumeFingerprint, IReadOnlyList<ResumeTopic> topics, CancellationToken ct = default)
+    {
+        await using var db = await factory.CreateDbContextAsync(ct);
+        var json = JsonSerializer.Serialize(topics);
+        var row = await db.ResumeTopics.FirstOrDefaultAsync(r => r.Fingerprint == resumeFingerprint, ct);
+        if (row is null)
+            db.ResumeTopics.Add(new ResumeTopicsEntity { Fingerprint = resumeFingerprint, TopicsJson = json, CreatedAt = clock.UtcNow.UtcDateTime });
+        else
+            row.TopicsJson = json;
+        await db.SaveChangesAsync(ct);
+    }
+
     public async Task<IReadOnlyList<TechQuestion>> ListQuestionsAsync(string technology, Seniority seniority, CancellationToken ct = default)
     {
         await using var db = await factory.CreateDbContextAsync(ct);
