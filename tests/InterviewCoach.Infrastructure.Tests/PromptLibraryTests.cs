@@ -9,7 +9,7 @@ public class PromptLibraryTests
     [
         "JOB_ROLE", "SENIORITY", "JOB_DESCRIPTION", "RESUME", "ROUND_TYPE", "DURATION", "PLAN_JSON", "QUESTION_TYPES",
         "ALREADY_ASKED", "FOCUS_TECHNOLOGY", "RESUME_FOCUS", "QUESTION_TYPE", "EMPLOYMENT_TYPE", "MODE", "QUESTION", "TRANSCRIPT", "CANDIDATE_ANSWER", "PREVIOUS_ATTEMPT", "INPUT_METHOD", "ANSWER_LENGTH",
-        "DURATION_SECONDS", "WORD_COUNT",
+        "DURATION_SECONDS", "WORD_COUNT", "MAX_TECHNOLOGIES",
     ];
 
     private static Dictionary<string, string?> FullVars() => AllVars.ToDictionary(v => v, v => (string?)$"<<{v}>>");

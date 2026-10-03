@@ -41,3 +41,14 @@ public class JdTechnologiesEntity
     public string TechnologiesJson { get; set; } = "[]";
     public DateTime CreatedAt { get; set; }
 }
+
+/// <summary>The technologies fetched for one job role, saved so the model is asked only once per role.</summary>
+public class RoleTechnologiesEntity
+{
+    /// <summary>The role, lower case with spaces tidied (see TechBank.RoleKey).</summary>
+    public string RoleKey { get; set; } = "";
+    /// <summary>The role as it was typed, for display.</summary>
+    public string Role { get; set; } = "";
+    public string TechnologiesJson { get; set; } = "[]";
+    public DateTime CreatedAt { get; set; }
+}

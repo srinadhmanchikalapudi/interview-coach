@@ -117,7 +117,13 @@ public class VisualSnapshots
             var practiceVm = new PracticeViewModel(practiceLlm, prompts, settings, null, () => 0.0, () => practiceClock);
             var demoSpeech = new InterviewCoach.Infrastructure.Speech.SpeechFactory(new MemorySettings(new AppSettings { DemoMode = true }));
             var voiceVm = new PracticeViewModel(practiceLlm, prompts, new MemorySettings(new AppSettings { SpeakQuestions = false, AutoListen = false }), null, () => 0.0, () => practiceClock, speech: demoSpeech);
-            var main = new MainViewModel(home, settingsVm, learn, settings, library);
+            var conceptsVm = new ConceptsViewModel(bank, settings);
+            conceptsVm.Role = "Backend developer";
+            conceptsVm.ShowTechnologiesCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+            foreach (var option in conceptsVm.Technologies.Where(t => t.Name is "C#" or "SQL Server" or "Docker")) option.IsChecked = true;
+            conceptsVm.OtherTechnologies = "Kafka";
+            conceptsVm.DifficultyOptions.First(o => o.Difficulty == Difficulty.Advanced).IsSelected = true;
+            var main = new MainViewModel(home, settingsVm, learn, settings, library, null, conceptsVm);
 
             var window = new MainWindow(main);
 
@@ -180,6 +186,9 @@ public class VisualSnapshots
                 main.CurrentPage = voiceVm;
                 Save(window, 1180, 820, Path.Combine(dir, $"9-practice-listening-{name}.png"));
                 voiceVm.ToggleMicCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+
+                main.CurrentPage = conceptsVm;
+                Save(window, 1180, 1500, Path.Combine(dir, $"10-concepts-{name}.png"));
             }
         });
     }

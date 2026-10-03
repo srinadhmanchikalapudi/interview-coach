@@ -8,7 +8,7 @@ architecture, decisions, measurements and traps. The code and tests are the trut
 
 ```
 dotnet run --project src/InterviewCoach.App
-dotnet test                                    # all tests (822 at last count)
+dotnet test                                    # all tests (872 at last count)
 dotnet build InterviewCoach.sln -c Release     # use -c Release when the user has the Debug exe running
 ```
 
@@ -44,3 +44,4 @@ Prompts are files in `src/InterviewCoach.App/Prompts/`.
 
 Milestones 1 to 5 are done (4 is Practice, typed; 5 is voice: dictation, spoken questions, read aloud). 6 (Mock Interview) and 7 (history and polish; the Library of Learn questions is done) are not started.
 Learn and Practice share `QuestionPicker`; both record to the Library (`LearnHistory`, `PracticeAttempts`).
+The Concepts page (sidebar) runs Learn or Practice on chosen technologies at a difficulty with no resume or job description; a role's technologies are fetched once and saved (`RoleTechnologies`). See HANDOFF section 23.

@@ -1,0 +1,156 @@
+<UserControl x:Class="InterviewCoach.App.Views.ConceptsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        <Style x:Key="HiddenWhenEmpty" TargetType="TextBlock">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Text, RelativeSource={RelativeSource Self}}" Value="">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="32,28,32,28" MaxWidth="900" HorizontalAlignment="Stretch">
+            <TextBlock Text="Technology concepts" Style="{StaticResource PageTitle}" />
+            <TextBlock Style="{StaticResource PageSubtitle}" Margin="0,4,0,20"
+                       Text="Practise one technology at a time, by concept. Nothing here uses your resume or a job description." />
+
+            <!-- 1. The job role -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                        <Border Style="{StaticResource AccentChip}" Padding="9,2"><TextBlock Text="1" FontSize="12" FontWeight="SemiBold" /></Border>
+                        <TextBlock Text="Job role" Style="{StaticResource CardHeading}" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox Text="{Binding Role, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Job role" VerticalContentAlignment="Center">
+                            <TextBox.InputBindings>
+                                <KeyBinding Key="Enter" Command="{Binding ShowTechnologiesCommand}" />
+                            </TextBox.InputBindings>
+                        </TextBox>
+                        <Button Grid.Column="1" Command="{Binding ShowTechnologiesCommand}" Padding="18,7" Margin="10,0,0,0" Style="{DynamicResource AccentButtonStyle}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Style="{StaticResource Glyph}" Text="&#xE721;" FontSize="13" Margin="0,0,8,0" />
+                                <TextBlock Text="Show technologies" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Hint}" Text="For example Backend developer, Data engineer, Android developer. The technologies the role uses are found once and saved, so the same role is instant next time." />
+                    <ProgressBar IsIndeterminate="True" Height="3" Margin="0,10,0,0" Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}" />
+                </StackPanel>
+            </Border>
+
+            <!-- 2. The technologies -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                        <Border Style="{StaticResource AccentChip}" Padding="9,2"><TextBlock Text="2" FontSize="12" FontWeight="SemiBold" /></Border>
+                        <TextBlock Text="Technologies" Style="{StaticResource CardHeading}" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding Status}" TextWrapping="Wrap" Margin="0,0,0,10" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Style="{StaticResource HiddenWhenEmpty}" />
+                    <ItemsControl ItemsSource="{Binding Technologies}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <CheckBox Style="{StaticResource ChipCheckBox}" Content="{Binding Name}" IsChecked="{Binding IsChecked}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,10" Visibility="{Binding HasTechnologies, Converter={StaticResource BoolToVis}}">
+                        <Button Content="Select all" Command="{Binding SelectAllTechnologiesCommand}" Padding="14,4" />
+                        <Button Content="Clear" Command="{Binding ClearTechnologiesCommand}" Padding="14,4" Margin="8,0,0,0" />
+                        <Button Content="Ask again" Command="{Binding RefreshTechnologiesCommand}" Padding="14,4" Margin="8,0,0,0"
+                                ToolTip="Ask the model for the role's technologies again and replace the saved list" />
+                    </StackPanel>
+                    <Button Content="Try again" Command="{Binding ShowTechnologiesCommand}" Padding="16,4" HorizontalAlignment="Left" Margin="0,0,0,10"
+                            Visibility="{Binding LoadFailed, Converter={StaticResource BoolToVis}}" />
+
+                    <!-- Other: a technology the list does not have -->
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                        <CheckBox Style="{StaticResource ChipCheckBox}" Content="Other" IsChecked="{Binding OtherTechnologyChecked}" Margin="0,0,10,0" />
+                        <TextBox Text="{Binding OtherTechnologies, UpdateSourceTrigger=PropertyChanged}" Width="320" VerticalAlignment="Center"
+                                 AutomationProperties.Name="Other technologies" />
+                    </StackPanel>
+                    <TextBlock Style="{StaticResource Hint}"
+                               Text="Not in the list, or no role at all? Type one or more technologies under Other, separated by commas, for example Kafka, GraphQL." />
+                </StackPanel>
+            </Border>
+
+            <!-- 3. Difficulty -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                        <Border Style="{StaticResource AccentChip}" Padding="9,2"><TextBlock Text="3" FontSize="12" FontWeight="SemiBold" /></Border>
+                        <TextBlock Text="Difficulty" Style="{StaticResource CardHeading}" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <ItemsControl ItemsSource="{Binding DifficultyOptions}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <RadioButton Style="{StaticResource ChipRadio}" Content="{Binding Label}" IsChecked="{Binding IsSelected}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Style="{StaticResource Hint}" Text="{Binding DifficultyDescription}" />
+                </StackPanel>
+            </Border>
+
+            <!-- 4. The session -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                        <Border Style="{StaticResource AccentChip}" Padding="9,2"><TextBlock Text="4" FontSize="12" FontWeight="SemiBold" /></Border>
+                        <TextBlock Text="How to practise" Style="{StaticResource CardHeading}" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <UniformGrid Columns="2" Margin="0,0,0,18">
+                        <RadioButton Style="{StaticResource ModeCard}" IsChecked="{Binding IsLearnMode, Mode=OneWay}" Command="{Binding SelectLearnCommand}" Margin="0,0,6,0" HorizontalContentAlignment="Stretch">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource Glyph}" Text="&#xE82F;" FontSize="20" HorizontalAlignment="Left" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                                <TextBlock Text="Learn" FontWeight="SemiBold" FontSize="15" Margin="0,10,0,2" />
+                                <TextBlock Text="See a question and how to answer it, straight away." TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                        </RadioButton>
+                        <RadioButton Style="{StaticResource ModeCard}" IsChecked="{Binding IsPracticeMode, Mode=OneWay}" Command="{Binding SelectPracticeCommand}" Margin="6,0,0,0" HorizontalContentAlignment="Stretch">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource Glyph}" Text="&#xE70F;" FontSize="20" HorizontalAlignment="Left" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                                <TextBlock Text="Practice" FontWeight="SemiBold" FontSize="15" Margin="0,10,0,2" />
+                                <TextBlock Text="Answer first, then get feedback." TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                        </RadioButton>
+                    </UniformGrid>
+
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="Answer length" />
+                    <ComboBox ItemsSource="{Binding AnswerLengthChoices}" DisplayMemberPath="Label" SelectedValuePath="Value"
+                              SelectedValue="{Binding AnswerLengthChoice}" MinWidth="320" HorizontalAlignment="Left" />
+
+                    <StackPanel Orientation="Horizontal" Margin="0,22,0,0">
+                        <Button Command="{Binding StartCommand}" Padding="26,10" Style="{DynamicResource AccentButtonStyle}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Style="{StaticResource Glyph}" Text="&#xE768;" FontSize="13" Margin="0,0,10,0" />
+                                <TextBlock Text="{Binding StartLabel}" FontWeight="SemiBold" />
+                            </StackPanel>
+                        </Button>
+                        <TextBlock Text="{Binding StartHint}" VerticalAlignment="Center" Margin="16,0,0,0" TextWrapping="Wrap" MaxWidth="460"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -101,6 +101,7 @@ internal static class ServiceRegistration
         s.AddSingleton<LearnViewModel>();
         s.AddSingleton<LibraryViewModel>();
         s.AddSingleton<PracticeViewModel>();
+        s.AddSingleton<ConceptsViewModel>();
         s.AddSingleton<MainViewModel>();
         s.AddSingleton<MainWindow>();
         return builder;

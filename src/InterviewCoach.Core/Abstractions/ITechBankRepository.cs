@@ -14,6 +14,11 @@ public interface ITechBankRepository
 
     Task SaveTechnologiesAsync(string jobDescriptionFingerprint, IReadOnlyList<string> technologies, CancellationToken ct = default);
 
+    /// <summary>The technologies saved for a job role (the key is the role normalised by <c>TechBank.RoleKey</c>), or null if never fetched.</summary>
+    Task<IReadOnlyList<string>?> GetRoleTechnologiesAsync(string roleKey, CancellationToken ct = default);
+
+    Task SaveRoleTechnologiesAsync(string roleKey, string role, IReadOnlyList<string> technologies, CancellationToken ct = default);
+
     /// <summary>The employers, projects and highlights previously read from a resume with this fingerprint, or null if never read.</summary>
     Task<IReadOnlyList<ResumeTopic>?> GetResumeTopicsAsync(string resumeFingerprint, CancellationToken ct = default);
 

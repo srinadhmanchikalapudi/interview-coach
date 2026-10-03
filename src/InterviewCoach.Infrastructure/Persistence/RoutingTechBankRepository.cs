@@ -15,6 +15,12 @@ public sealed class RoutingTechBankRepository(ISettingsStore settings, TechBankR
     public Task SaveTechnologiesAsync(string jobDescriptionFingerprint, IReadOnlyList<string> technologies, CancellationToken ct = default)
         => Current.SaveTechnologiesAsync(jobDescriptionFingerprint, technologies, ct);
 
+    public Task<IReadOnlyList<string>?> GetRoleTechnologiesAsync(string roleKey, CancellationToken ct = default)
+        => Current.GetRoleTechnologiesAsync(roleKey, ct);
+
+    public Task SaveRoleTechnologiesAsync(string roleKey, string role, IReadOnlyList<string> technologies, CancellationToken ct = default)
+        => Current.SaveRoleTechnologiesAsync(roleKey, role, technologies, ct);
+
     public Task<IReadOnlyList<ResumeTopic>?> GetResumeTopicsAsync(string resumeFingerprint, CancellationToken ct = default)
         => Current.GetResumeTopicsAsync(resumeFingerprint, ct);
 

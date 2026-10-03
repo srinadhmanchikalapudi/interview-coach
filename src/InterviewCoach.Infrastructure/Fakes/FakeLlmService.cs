@@ -50,6 +50,8 @@ public sealed class FakeLlmService(Func<LlmRole, string, string>? responder = nu
 
     private string DefaultResponder(LlmRole role, string systemPrompt)
     {
+        if (systemPrompt.Contains("List the major technologies a"))
+            return "{\"technologies\": [\"C#\", \".NET\", \"SQL Server\", \"Docker\", \"Git\", \"REST APIs\", \"Azure\"]}";
         if (systemPrompt.Contains("List the main technologies this job actually requires"))
             return "{\"technologies\": [\"C#\", \".NET\", \"SQL Server\"]}";
         return role switch

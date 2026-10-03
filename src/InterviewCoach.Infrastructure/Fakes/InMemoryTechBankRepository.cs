@@ -12,6 +12,7 @@ public sealed class InMemoryTechBankRepository : ITechBankRepository
     private readonly object _gate = new();
     private readonly Dictionary<string, List<string>> _technologies = [];
     private readonly Dictionary<string, List<ResumeTopic>> _resumeTopics = [];
+    private readonly Dictionary<string, List<string>> _roleTechnologies = [];
     private readonly List<TechQuestion> _questions = [];
     private readonly Dictionary<(int QuestionId, int Words), CoachOutput> _answers = [];
     private int _nextId = 1;
@@ -27,6 +28,18 @@ public sealed class InMemoryTechBankRepository : ITechBankRepository
     public Task SaveTechnologiesAsync(string jobDescriptionFingerprint, IReadOnlyList<string> technologies, CancellationToken ct = default)
     {
         lock (_gate) _technologies[jobDescriptionFingerprint] = technologies.ToList();
+        return Task.CompletedTask;
+    }
+
+    public Task<IReadOnlyList<string>?> GetRoleTechnologiesAsync(string roleKey, CancellationToken ct = default)
+    {
+        lock (_gate)
+            return Task.FromResult<IReadOnlyList<string>?>(_roleTechnologies.TryGetValue(roleKey, out var list) ? list.ToList() : null);
+    }
+
+    public Task SaveRoleTechnologiesAsync(string roleKey, string role, IReadOnlyList<string> technologies, CancellationToken ct = default)
+    {
+        lock (_gate) _roleTechnologies[roleKey] = technologies.ToList();
         return Task.CompletedTask;
     }
 

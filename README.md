@@ -12,7 +12,7 @@
 <p align="center">
   <img alt=".NET 10" src="https://img.shields.io/badge/.NET-10-512BD4">
   <img alt="WPF" src="https://img.shields.io/badge/UI-WPF%20%28MVVM%29-0078D4">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-822%20passing-2EA043">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-872%20passing-2EA043">
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%2010%2F11-lightgrey">
   <img alt="Status" src="https://img.shields.io/badge/status-Learn%20mode%20complete-blue">
 </p>
@@ -61,6 +61,7 @@ Things that make it more than a question generator:
 | **Question types** (eight per interview) | Tell me about yourself, resume deep-dive, technical concept, system design, coding talk-through, behavioral, scenario-based, plus one of *Motivation and fit* (full-time) or *Availability and engagement* (contract). |
 | **Full-time or contract** | The two interview styles differ, so the role type changes which questions are offered and how they are written and coached. |
 | **By technology** | Reads the technologies out of the job description (or lets you type your own under **Other**) and asks questions about the ones you pick. |
+| **Technology concepts** | A **Concepts** page for drilling one technology at a time, with no resume or job description: type a job role, tick the technologies it uses (found once by the model and saved), or type your own, then pick **Beginner**, **Medium** or **Advanced**. Works in Learn and Practice. |
 | **Saved technical questions** | Technical-concept questions and their general answers are saved per technology and seniority, so repeats cost nothing and survive edits to your resume. When a technology runs out of saved questions the model writes ten common ones in a single call (most common first, spread over different areas, mixed phrasing) instead of one at a time. |
 | **Questions spread across your resume** | Resume questions take turns between your employers and projects (the least used first, then a different highlight each time) instead of always asking about the current job, and each starts with a different word. A question that repeats an earlier one in other words is sent back once. |
 | **Practice (typed)** | Answer a question yourself, with a live word count and an answer timer, then get feedback that quotes your own words, what the interviewer is testing, a strong answer and a delivery comment. Try again passes your last answer to the coach so it can say what changed; follow-ups become the next question. |
@@ -226,6 +227,19 @@ remembered), tick the ones you want, or tick **Other** and type names yourself (
 Questions are then about those technologies. On its own, By technology serves only technology questions; if one cannot be produced
 you see the error with **Retry** rather than a silent substitute.
 
+### Technology concepts (Concepts page)
+
+For practising a technology by its concepts rather than by your resume. Open **Concepts** in the sidebar:
+
+1. **Job role.** Type a role (it starts as your selected profile's role, and the last one you used is remembered) and click **Show technologies**. The model lists the main technologies that role uses, **once**: the list is saved in the database against the role (spelling and spacing of the role do not matter), so the same role is instant next time, after a restart, with no model call. **Ask again** replaces the saved list if it looks wrong or old. Opening the page only ever reads the saved list; the model is called only when you click.
+2. **Technologies.** Tick the ones you want (**Select all** and **Clear** help), and/or tick **Other** and type names yourself (comma, semicolon or newline separated). Typing works with no role at all.
+3. **Difficulty.** **Beginner** (fundamentals), **Medium** (working knowledge, trade-offs) or **Advanced** (internals, performance, failure cases). It is the level the saved questions are kept at: Beginner is Junior, Medium is Mid and Advanced is Senior, so a question saved for a technology at one difficulty is reused at that difficulty and never at another.
+4. **How to practise.** **Learn** (see the question and how to answer it) or **Practice** (answer first, then get feedback), and the answer length. **Back to Home** in the session returns to Concepts.
+
+Every question is a technical concept question about one of the ticked technologies, taken from the saved question bank (ten common ones are written in one call when a technology and difficulty run out) with a general answer. No resume or job description is sent anywhere, and there is no **Tailor to my resume** button because there is nothing to tailor to. These sessions need the saved question bank (Settings, Saved technical questions); if it is switched off the page says so. Clearing the saved questions in Settings keeps the saved role lists.
+
+<img src="docs/images/concepts-light.png" alt="Concepts page" width="560">
+
 ### Library (Revisit)
 
 Every question and answer Learn mode shows, and every answer you give in Practice with its feedback, is kept, so you can come back to it. Open it from the **Revisit** card next to Practice on Home,
@@ -336,6 +350,7 @@ build time and also embedded in Infrastructure as a fallback. You can edit the c
 | `question_generator.md` | Learn; the bank when it writes a question | Writes one question; per-type length rules; role-type rule; optional focus technology |
 | `coach.md` | Learn and Practice (Mock later) | Writes the answer, the shape, and the follow-ups; in Practice also feedback on your answer |
 | `tech_tags.md` | By technology | Extracts up to eight technologies from a job description |
+| `role_technologies.md` | Concepts page | Lists the main technologies a job role uses (up to 24), once per role, saved |
 | `question_batch.md` | The technology bank | Writes ten common questions about one technology in one call, for the bank |
 | `resume_topics.md` | Resume questions | Lists the employers and projects on a resume with what was done on each, once per resume, so questions can be spread over them |
 | `planner.md`, `interviewer.md`, `debrief.md` | Mock Interview (milestone 6) | Present, not yet used |
@@ -377,7 +392,7 @@ Everything is stored locally under `%LOCALAPPDATA%\InterviewCoach\`:
 | Path | Contents |
 |---|---|
 | `settings.json` | Settings. API and speech keys are encrypted with **DPAPI** for the current Windows user (`dpapi:<base64>`); a test guards against plaintext keys. A corrupt file falls back to defaults. |
-| `app.db` | SQLite (WAL mode): profiles, saved technical questions and answers, remembered technologies per job description. Migrations apply at startup. |
+| `app.db` | SQLite (WAL mode): profiles, saved technical questions and answers, remembered technologies per job description and per job role. Migrations apply at startup. |
 | `logs\llm-yyyymmdd.log` | Only when **Debug logging** is on. Contains full prompts and replies, **including your resume and job description**. Turn it off afterwards. |
 
 **What leaves your machine:** your resume, job description, and the question text go to the LLM provider you configure, and nothing
@@ -386,21 +401,21 @@ on its OpenRouter page if that matters to you. The model list for the OpenRouter
 
 **Key fallbacks** when a Settings field is empty: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION`.
 
-**Database tables:** `Profiles`, `TechQuestions`, `TechAnswers`, `JdTechnologies`, `ResumeTopics` (employers and projects read from a resume), `LearnHistory` and `PracticeAttempts` (the Library).
+**Database tables:** `Profiles`, `TechQuestions`, `TechAnswers`, `JdTechnologies`, `RoleTechnologies` (the technologies of a job role, fetched once), `ResumeTopics` (employers and projects read from a resume), `LearnHistory` and `PracticeAttempts` (the Library).
 
 ## Testing
 
 ```bash
-dotnet test                                     # all 822 tests
+dotnet test                                     # all 872 tests
 dotnet test tests/InterviewCoach.Core.Tests     # one project
 dotnet build InterviewCoach.sln -c Release      # use this if the Debug exe is running (it locks its DLLs)
 ```
 
 | Project | Tests | Covers |
 |---|---|---|
-| `InterviewCoach.Core.Tests` | 319 | Prompt rendering, engine behaviour, the bank, answer lengths, question types, text helpers, role type |
-| `InterviewCoach.Infrastructure.Tests` | 167 | JSON parsing, LLM service (retry, cache split, options), settings (DPAPI round trip, no plaintext), SQLite repositories on real files, file extractors, prompt guards, Demo-mode isolation |
-| `InterviewCoach.App.Tests` | 239 | View models and **real WPF views** on a shared STA dispatcher; fails on any binding error |
+| `InterviewCoach.Core.Tests` | 365 | Prompt rendering, engine behaviour, the bank, answer lengths, question types, text helpers, role type |
+| `InterviewCoach.Infrastructure.Tests` | 206 | JSON parsing, LLM service (retry, cache split, options), settings (DPAPI round trip, no plaintext), SQLite repositories on real files, file extractors, prompt guards, Demo-mode isolation |
+| `InterviewCoach.App.Tests` | 301 | View models and **real WPF views** on a shared STA dispatcher; fails on any binding error |
 
 Test names are sentences that describe behaviour. Scripted test doubles (`ScriptedLlmService`, `BankScript`) let tests control exactly
 what the model "says", including delays and failures.

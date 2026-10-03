@@ -59,6 +59,8 @@ public partial class LearnViewModel : ObservableObject
 
     /// <summary>True when the answer on screen was written without the resume (and so can be reused). Offers "Tailor to my resume".</summary>
     public bool IsGenericAnswer => Item is { IsGeneric: true, Coach: not null };
+    /// <summary>A technology concepts session has no resume, so there is nothing to tailor an answer to.</summary>
+    public bool CanTailor => IsGenericAnswer && _request is not null && !ConceptSession.IsConceptProfile(_request.Profile);
     public string GenericAnswerNote => HasTechnology
         ? $"This is a general answer about {Technology}, written without your resume so it can be saved and reused. Wherever your own experience belongs there is a [bracketed placeholder]."
         : "This is a general answer, written without your resume so it can be saved and reused. Wherever your own experience belongs there is a [bracketed placeholder].";
@@ -101,7 +103,7 @@ public partial class LearnViewModel : ObservableObject
     }
 
     /// <summary>Rewrites a general answer from the resume and job description. Costs a normal answer's worth of tokens.</summary>
-    [RelayCommand(CanExecute = nameof(IsGenericAnswer))]
+    [RelayCommand(CanExecute = nameof(CanTailor))]
     private Task PersonalizeAsync() => RunAsync(() => _engine!.PersonalizeAsync());
 
     [RelayCommand(CanExecute = nameof(CanGoBack))]

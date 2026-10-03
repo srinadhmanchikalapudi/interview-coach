@@ -27,11 +27,12 @@ internal sealed class ScriptedLlmService(Func<LlmCall, Task<object>> handler) : 
         => throw new NotSupportedException();
 
     public IEnumerable<LlmCall> To(LlmRole role) => Calls.Where(c => c.Role == role);
+    public IEnumerable<LlmCall> RoleTagCalls => Calls.Where(c => c.Prompt.Contains(BankScript.RoleTagsMarker));
     public IEnumerable<LlmCall> TagCalls => Calls.Where(c => c.Prompt.Contains(BankScript.TagsMarker));
     public IEnumerable<LlmCall> BankQuestionCalls => To(LlmRole.QuestionGenerator).Where(c => BankScript.FocusOf(c) != "(none)");
     public IEnumerable<LlmCall> BatchCalls => BankQuestionCalls.Where(c => c.Prompt.Contains(BankScript.BatchMarker));
     public IEnumerable<LlmCall> SingleQuestionCalls => BankQuestionCalls.Where(c => !c.Prompt.Contains(BankScript.BatchMarker));
-    public IEnumerable<LlmCall> ModelQuestionCalls => To(LlmRole.QuestionGenerator).Where(c => !c.Prompt.Contains(BankScript.TagsMarker) && !c.Prompt.Contains(BankScript.ResumeTopicsMarker) && BankScript.FocusOf(c) == "(none)");
+    public IEnumerable<LlmCall> ModelQuestionCalls => To(LlmRole.QuestionGenerator).Where(c => !c.Prompt.Contains(BankScript.TagsMarker) && !c.Prompt.Contains(BankScript.RoleTagsMarker) && !c.Prompt.Contains(BankScript.ResumeTopicsMarker) && BankScript.FocusOf(c) == "(none)");
     public IEnumerable<LlmCall> ResumeTopicCalls => To(LlmRole.QuestionGenerator).Where(c => c.Prompt.Contains(BankScript.ResumeTopicsMarker));
     public IEnumerable<LlmCall> GeneralAnswerCalls => To(LlmRole.Coach).Where(c => c.Prompt.Contains(TechBank.GeneralAnswerNote));
     public IEnumerable<LlmCall> TailoredAnswerCalls => To(LlmRole.Coach).Where(c => !c.Prompt.Contains(TechBank.GeneralAnswerNote));
@@ -44,11 +45,15 @@ internal sealed class ScriptedLlmService(Func<LlmCall, Task<object>> handler) : 
 internal sealed partial class BankScript
 {
     public const string TagsMarker = "List the main technologies this job actually requires";
+    public const string RoleTagsMarker = "List the major technologies a";
     public const string BatchMarker = "preparing a bank of technical screening questions";
     public const string ResumeTopicsMarker = "List the employers and projects on this resume";
 
     public string[] Technologies { get; set; } = ["C#", "SQL Server"];
     public bool FailTags { get; set; }
+    /// <summary>What the model says a job role uses, and whether asking fails.</summary>
+    public string[] RoleTechnologies { get; set; } = ["Python", "SQL", "Spark"];
+    public bool FailRoleTags { get; set; }
     public bool FailBankQuestions { get; set; }
     /// <summary>What reading the resume returns. Empty by default, which means no resume focus, so most tests are not affected.</summary>
     public List<ResumeTopicEntryDto> ResumeEntries { get; set; } = [];
@@ -71,6 +76,12 @@ internal sealed partial class BankScript
 
     public Task<object> Handle(LlmCall call)
     {
+        if (call.Prompt.Contains(RoleTagsMarker))
+        {
+            if (FailRoleTags) throw new LlmException("role technologies failed");
+            return Task.FromResult<object>(new TechTagsDto { Technologies = [.. RoleTechnologies] });
+        }
+
         if (call.Prompt.Contains(TagsMarker))
         {
             if (FailTags) throw new LlmException("tag extraction failed");

@@ -57,6 +57,10 @@ public class AppSettings
     public double SpeakingRate { get; set; } = 1.0;
     public string? MicrophoneDeviceId { get; set; }
 
+    // Technology concepts (the Concepts page remembers the last role and difficulty)
+    public string? ConceptRole { get; set; }
+    public Difficulty ConceptDifficulty { get; set; } = Difficulty.Medium;
+
     // Behavior
     /// <summary>Speak each Practice question aloud when it appears (when a voice is ready).</summary>
     public bool SpeakQuestions { get; set; } = true;

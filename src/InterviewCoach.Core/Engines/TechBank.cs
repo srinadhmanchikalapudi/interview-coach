@@ -58,6 +58,44 @@ public sealed class TechBank(ITechBankRepository repository, ILlmService llm, IP
         return technologies;
     }
 
+    /// <summary>The most technologies kept for one job role.</summary>
+    public const int MaxRoleTechnologies = 24;
+
+    /// <summary>The key a role is saved under: lower case, with spaces tidied, so "Backend  Engineer" and "backend engineer" are one role.</summary>
+    public static string RoleKey(string? role) => string.Join(' ', (role ?? "").Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)).ToLowerInvariant();
+
+    /// <summary>The technologies already saved for a role, or null when it was never fetched. Never calls the model.</summary>
+    public async Task<IReadOnlyList<string>?> GetSavedRoleTechnologiesAsync(string role, CancellationToken ct = default)
+        => RoleKey(role).Length == 0 ? null : await repository.GetRoleTechnologiesAsync(RoleKey(role), ct);
+
+    /// <summary>
+    /// The main technologies a job role uses, for technology concepts sessions that start from a role instead of a job description. Asked of
+    /// the model once per role and saved, so opening the same role again costs nothing; <paramref name="refresh"/> asks again and replaces
+    /// the saved list (the user asked for it, because the list looks wrong or out of date).
+    /// </summary>
+    public async Task<IReadOnlyList<string>> GetRoleTechnologiesAsync(string role, bool refresh = false, CancellationToken ct = default)
+    {
+        var key = RoleKey(role);
+        if (key.Length == 0) return [];
+        if (!refresh && await repository.GetRoleTechnologiesAsync(key, ct) is { } known) return known;
+
+        var vars = new Dictionary<string, string?> { ["JOB_ROLE"] = role.Trim(), ["MAX_TECHNOLOGIES"] = MaxRoleTechnologies.ToString() };
+        var system = prompts.Render(PromptName.RoleTechnologies, vars);
+        var reply = await llm.GetJsonAsync<TechTagsDto>(
+            LlmRole.QuestionGenerator, system, [new ChatTurn(ChatTurnRole.User, PromptName.RoleTechnologies.UserMessage()!)], ct);
+
+        var technologies = reply.Technologies
+            .Select(t => t?.Trim() ?? "")
+            .Where(t => t.Length > 0)
+            .Select(t => t.Length > 60 ? t[..60].TrimEnd() : t)
+            .DistinctBy(t => t.ToLowerInvariant())
+            .Take(MaxRoleTechnologies)
+            .ToList();
+        // An empty reply is not saved: it would stick, and the next visit would show nothing without ever asking again.
+        if (technologies.Count > 0) await repository.SaveRoleTechnologiesAsync(key, role.Trim(), technologies, ct);
+        return technologies;
+    }
+
     /// <summary>Employers kept from a resume, and highlights kept per employer.</summary>
     public const int MaxEmployers = 8;
     public const int MaxHighlights = 5;
