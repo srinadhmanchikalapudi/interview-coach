@@ -3,7 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using InterviewCoach.Core.Abstractions;
 using InterviewCoach.Core.Engines;
 using InterviewCoach.Core.Models;
-using InterviewCoach.Core.Speech;
+using InterviewCoach.App.Services;
 
 namespace InterviewCoach.App.ViewModels;
 
@@ -39,7 +39,6 @@ public partial class PracticeViewModel : ObservableObject
     private DateTime? _startedAt;
     private int _frozenSeconds;
 
-    [ObservableProperty] private string _answerText = "";
     [ObservableProperty] private string _emptyMessage = "";
     [ObservableProperty] private CoachOutputViewModel? _coach;
     [ObservableProperty] private string? _unexpectedError;
@@ -49,15 +48,29 @@ public partial class PracticeViewModel : ObservableObject
         IPracticeHistory? history = null, ISpeechFactory? speech = null)
     {
         _history = history;
+        _now = now ?? (() => DateTime.UtcNow);
         _speech = speech;
-        _silence = new SilenceDetector(now ?? (() => DateTime.UtcNow));
+        _speaker = speech is null ? null : new Speaker(speech);
+        if (_speaker is not null) _speaker.Changed += OnSpeakerChanged;
         ReadAloudCommand = new AsyncRelayCommand(ReadAloudAsync);
+
+        // The answer box and its microphone are shared with Mock Interview. Its property names are the ones this screen binds to,
+        // so its change notifications are passed on under the same names.
+        Composer = new AnswerComposer(speech, settings, _now, () => IsAnswering);
+        Composer.PropertyChanged += (_, e) => OnPropertyChanged(e.PropertyName);
+        Composer.TextChanged += OnAnswerTextChanged;
+        Composer.MicStarted += () =>
+        {
+            StopSpeaking(); // talking over the interviewer ends the question
+            // The timer starts at the first keystroke or the first use of the microphone (spec 4.6).
+            if (_startedAt is null && _frozenSeconds == 0) _startedAt = _now();
+        };
+        Composer.SubmitRequested += () => _ = SubmitCommand.ExecuteAsync(null);
         _llm = llm;
         _prompts = prompts;
         _settings = settings;
         _bank = bank;
         _random = random;
-        _now = now ?? (() => DateTime.UtcNow);
     }
 
     /// <summary>Raised when the user asks to go back to the Home screen.</summary>
@@ -96,7 +109,7 @@ public partial class PracticeViewModel : ObservableObject
         _shownAttempt = 1;
         _lastAnswerText = "";
         Coach = null;
-        SetAnswer("");
+        Composer.SetText("");
         EmptyMessage = "";
         SpeechMessage = "";
         ResetTimer();
@@ -148,8 +161,17 @@ public partial class PracticeViewModel : ObservableObject
 
     // ---- the answer box
 
-    public int WordCount => AnswerLength.CountWords(AnswerText);
-    public string WordCountText => WordCount == 1 ? "1 word" : $"{WordCount} words";
+    /// <summary>The answer box and its microphone (shared with Mock Interview).</summary>
+    public AnswerComposer Composer { get; }
+
+    public string AnswerText
+    {
+        get => Composer.AnswerText;
+        set => Composer.AnswerText = value;
+    }
+
+    public int WordCount => Composer.WordCount;
+    public string WordCountText => Composer.WordCountText;
     public bool HasEmptyMessage => EmptyMessage.Length > 0;
 
     public int ElapsedSeconds => _startedAt is { } start ? Math.Max(0, (int)(_now() - start).TotalSeconds) : _frozenSeconds;
@@ -176,17 +198,14 @@ public partial class PracticeViewModel : ObservableObject
         OnPropertyChanged(nameof(TimerLevel));
         OnPropertyChanged(nameof(IsTimerAmber));
         OnPropertyChanged(nameof(IsTimerRed));
-        CheckSilence();
+        Composer.CheckSilence();
     }
 
-    partial void OnAnswerTextChanged(string value)
+    private void OnAnswerTextChanged(string value)
     {
         // The timer starts at the first keystroke (spec 4.6).
         if (_startedAt is null && IsAnswering && _frozenSeconds == 0 && value.Length > 0) _startedAt = _now();
         if (EmptyMessage.Length > 0 && value.Trim().Length > 0) EmptyMessage = "";
-        NoteTextChanged(value);
-        OnPropertyChanged(nameof(WordCount));
-        OnPropertyChanged(nameof(WordCountText));
         Tick();
     }
 
@@ -199,11 +218,11 @@ public partial class PracticeViewModel : ObservableObject
     private async Task SubmitAsync()
     {
         if (_engine is null || !IsAnswering) return;
-        await StopListeningAsync(); // the last words are put into the box before the answer is read
+        await Composer.StopListeningAsync(); // the last words are put into the box before the answer is read
         StopSpeaking();
         if (_engine is null || !IsAnswering) return;
         var seconds = ElapsedSeconds;
-        var method = _input.Method;
+        var method = Composer.InputMethod;
         var result = await RunAsync(() => _engine.SubmitAsync(AnswerText, method, seconds));
         if (result == SubmitResult.Empty)
         {
@@ -245,7 +264,7 @@ public partial class PracticeViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanUsePreviousAnswer))]
     private void UsePreviousAnswer()
     {
-        SetAnswer(_lastAnswerText, typed: true);
+        Composer.SetText(_lastAnswerText, typed: true);
     }
 
     [RelayCommand]
@@ -300,7 +319,7 @@ public partial class PracticeViewModel : ObservableObject
             _shownItem = item;
             _shownAttempt = attempt;
             _lastAnswerText = "";
-            SetAnswer("");
+            Composer.SetText("");
             EmptyMessage = "";
             ResetTimer();
             StopSpeaking();
@@ -311,7 +330,7 @@ public partial class PracticeViewModel : ObservableObject
         {
             // Trying the same question again: an empty box, with the last answer one click away.
             _shownAttempt = attempt;
-            SetAnswer("");
+            Composer.SetText("");
             EmptyMessage = "";
             ResetTimer();
         }
@@ -327,7 +346,7 @@ public partial class PracticeViewModel : ObservableObject
                     _speech is null ? null : ReadAloudCommand);
         }
 
-        if (!IsAnswering && IsListening) _ = StopListeningAsync();
+        if (!IsAnswering && IsListening) Composer.CloseMicrophone();
         if (_readingAnswer && !IsFeedback) StopSpeaking();
 
         OnPropertyChanged(string.Empty); // everything above is derived from the engine; refresh all bindings
