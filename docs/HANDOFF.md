@@ -546,3 +546,27 @@ preferring the answer saved with AnswerWords = -1, keeping the original dates); 
   again" button and no tags; "Remove" does not remove the question from the bank; the 4-card mode row on Home wraps "Mock Interview" onto two lines.
 - Screenshots: `VisualSnapshots` renders the library (`6-library-*`). Its capture was changed to paint the window at its own scale; the earlier
   brush stretched the bounds of every descendant (including scrolled-away content) into the picture and rescaled it.
+
+---
+
+## 17. Third log window: the batch, the filler fix, and long questions that stayed long
+
+Checked on 2 October 2026 after the batch and Library work (20 new calls, Haiku via OpenRouter for questions, GPT-5 Mini for coaching).
+
+- **Filler openers: fixed.** 0 of 11 raw coach answers began with a warm-up (30 of 32 before), and every answer was inside its requested word range
+  (for example 109 words for a 60 to 150 concept answer, 179 to 219 for 150 to 280 resume answers). That is the model output before the code
+  safety net, so the prompt change alone worked.
+- **Batch: works.** One batch call (ASP.NET Core): 3.7 s, 762 input and 442 output tokens (about $0.003 at Haiku's listed prices), valid JSON first
+  time, 10 questions of 11 to 16 words in 8 areas (dependency injection twice, within the limit), mixed forms (one "What's the difference between",
+  "What happens if", "How would you track down", "When would you choose"), none repeated. Flaws: 2 of 10 had a second ask ("How does async/await
+  actually work in C#, and why can't you use it in static constructors?", "What does [ApiController] do, and when would you omit it?"), one mixed up
+  MapGet with attribute routing, and the async question overlaps one already saved under C# (the avoid list is per technology, so near-duplicates
+  across technologies are possible).
+- **Length rules ignored for the other types.** With the new prompt confirmed in the logged system text, 6 of 7 resume, design and engagement
+  questions were still 24 to 33 words, 3 had a second ask, the design question began "Walk me through" at 25 words (limit 15), and the engagement
+  question still asked two things. Stated limits and positive examples did not move Haiku. Change made: worked **Too long / Right** pairs (taken
+  from these real outputs, with the technologies changed so a user's resume is not echoed), a hard limit of 20 words for resume deep-dives, a rule
+  against joining a resume lead-in to the question with a dash, and one pair in the batch prompt. **Not yet verified live.** If it still fails the
+  next step is code, not prose: measure the question (over 20 words, or "and" followed by a new request) and make one cheap retry asking for the
+  short form, or accept it; both cost a call.
+- Not addressed: near-duplicates across technologies in the bank.
