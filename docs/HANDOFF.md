@@ -31,7 +31,7 @@ background preparation of the next question; the technology bank (saved technica
 and seniority); By technology with an Other box; interviewer-style question length rules; full-time or contract role type with two
 extra question types; scroll-wheel behaviour on Home; app icon; a full visual redesign.
 
-Test status: **668 tests passing** (Core 292, Infrastructure 158, App 218). The last full verification was done with
+Test status: **670 tests passing** (Core 293, Infrastructure 159, App 218). The last full verification was done with
 `-c Release` because the user had the Debug build running (see section 2).
 
 **Version control.** The folder is a git repository (branch `main`). History is written to be read; see "Commit conventions" in `README.md`.
@@ -315,7 +315,7 @@ cache read about 0.1x, cache write about 1.25x; the user's balance drop was cons
 
 ## 10. Tests
 
-668 tests: Core 292, Infrastructure 158, App 218.
+670 tests: Core 293, Infrastructure 159, App 218.
 
 - **Core.Tests**: prompt rendering, engine behaviour (`LearnEngineTests`, `LearnEngineBankTests`, `LearnEngineTechnologyTests`,
   `EmploymentTypeTests`), bank service, answer length, question types, text helpers. Helpers in `TestDoubles.cs`:
@@ -642,3 +642,30 @@ on the Learn screen (`LearnViewModel.TryItMyselfRequested`). Rules and flow are 
   list Practice. No voice (milestone 5): `INPUT_METHOD` is always `typed`, and `AnswerInputMethod` already has `Voice` and `Mixed`. No prefetch of the next
   question while the user is answering (a question takes about 1 to 2 s). **Not yet measured live:** how the real coach's feedback reads against real answers; send a
   debug log after a Practice session and check it quotes the answer and that Try again's first point is about what changed.
+
+---
+
+## 20. First Practice log (2 October 2026, SQL Server questions, four typed answers)
+
+**How Practice did on real answers.** Four coach calls with GPT-5 Mini, 7.8 to 8.5 s each (about 6.7 k input tokens, 5.9 to 6.5 k of them cached, 990 to 1,160
+output tokens including 256 to 384 thinking), about $0.0025 each at list prices. The wait after Submit is about 8 s, longer than Learn's 5 to 6 s because the reply
+also carries feedback and a delivery comment. What the feedback did:
+
+- It was specific and mostly grounded: of 10 quotes, 6 were verbatim from the answer and the other 4 were verbatim fragments joined with "..." (all from the
+  answer). It caught a real technical error in a 155-word answer ("ROW_NUMBER assumes a random student": it is deterministic only with an ORDER BY) and gave
+  concrete misses (covering indexes, deadlock graph via Extended Events, PARTITION BY syntax). It handled a five-word "I dont know the answer" well: honest, but
+  push to attempt something. It ignored typos, as it should. Model answers were 106 to 119 words against a 60 to 150 target and no answer opened with a warm-up.
+- **Flaw found and fixed: delivery read typing time as speaking time.** The timer's seconds were sent as `DURATION_SECONDS`; for typed answers that is typing time. The coach
+  said a 5-second typed answer took "1 to 2 seconds" and treated 38 s for 27 typed words as a spoken length. Fix: typed answers send "(none)" (only voice and
+  mixed send a duration), and `coach.md` now says typed answers get no pace or seconds comment and only a one-sentence length comment in words and spoken time (about
+  130 words a minute) when clearly far too short or too long. The timer stays on screen for the user's own pacing. Not yet re-measured live.
+- **Not exercised yet:** Try again (first feedback point about what changed) and follow-ups (transcript in the prompt): all four calls had `previous_attempt` "(none)".
+  Send a log after using them.
+
+**The SQL Server batch** (3.7 s, 10 questions of 8 to 16 words across ten areas, valid JSON). Flaws: one second ask ("When would you denormalize a schema, and what are the
+trade-offs?", despite the example of that exact pattern in the prompt), one product mismatch ("What's the difference between a view and a materialized view?":
+SQL Server has indexed views, not materialized views; the user got this question and answered "I don't know", which was not their fault), one odd question ("What
+happens if you update a column used in a WHERE clause mid-transaction?"), and four of ten in the "difference between" family ("What's the difference between"
+three times, "Explain the difference between" once; the limit is three "What's the difference between"). Changes: the batch prompt now says to ask only about things that
+exist in the technology as named, and has a third Too long / Right pair for the denormalize question. A saved question that is wrong stays in the bank until the
+user clears it in Settings.

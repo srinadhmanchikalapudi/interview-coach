@@ -12,7 +12,7 @@
 <p align="center">
   <img alt=".NET 10" src="https://img.shields.io/badge/.NET-10-512BD4">
   <img alt="WPF" src="https://img.shields.io/badge/UI-WPF%20%28MVVM%29-0078D4">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-668%20passing-2EA043">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-670%20passing-2EA043">
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%2010%2F11-lightgrey">
   <img alt="Status" src="https://img.shields.io/badge/status-Learn%20mode%20complete-blue">
 </p>
@@ -245,7 +245,8 @@ Choose **Practice** on Home (the same role type, question types, technologies an
 click **Try it myself** in Learn mode to practise the question you are looking at, without its model answer.
 
 1. A question appears and the answer box opens. **Nothing is coached until you submit**: the app enforces that in the engine, not just on screen.
-2. Type your answer. The box shows a live word count and a timer that starts at your first keystroke. For behavioral and project questions the
+2. Type your answer. The box shows a live word count and a timer that starts at your first keystroke (for your own pacing: the coach is not told the
+   typing time, because it is not speaking time). For behavioral and project questions the
    timer turns amber past 2:30 and red past 3:30. **Ctrl+Enter** or **Submit** sends it; an empty answer is not sent ("I don't know" is fine).
 3. The coach replies with **how your answer landed** (what worked, what to fix, what was missing, quoting your words), what the interviewer was testing,
    a strong answer, its shape, a delivery comment and likely follow-ups.
@@ -385,15 +386,15 @@ on its OpenRouter page if that matters to you. The model list for the OpenRouter
 ## Testing
 
 ```bash
-dotnet test                                     # all 668 tests
+dotnet test                                     # all 670 tests
 dotnet test tests/InterviewCoach.Core.Tests     # one project
 dotnet build InterviewCoach.sln -c Release      # use this if the Debug exe is running (it locks its DLLs)
 ```
 
 | Project | Tests | Covers |
 |---|---|---|
-| `InterviewCoach.Core.Tests` | 292 | Prompt rendering, engine behaviour, the bank, answer lengths, question types, text helpers, role type |
-| `InterviewCoach.Infrastructure.Tests` | 158 | JSON parsing, LLM service (retry, cache split, options), settings (DPAPI round trip, no plaintext), SQLite repositories on real files, file extractors, prompt guards, Demo-mode isolation |
+| `InterviewCoach.Core.Tests` | 293 | Prompt rendering, engine behaviour, the bank, answer lengths, question types, text helpers, role type |
+| `InterviewCoach.Infrastructure.Tests` | 159 | JSON parsing, LLM service (retry, cache split, options), settings (DPAPI round trip, no plaintext), SQLite repositories on real files, file extractors, prompt guards, Demo-mode isolation |
 | `InterviewCoach.App.Tests` | 218 | View models and **real WPF views** on a shared STA dispatcher; fails on any binding error |
 
 Test names are sentences that describe behaviour. Scripted test doubles (`ScriptedLlmService`, `BankScript`) let tests control exactly
