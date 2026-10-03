@@ -232,3 +232,49 @@ public class ConceptTests
         Assert.NotEmpty(first.BankQuestionCalls);
     }
 }
+
+public class CredentialsTests
+{
+    private static readonly string[] Variables = ["ANTHROPIC_API_KEY", "OPENAI_API_KEY", "OPENROUTER_API_KEY"];
+
+    private static void WithoutEnvironmentKeys(Action test)
+    {
+        var saved = Variables.ToDictionary(v => v, Environment.GetEnvironmentVariable);
+        try
+        {
+            foreach (var v in Variables) Environment.SetEnvironmentVariable(v, null);
+            test();
+        }
+        finally
+        {
+            foreach (var (v, value) in saved) Environment.SetEnvironmentVariable(v, value);
+        }
+    }
+
+    [Fact]
+    public void Each_provider_needs_its_own_key_and_a_compatible_server_may_have_an_address_instead()
+    {
+        WithoutEnvironmentKeys(() =>
+        {
+            Assert.False(new AppSettings().HasLlmCredentials);
+            Assert.True(new AppSettings { AnthropicApiKey = "k" }.HasLlmCredentials);
+            Assert.False(new AppSettings { OpenRouterApiKey = "k" }.HasLlmCredentials);          // the key is for a provider that is not selected
+            Assert.True(new AppSettings { Provider = LlmProvider.OpenRouter, OpenRouterApiKey = "k" }.HasLlmCredentials);
+            Assert.False(new AppSettings { Provider = LlmProvider.OpenAiCompatible }.HasLlmCredentials);
+            Assert.True(new AppSettings { Provider = LlmProvider.OpenAiCompatible, OpenAiApiKey = "k" }.HasLlmCredentials);
+            Assert.True(new AppSettings { Provider = LlmProvider.OpenAiCompatible, OpenAiBaseUrl = "http://localhost:1234/v1" }.HasLlmCredentials);
+            Assert.False(new AppSettings { AnthropicApiKey = "   " }.HasLlmCredentials);
+        });
+    }
+
+    [Fact]
+    public void A_key_from_the_environment_counts_and_the_flag_is_not_written_to_the_settings_file()
+    {
+        WithoutEnvironmentKeys(() =>
+        {
+            Environment.SetEnvironmentVariable("ANTHROPIC_API_KEY", "from-env");
+            Assert.True(new AppSettings().HasLlmCredentials);
+            Assert.DoesNotContain("HasLlmCredentials", System.Text.Json.JsonSerializer.Serialize(new AppSettings()));
+        });
+    }
+}

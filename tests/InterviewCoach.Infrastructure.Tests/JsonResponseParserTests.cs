@@ -145,6 +145,81 @@ public class JsonResponseParserTests
     }
 
     [Fact]
+    public void Planner_sample_deserializes_with_its_phases_and_claims()
+    {
+        var plan = JsonResponseParser.Parse<InterviewPlanDto>("""
+            {
+              "focus_areas": [ { "id": "fa1", "name": "Caching", "why": "JD must-have", "source": "jd" } ],
+              "resume_claims_to_probe": [ { "claim": "cut p99 by 60%", "probe": "How was it measured?" } ],
+              "phases": [ { "phase": "opener", "target_minutes": 2, "topics": ["intro"] }, { "phase": "technical", "target_minutes": 13, "topics": [] } ],
+              "opening_line": "Hi, thanks for joining."
+            }
+            """);
+
+        Assert.Equal("fa1", plan.FocusAreas[0].Id);
+        Assert.Equal("How was it measured?", plan.ResumeClaimsToProbe[0].Probe);
+        Assert.Equal([2, 13], plan.Phases.Select(p => p.TargetMinutes));
+        Assert.Equal("Hi, thanks for joining.", plan.OpeningLine);
+    }
+
+    [Fact]
+    public void Interviewer_turn_sample_deserializes_including_a_null_focus_area_and_the_end_flag()
+    {
+        var turn = JsonResponseParser.Parse<InterviewerTurnDto>("""{"say": "Thanks, this was great.", "turn_type": "closing", "phase": "candidate_questions", "focus_area_id": null, "end_interview": true}""");
+
+        Assert.Equal("Thanks, this was great.", turn.Say);
+        Assert.Equal("closing", turn.TurnType);
+        Assert.Null(turn.FocusAreaId);
+        Assert.True(turn.EndInterview);
+    }
+
+    [Fact]
+    public void Interviewer_turn_inside_a_fence_with_prose_before_it_still_parses()
+    {
+        var raw = "Here is my turn:\n```json\n{\"say\": \"Okay. Why Redis?\", \"turn_type\": \"follow_up\", \"phase\": \"technical\", \"focus_area_id\": \"fa1\", \"end_interview\": false}\n```";
+        var turn = JsonResponseParser.Parse<InterviewerTurnDto>(raw);
+
+        Assert.Equal("follow_up", turn.TurnType);
+        Assert.False(turn.EndInterview);
+    }
+
+    [Fact]
+    public void Debrief_sample_deserializes_with_a_null_rating_for_an_area_that_did_not_come_up()
+    {
+        var debrief = JsonResponseParser.Parse<DebriefDto>("""
+            {
+              "overall_summary": "Clear on caching, vague on measuring.",
+              "hire_signal": "lean_yes",
+              "focus_area_ratings": [
+                { "focus_area_id": "fa1", "name": "Caching", "rating": 3, "evidence": "\"cut p99\"" },
+                { "focus_area_id": "fa2", "name": "Design", "rating": null, "evidence": "never came up" }
+              ],
+              "strengths": ["Specific numbers"],
+              "top_fixes": [ { "fix": "Say how you measured", "example": "the p99 claim", "how_to_practice": "Name the metric first" } ],
+              "practice_next": ["How do you measure latency?"]
+            }
+            """);
+
+        Assert.Equal("lean_yes", debrief.HireSignal);
+        Assert.Equal(3, debrief.FocusAreaRatings[0].Rating);
+        Assert.Null(debrief.FocusAreaRatings[1].Rating);
+        Assert.Equal("Name the metric first", debrief.TopFixes[0].HowToPractice);
+        Assert.Single(debrief.PracticeNext);
+    }
+
+    [Fact]
+    public void A_debrief_with_missing_fields_still_deserializes_with_safe_defaults()
+    {
+        var debrief = JsonResponseParser.Parse<DebriefDto>("""{"overall_summary": "Short."}""");
+
+        Assert.Equal("Short.", debrief.OverallSummary);
+        Assert.Equal("", debrief.HireSignal);
+        Assert.Empty(debrief.FocusAreaRatings);
+        Assert.Empty(debrief.Strengths);
+        Assert.Empty(debrief.TopFixes);
+    }
+
+    [Fact]
     public void Garbage_throws_JsonException()
     {
         Assert.ThrowsAny<JsonException>(() => JsonResponseParser.Parse<Sample>("I cannot do that."));

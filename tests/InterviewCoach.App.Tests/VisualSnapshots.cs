@@ -59,7 +59,8 @@ public class VisualSnapshots
                 Name = "Fintech startup", JobRole = "Staff Engineer", Seniority = Seniority.Staff, JobDescription = "Payments platform.", ResumeText = Resume,
             }).GetAwaiter().GetResult();
 
-            var home = new HomeViewModel(repo, new StubExtractor(), new ScriptedDialogs(), bank);
+            var snapHistory = new InMemoryMockHistory();
+            var home = new HomeViewModel(repo, new StubExtractor(), new ScriptedDialogs(), bank, null, snapHistory);
             home.InitializeAsync().GetAwaiter().GetResult();
             var learn = new LearnViewModel(llm, prompts, settings, bank, () => 0.0);
             var settingsVm = new SettingsViewModel(settings, llm, bank, new ScriptedDialogs());
@@ -125,12 +126,15 @@ public class VisualSnapshots
             conceptsVm.DifficultyOptions.First(o => o.Difficulty == Difficulty.Advanced).IsSelected = true;
             var mockLlm = new FakeLlmService();
             var mockSpeech = new TestSpeech();
-            var mockVm = new MockViewModel(mockLlm, prompts, new MemorySettings(new AppSettings { AutoListen = false }), mockSpeech, new ScriptedDialogs(), null, () => practiceClock);
+            var mockVm = new MockViewModel(mockLlm, prompts, new MemorySettings(new AppSettings { AutoListen = false }), mockSpeech, new ScriptedDialogs(), snapHistory, () => practiceClock);
+            var historyVm = new HistoryViewModel(snapHistory, repo, new ScriptedDialogs(), settings);
             DebriefViewModel? debriefVm = null;
             mockVm.DebriefReady += d => debriefVm = d;
-            var main = new MainViewModel(home, settingsVm, learn, settings, library, null, conceptsVm, mockVm);
+            var main = new MainViewModel(home, settingsVm, learn, settings, library, null, conceptsVm, mockVm, historyVm);
+            main.DismissNoticeCommand.Execute(null); // the pictures are of the app in use, not of a first run without a key
 
             var window = new MainWindow(main);
+            var homeWithHistory = home;
 
             foreach (var (theme, name) in new[] { (ThemeMode.Light, "light"), (ThemeMode.Dark, "dark") })
             {
@@ -225,7 +229,27 @@ public class VisualSnapshots
                 }
                 main.CurrentPage = debriefVm!;
                 Save(window, 1180, 2000, Path.Combine(dir, $"13-debrief-{name}.png"));
-                foreach (var card in debriefVm!.Threads.Take(1)) { /* cards stay collapsed in the picture */ }
+                // History: the finished interview, one that was left midway (offered back on Home), and the notice bar of a first run.
+                practiceClock = new DateTime(2026, 10, 3, 14, 0, 0, DateTimeKind.Utc);
+                mockVm.Begin(new MockSessionRequest(repo.ListAsync().GetAwaiter().GetResult()[0], RoundType.SystemDesign, 45, true, EmploymentType.FullTime));
+                practiceClock = practiceClock.AddSeconds(605);
+                mockVm.AnswerText = "Good, thanks.";
+                mockVm.SubmitCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+                mockVm.Abandon();
+                historyVm.LoadAsync().GetAwaiter().GetResult();
+                main.CurrentPage = historyVm;
+                Save(window, 1180, 640, Path.Combine(dir, $"14-history-{name}.png"));
+
+                homeWithHistory.RefreshMockStatusAsync().GetAwaiter().GetResult();
+                main.CurrentPage = home;
+                Save(window, 1180, 900, Path.Combine(dir, $"15-home-resume-{name}.png"));
+                foreach (var left in snapHistory.ListAsync().GetAwaiter().GetResult().Where(r => r.IsUnfinished).ToList()) snapHistory.DeleteAsync(left.Id).GetAwaiter().GetResult();
+                homeWithHistory.RefreshMockStatusAsync().GetAwaiter().GetResult();
+
+                var firstRun = new MainViewModel(home, settingsVm, learn, new MemorySettings(new AppSettings()));
+                main.CurrentPage = home;
+                var firstRunWindow = new MainWindow(firstRun);
+                Save(firstRunWindow, 1180, 520, Path.Combine(dir, $"16-no-key-{name}.png"));
             }
         });
     }
