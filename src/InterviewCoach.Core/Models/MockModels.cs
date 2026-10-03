@@ -158,6 +158,8 @@ public sealed class MockTurn
     public string? InputMethod { get; init; }
     public int DurationSeconds { get; init; }
     public DateTime At { get; init; }
+    /// <summary>Seconds into the interview when this turn was added (the interview's own clock, which does not run while it is left).</summary>
+    public int ElapsedSeconds { get; init; }
 }
 
 public enum ThreadStatus { NotAnswered, Coaching, Done, Failed }

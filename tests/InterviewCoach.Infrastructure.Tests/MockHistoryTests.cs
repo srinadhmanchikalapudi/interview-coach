@@ -36,7 +36,7 @@ public class MockHistoryTests : IDisposable
 
     private static MockRecord Record(string role = "Backend Engineer", DateTime? started = null) => new()
     {
-        ProfileName = "Acme", JobRole = role, RoundType = "Technical", DurationMinutes = 30,
+        ProfileId = 7, ProfileName = "Acme", JobRole = role, RoundType = "Technical", Employment = "Contract", DurationMinutes = 30,
         StartedAt = started ?? new DateTime(2026, 10, 3, 12, 0, 0, DateTimeKind.Utc), PlanJson = "{\"focus_areas\":[]}",
         TurnsJson = "[{\"text\":\"Hi\"}]",
     };
@@ -57,6 +57,8 @@ public class MockHistoryTests : IDisposable
         Assert.Equal(id, saved.Id);
         Assert.Equal("Backend Engineer", saved.JobRole);
         Assert.Equal("Technical", saved.RoundType);
+        Assert.Equal(7, saved.ProfileId);
+        Assert.Equal("Contract", saved.Employment);
         Assert.Equal(30, saved.DurationMinutes);
         Assert.Equal(900, saved.ElapsedSeconds);
         Assert.True(saved.Finished);

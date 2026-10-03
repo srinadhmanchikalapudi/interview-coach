@@ -6,7 +6,7 @@ using InterviewCoach.Infrastructure.Prompts;
 
 namespace InterviewCoach.Core.Tests;
 
-public class MockEngineTests
+public partial class MockEngineTests
 {
     private sealed class Clockwork
     {

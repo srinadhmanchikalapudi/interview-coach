@@ -11,9 +11,11 @@ public sealed class MockHistoryRepository(IDbContextFactory<AppDbContext> factor
         await using var db = await factory.CreateDbContextAsync(ct);
         var row = new MockSessionEntity
         {
+            ProfileId = record.ProfileId,
             ProfileName = record.ProfileName,
             JobRole = record.JobRole,
             RoundType = record.RoundType,
+            Employment = record.Employment,
             DurationMinutes = record.DurationMinutes,
             StartedAt = record.StartedAt,
             PlanJson = record.PlanJson ?? "",
@@ -40,9 +42,11 @@ public sealed class MockHistoryRepository(IDbContextFactory<AppDbContext> factor
         return rows.Select(r => new MockRecord
         {
             Id = r.Id,
+            ProfileId = r.ProfileId,
             ProfileName = r.ProfileName,
             JobRole = r.JobRole,
             RoundType = r.RoundType,
+            Employment = r.Employment,
             DurationMinutes = r.DurationMinutes,
             StartedAt = r.StartedAt,
             EndedAt = r.EndedAt,

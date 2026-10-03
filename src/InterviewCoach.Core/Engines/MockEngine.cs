@@ -48,6 +48,7 @@ public sealed class MockEngine(ILlmService llm, IPromptLibrary prompts, Func<Dat
     private readonly List<ChatTurn> _messages = [];
     private readonly List<MockTurn> _turns = [];
     private readonly SemaphoreSlim _coachGate = new(MaxCoachCalls);
+    private readonly SemaphoreSlim _recordGate = new(1, 1);
     private readonly CancellationTokenSource _lifetime = new();
     private readonly List<Task> _coachTasks = [];
 
@@ -204,10 +205,12 @@ public sealed class MockEngine(ILlmService llm, IPromptLibrary prompts, Func<Dat
             Phase = reply.Phase,
             FocusAreaId = reply.FocusAreaId,
             At = _now(),
+            ElapsedSeconds = ElapsedSeconds,
         });
 
         // After "Time is up" the next interviewer turn is the closing, whatever it says.
         IsClosing = reply.EndInterview || _timeUpSent;
+        await RecordAsync(); // written as it goes, so a round that is left can be picked up again
         SetPhase(MockPhase.InterviewerSpeaking);
     }
 
@@ -239,6 +242,7 @@ public sealed class MockEngine(ILlmService llm, IPromptLibrary prompts, Func<Dat
             InputMethod = inputMethod,
             DurationSeconds = Math.Max(0, durationSeconds),
             At = _now(),
+            ElapsedSeconds = ElapsedSeconds,
         });
 
         var context = $"[app context] Elapsed {ElapsedSeconds / 60} min of {DurationMinutes} min. Answer took {Math.Max(0, durationSeconds)}s via {inputMethod}.";
@@ -248,6 +252,7 @@ public sealed class MockEngine(ILlmService llm, IPromptLibrary prompts, Func<Dat
             context += "\n" + TimeUpMessage;
         }
         _messages.Add(new ChatTurn(ChatTurnRole.User, text + "\n" + context));
+        await RecordAsync();
 
         var (token, id) = BeginOperation();
         await InterviewerTurnAsync(id, token);
@@ -387,32 +392,145 @@ public sealed class MockEngine(ILlmService llm, IPromptLibrary prompts, Func<Dat
     private async Task RecordAsync()
     {
         if (history is null || _startedAt is null) return;
+        await _recordGate.WaitAsync();
         try
         {
-            var first = _record is null;
-            _record ??= new MockRecord
+            var record = _record ?? new MockRecord
             {
+                ProfileId = _profile.Id,
                 ProfileName = _profile.Name,
                 JobRole = _profile.JobRole,
                 RoundType = RoundType.Label(),
+                Employment = _employment.Label(),
                 DurationMinutes = DurationMinutes,
                 StartedAt = _startedAt.Value,
                 PlanJson = _planJson,
             };
-            _record.EndedAt = _endedAt;
-            _record.ElapsedSeconds = ElapsedSeconds;
-            _record.Finished = true;
-            _record.TurnsJson = JsonSerializer.Serialize(_turns, MockJson.Options);
-            _record.DebriefJson = Debrief is null ? null : JsonSerializer.Serialize(Debrief, MockJson.Options);
-            _record.HireSignal = Debrief?.HireSignal;
-            _record.ThreadsJson = JsonSerializer.Serialize(
+            record.EndedAt = _endedAt;
+            record.ElapsedSeconds = ElapsedSeconds;
+            record.Finished = HasEnded;
+            record.TurnsJson = JsonSerializer.Serialize(_turns, MockJson.Options);
+            record.DebriefJson = Debrief is null ? null : JsonSerializer.Serialize(Debrief, MockJson.Options);
+            record.HireSignal = Debrief?.HireSignal;
+            record.ThreadsJson = JsonSerializer.Serialize(
                 _threads.Select(t => new { t.Question, t.Phase, t.FocusAreaId, Status = t.Status.ToString(), t.Coach, t.Error, Transcript = t.Transcript }), MockJson.Options);
-            if (first) _record.Id = await history.AddAsync(_record);
-            else await history.UpdateAsync(_record);
+            if (_record is null)
+            {
+                record.Id = await history.AddAsync(record);
+                _record = record; // only once it is stored: a failed first write is tried again as a first write
+            }
+            else
+            {
+                await history.UpdateAsync(record);
+            }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            // Recording is best effort: it must not interrupt the debrief.
+            // Recording is best effort: it must not interrupt the interview or the debrief.
+        }
+        finally
+        {
+            _recordGate.Release();
+        }
+    }
+
+    // ---- resuming
+
+    /// <summary>
+    /// Picks up a stored interview. A round that was left midway goes on where it stopped (the interviewer repeats the line it was on, or
+    /// answers the last thing that was said); the clock does not count the time it was left. A round that had ended but has no debrief gets
+    /// its debrief written now. A record that cannot be read leaves the engine in Failed with a message.
+    /// </summary>
+    public async Task ResumeAsync(CandidateProfile profile, MockRecord record)
+    {
+        _cts?.Cancel();
+        _profile = profile;
+        _employment = MockRecords.EmploymentOf(record.Employment);
+        RoundType = MockRecords.RoundOf(record.RoundType);
+        DurationMinutes = Math.Max(1, record.DurationMinutes);
+        _messages.Clear();
+        _turns.Clear();
+        _threads = [];
+        _coachTasks.Clear();
+        _threadsStarted = false;
+        _userEnded = false;
+        _cancelled = false;
+        IsClosing = false;
+        Debrief = null;
+        Error = null;
+        _failedStep = Step.None;
+
+        var restored = MockRecords.Restore(record);
+        if (restored.Turns.Count == 0 || restored.Plan is null)
+        {
+            Plan = null;
+            _startedAt = null;
+            Error = "This interview cannot be resumed: its saved conversation could not be read.";
+            SetPhase(MockPhase.Failed);
+            return;
+        }
+
+        Plan = restored.Plan;
+        _planJson = record.PlanJson;
+        _turns.AddRange(restored.Turns);
+        _record = record; // later writes go to the same row
+        // The clock is the interview's own: time spent away is not counted.
+        _startedAt = _now() - TimeSpan.FromSeconds(record.ElapsedSeconds);
+        _endedAt = record.Finished ? (_startedAt + TimeSpan.FromSeconds(record.ElapsedSeconds)) : null;
+
+        // What the model was sent, rebuilt from the conversation: the joining line, then each interviewer turn as it was and each answer with its context line.
+        _messages.Add(new ChatTurn(ChatTurnRole.User, $"[app context] The candidate has joined the call. Elapsed 0 min of {DurationMinutes} min."));
+        _timeUpSent = false;
+        foreach (var turn in _turns)
+        {
+            if (turn.Speaker == MockSpeaker.Interviewer)
+            {
+                _messages.Add(new ChatTurn(ChatTurnRole.Assistant, turn.RawJson ?? JsonSerializer.Serialize(new
+                {
+                    say = turn.Text, turn_type = turn.TurnType, phase = turn.Phase, focus_area_id = turn.FocusAreaId, end_interview = false,
+                })));
+            }
+            else
+            {
+                var context = $"[app context] Elapsed {turn.ElapsedSeconds / 60} min of {DurationMinutes} min. Answer took {turn.DurationSeconds}s via {turn.InputMethod ?? AnswerInputMethod.Typed}.";
+                if (turn.ElapsedSeconds >= (DurationMinutes + OvertimeMinutes) * 60)
+                {
+                    _timeUpSent = true;
+                    context += "\n" + TimeUpMessage;
+                }
+                _messages.Add(new ChatTurn(ChatTurnRole.User, turn.Text + "\n" + context));
+            }
+        }
+
+        if (record.Finished)
+        {
+            await EndRoundAsync(); // the debrief was never written
+            return;
+        }
+
+        var last = _turns[^1];
+        if (last.Speaker == MockSpeaker.Candidate)
+        {
+            var (token, id) = BeginOperation();
+            await InterviewerTurnAsync(id, token); // the reply to the last answer never came
+            return;
+        }
+
+        IsClosing = EndsInterview(last);
+        SetPhase(MockPhase.InterviewerSpeaking);
+    }
+
+    private static bool EndsInterview(MockTurn turn)
+    {
+        if (string.Equals(turn.TurnType, "closing", StringComparison.OrdinalIgnoreCase)) return true;
+        try
+        {
+            using var doc = JsonDocument.Parse(turn.RawJson ?? "{}");
+            return doc.RootElement.TryGetProperty("end_interview", out var end) && end.ValueKind == JsonValueKind.True;
+        }
+        catch (JsonException)
+        {
+            return false;
         }
     }
 

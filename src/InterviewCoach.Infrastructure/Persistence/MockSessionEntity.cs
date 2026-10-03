@@ -4,9 +4,11 @@ namespace InterviewCoach.Infrastructure.Persistence;
 public class MockSessionEntity
 {
     public int Id { get; set; }
+    public int ProfileId { get; set; }
     public string ProfileName { get; set; } = "";
     public string JobRole { get; set; } = "";
     public string RoundType { get; set; } = "";
+    public string Employment { get; set; } = "";
     public int DurationMinutes { get; set; }
     public DateTime StartedAt { get; set; }
     public DateTime? EndedAt { get; set; }
