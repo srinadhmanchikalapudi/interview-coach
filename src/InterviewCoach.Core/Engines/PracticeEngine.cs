@@ -50,7 +50,8 @@ public sealed record PracticeAttempt(string AnswerText, string InputMethod, int 
 /// submission do, so the rule holds whatever the screen does. Questions come from the same <see cref="QuestionPicker"/> as Learn mode.
 /// No UI references. Async methods resume on the caller's context, so events are raised on the UI thread when called from WPF.
 /// </summary>
-public sealed class PracticeEngine(ILlmService llm, IPromptLibrary prompts, TechBank? bank = null, Func<double>? random = null)
+public sealed class PracticeEngine(
+    ILlmService llm, IPromptLibrary prompts, TechBank? bank = null, Func<double>? random = null, IPracticeHistory? history = null)
 {
     private enum Step { None, Generate, Coach }
 
@@ -247,6 +248,7 @@ public sealed class PracticeEngine(ILlmService llm, IPromptLibrary prompts, Tech
             LastAttempt = new PracticeAttempt(submission.Answer, submission.InputMethod, submission.DurationSeconds, submission.WordCount, coach.ForPractice());
             Error = null;
             SetPhase(PracticePhase.ShowingFeedback);
+            await RecordAttemptAsync(Current!, LastAttempt, AttemptNumber);
         }
         catch (LlmException ex)
         {
@@ -255,6 +257,39 @@ public sealed class PracticeEngine(ILlmService llm, IPromptLibrary prompts, Tech
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
             // superseded by Next, Try again or Cancel
+        }
+    }
+
+    /// <summary>
+    /// Keeps the answer and its feedback for the Library once the feedback is on screen. Best effort: a problem saving a note about an
+    /// answer must never interrupt practice, so any failure here is ignored.
+    /// </summary>
+    private async Task RecordAttemptAsync(LearnItem item, PracticeAttempt? attempt, int attemptNumber)
+    {
+        if (history is null || attempt is null) return;
+        try
+        {
+            await history.RecordAsync(new PracticeRecord
+            {
+                Question = item.Question,
+                QuestionType = item.QuestionType,
+                Technology = item.Technology,
+                Seniority = _profile.Seniority.ToString(),
+                Source = item.Source,
+                IsFollowUp = item.IsFollowUp,
+                ParentQuestion = item.ParentQuestion,
+                ProfileName = _profile.Name,
+                AttemptNumber = attemptNumber,
+                AnswerText = attempt.AnswerText,
+                InputMethod = attempt.InputMethod,
+                DurationSeconds = attempt.DurationSeconds,
+                WordCount = attempt.WordCount,
+                Coach = attempt.Coach,
+            });
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // intentionally ignored, see above
         }
     }
 

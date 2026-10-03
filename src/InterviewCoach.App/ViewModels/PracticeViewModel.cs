@@ -27,6 +27,7 @@ public partial class PracticeViewModel : ObservableObject
     private readonly TechBank? _bank;
     private readonly Func<double>? _random;
     private readonly Func<DateTime> _now;
+    private readonly IPracticeHistory? _history;
 
     private PracticeEngine? _engine;
     private LearnSessionRequest? _request;
@@ -43,8 +44,10 @@ public partial class PracticeViewModel : ObservableObject
     [ObservableProperty] private string? _unexpectedError;
 
     public PracticeViewModel(
-        ILlmService llm, IPromptLibrary prompts, ISettingsStore settings, TechBank? bank = null, Func<double>? random = null, Func<DateTime>? now = null)
+        ILlmService llm, IPromptLibrary prompts, ISettingsStore settings, TechBank? bank = null, Func<double>? random = null, Func<DateTime>? now = null,
+        IPracticeHistory? history = null)
     {
+        _history = history;
         _llm = llm;
         _prompts = prompts;
         _settings = settings;
@@ -80,7 +83,7 @@ public partial class PracticeViewModel : ObservableObject
         _engine?.Cancel();
         _request = request;
         // The technology bank is optional, as in Learn mode: with it off every question is written from the resume and job description.
-        _engine = new PracticeEngine(_llm, _prompts, _settings.Current.ReuseGeneralAnswers ? _bank : null, _random);
+        _engine = new PracticeEngine(_llm, _prompts, _settings.Current.ReuseGeneralAnswers ? _bank : null, _random, _history);
         _engine.Changed += Refresh;
         UnexpectedError = null;
         _shownItem = null;

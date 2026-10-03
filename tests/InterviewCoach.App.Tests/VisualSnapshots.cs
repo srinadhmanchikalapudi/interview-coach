@@ -91,7 +91,27 @@ public class VisualSnapshots
             Add("Why did you choose Redis over Memcached for the claims cache?", "resume_deep_dive", null, false, "We needed expiry per key and a shared cache across several instances, and Redis gave us both along with simple data structures for the hot lookups.");
             Add("Tell me about a time you pushed back on a deadline.", "behavioral", null, false, "On the claims migration the date was set before the data was clean. I showed the team the failure rate from a trial run and we moved the cutover by two weeks.");
             Add("Design a notification service for a claims platform.", "system_design", null, false, "I would put a queue between the claims service and the senders, keep a preference store per user, and retry failed sends with backoff.");
-            var library = new LibraryViewModel(history, new ScriptedDialogs());
+            var practiceHistory = new InMemoryPracticeHistory(() => clock);
+            practiceHistory.RecordAsync(new PracticeRecord
+            {
+                Question = "Why did you choose Redis over Memcached for the claims cache?", QuestionType = "resume_deep_dive", ProfileName = "Claims platform",
+                AnswerText = "We needed expiry per key and a cache shared by several instances, and Redis gave us both. I also wanted simple data structures for the hot lookups.",
+                WordCount = 27, DurationSeconds = 74,
+                Coach = new CoachOutput
+                {
+                    WhatTheyreTesting = "Whether you chose the tool for reasons or by habit, and can name the alternative you ruled out.",
+                    Feedback =
+                    [
+                        new FeedbackPoint { Kind = "strength", Point = "You gave two concrete reasons.", Quote = "expiry per key and a cache shared by several instances" },
+                        new FeedbackPoint { Kind = "missing", Point = "Say what it did for the system: a number, before and after." },
+                    ],
+                    ModelAnswer = "We needed per-key expiry and one cache shared by several instances, and Redis gave us both. After the move the hot lookups dropped from about 40 ms to under 5 ms.",
+                    Shape = "Direct answer → the constraint → the result with a number",
+                    FollowUps = [new FollowUp { Question = "What did you do about cache invalidation?", Hint = "Name the strategy and one failure it prevented." }],
+                },
+            }).GetAwaiter().GetResult();
+            clock = clock.AddMinutes(25);
+            var library = new LibraryViewModel(history, new ScriptedDialogs(), null, practiceHistory);
             var practiceClock = new DateTime(2026, 10, 3, 12, 0, 0, DateTimeKind.Utc);
             var practiceLlm = new StubLlm { QuestionText = "Tell me about a time you pushed back on a deadline." };
             var practiceVm = new PracticeViewModel(practiceLlm, prompts, settings, null, () => 0.0, () => practiceClock);
@@ -135,7 +155,7 @@ public class VisualSnapshots
                 Save(window, 1180, 1500, Path.Combine(dir, $"5-settings-openrouter-{name}.png"));
 
                 library.LoadAsync().GetAwaiter().GetResult();
-                library.Selected = library.Rows.First(r => r.Question.StartsWith("What does a hook"));
+                library.Selected = library.Rows.First(r => r.IsPractice);
                 main.CurrentPage = library;
                 Save(window, 1180, 1100, Path.Combine(dir, $"6-library-{name}.png"));
 

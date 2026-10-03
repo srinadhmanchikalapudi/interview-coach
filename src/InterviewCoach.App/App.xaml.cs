@@ -89,6 +89,9 @@ internal static class ServiceRegistration
         s.AddSingleton<LearnHistoryRepository>();
         s.AddSingleton<InterviewCoach.Infrastructure.Fakes.InMemoryLearnHistory>(_ => new InterviewCoach.Infrastructure.Fakes.InMemoryLearnHistory());
         s.AddSingleton<ILearnHistory, RoutingLearnHistory>(); // the library; Demo mode keeps it in memory only
+        s.AddSingleton<PracticeHistoryRepository>();
+        s.AddSingleton<InterviewCoach.Infrastructure.Fakes.InMemoryPracticeHistory>(_ => new InterviewCoach.Infrastructure.Fakes.InMemoryPracticeHistory());
+        s.AddSingleton<IPracticeHistory, RoutingPracticeHistory>(); // practice answers and their feedback, shown in the library
         s.AddSingleton<IDocumentTextExtractor, ResumeTextExtractor>();
         s.AddSingleton<IDialogService, WpfDialogService>();
 

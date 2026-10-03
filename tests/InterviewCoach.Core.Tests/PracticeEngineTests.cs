@@ -1,3 +1,4 @@
+using InterviewCoach.Core.Abstractions;
 using InterviewCoach.Core.Engines;
 using InterviewCoach.Core.Models;
 using InterviewCoach.Infrastructure.Fakes;
@@ -40,7 +41,10 @@ public class PracticeEngineTests
             };
         }
 
-        public PracticeEngine NewEngine(bool withBank = true) => new(Llm, _prompts, withBank ? new TechBank(Bank, Llm, _prompts, () => 0.0) : null, () => 0.0);
+        public InMemoryPracticeHistory History { get; } = new();
+
+        public PracticeEngine NewEngine(bool withBank = true, IPracticeHistory? history = null)
+            => new(Llm, _prompts, withBank ? new TechBank(Bank, Llm, _prompts, () => 0.0) : null, () => 0.0, history ?? History);
     }
 
     private static CandidateProfile Profile() => new()
@@ -623,5 +627,104 @@ public class PracticeEngineTests
         await engine.SubmitAsync("an answer");
 
         Assert.Equal([PracticePhase.GeneratingQuestion, PracticePhase.Answering, PracticePhase.Coaching, PracticePhase.ShowingFeedback], phases);
+    }
+
+    // ---- the library keeps every attempt
+
+    private sealed class ThrowingPracticeHistory : IPracticeHistory
+    {
+        public Task RecordAsync(PracticeRecord record, CancellationToken ct = default) => throw new IOException("disk full");
+        public Task<IReadOnlyList<PracticeRecord>> ListAsync(CancellationToken ct = default) => Task.FromResult<IReadOnlyList<PracticeRecord>>([]);
+        public Task DeleteAsync(int id, CancellationToken ct = default) => Task.CompletedTask;
+        public Task ClearAsync(CancellationToken ct = default) => Task.CompletedTask;
+    }
+
+    [Fact]
+    public async Task An_answer_and_its_feedback_are_kept_once_the_feedback_is_on_screen()
+    {
+        var rig = new Rig();
+        var engine = rig.NewEngine();
+        await engine.StartAsync(Profile(), Behavioral);
+
+        Assert.Empty(await rig.History.ListAsync());               // nothing is kept for a question that was not answered
+        await engine.SubmitAsync("We cut p99 from 300ms to 80ms.", AnswerInputMethod.Typed, 41);
+
+        var record = Assert.Single(await rig.History.ListAsync());
+        Assert.Equal("Model question 1?", record.Question);
+        Assert.Equal("behavioral", record.QuestionType);
+        Assert.Equal("We cut p99 from 300ms to 80ms.", record.AnswerText);
+        Assert.Equal("typed", record.InputMethod);
+        Assert.Equal(41, record.DurationSeconds);
+        Assert.Equal(7, record.WordCount);
+        Assert.Equal(1, record.AttemptNumber);
+        Assert.Equal("Senior", record.Seniority);
+        Assert.Equal("p", record.ProfileName);
+        Assert.False(record.IsFollowUp);
+        Assert.Equal(2, record.Coach.Feedback.Count);              // the feedback is what makes it worth keeping
+        Assert.Equal("I cut p99 by caching the hot lookups.", record.Coach.ModelAnswer);
+    }
+
+    [Fact]
+    public async Task Every_try_at_a_question_is_its_own_record_and_a_follow_up_remembers_its_parent()
+    {
+        var rig = new Rig();
+        var engine = rig.NewEngine();
+        await engine.StartAsync(Profile(), Behavioral);
+        await engine.SubmitAsync("first try");
+        engine.TryAgain();
+        await engine.SubmitAsync("second try");
+        engine.AnswerFollowUp(engine.LastAttempt!.Coach.FollowUps[0]);
+        await engine.SubmitAsync("an answer to the follow-up");
+
+        var records = (await rig.History.ListAsync()).OrderBy(r => r.Id).ToList();
+
+        Assert.Equal(["first try", "second try", "an answer to the follow-up"], records.Select(r => r.AnswerText).ToArray());
+        Assert.Equal([1, 2, 1], records.Select(r => r.AttemptNumber).ToArray());
+        Assert.Equal([false, false, true], records.Select(r => r.IsFollowUp).ToArray());
+        Assert.Equal("Model question 1?", records[2].ParentQuestion);
+        Assert.Equal("Why Redis?", records[2].Question);
+    }
+
+    [Fact]
+    public async Task A_failed_coach_call_keeps_nothing_until_a_retry_succeeds()
+    {
+        var rig = new Rig { FailCoach = true };
+        var engine = rig.NewEngine();
+        await engine.StartAsync(Profile(), Behavioral);
+
+        await engine.SubmitAsync("an answer");
+        Assert.Empty(await rig.History.ListAsync());
+
+        rig.FailCoach = false;
+        await engine.RetryAsync();
+        Assert.Single(await rig.History.ListAsync());
+    }
+
+    [Fact]
+    public async Task An_unchanged_answer_that_was_not_sent_is_not_kept_either()
+    {
+        var rig = new Rig();
+        var engine = rig.NewEngine();
+        await engine.StartAsync(Profile(), Behavioral);
+        await engine.SubmitAsync("the answer");
+        engine.TryAgain();
+
+        await engine.SubmitAsync("the answer");
+
+        Assert.Single(await rig.History.ListAsync());
+    }
+
+    [Fact]
+    public async Task A_library_that_cannot_save_never_interrupts_practice()
+    {
+        var rig = new Rig();
+        var engine = rig.NewEngine(history: new ThrowingPracticeHistory());
+        await engine.StartAsync(Profile(), Behavioral);
+
+        await engine.SubmitAsync("an answer");
+
+        Assert.Equal(PracticePhase.ShowingFeedback, engine.Phase);
+        Assert.Null(engine.Error);
+        Assert.NotNull(engine.LastAttempt);
     }
 }

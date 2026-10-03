@@ -15,7 +15,7 @@
         <Grid Grid.Row="0" Margin="0,0,0,18">
             <StackPanel>
                 <TextBlock Text="Library" Style="{StaticResource PageTitle}" />
-                <TextBlock Style="{StaticResource PageSubtitle}" Text="Every question and answer you have seen in Learn mode, to go back to." />
+                <TextBlock Style="{StaticResource PageSubtitle}" Text="Every question you have learned and every answer you have practised, to go back to." />
             </StackPanel>
             <Button Command="{Binding BackCommand}" HorizontalAlignment="Right" VerticalAlignment="Top" Padding="14,7">
                 <StackPanel Orientation="Horizontal">
@@ -30,7 +30,7 @@
             <StackPanel>
                 <TextBlock Text="Nothing here yet" Style="{StaticResource CardHeading}" />
                 <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0"
-                           Text="Every question and answer you see in Learn mode is kept here, so you can come back to it. Start a Learn session from Home and they will appear." />
+                           Text="Every question you learn and every answer you practise is kept here, with its feedback, so you can come back to it. Start a Learn or Practice session from Home and they will appear." />
             </StackPanel>
         </Border>
 
@@ -66,6 +66,21 @@
                     </StackPanel>
 
                     <StackPanel Grid.Row="1" Margin="0,0,0,6">
+                        <StackPanel Visibility="{Binding HasKindFilter, Converter={StaticResource BoolToVis}}" Margin="0,0,0,8">
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="Show" />
+                            <ItemsControl ItemsSource="{Binding KindFilters}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <RadioButton Style="{StaticResource ChipRadio}" Content="{Binding Text}" IsChecked="{Binding IsSelected}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
                         <TextBlock Style="{StaticResource FieldLabel}" Text="Question type" />
                         <ItemsControl ItemsSource="{Binding TypeFilters}">
                             <ItemsControl.ItemsPanel>
@@ -113,6 +128,9 @@
                                             <Border Style="{StaticResource Chip}" Visibility="{Binding IsFollowUp, Converter={StaticResource BoolToVis}}">
                                                 <TextBlock Text="Follow-up" FontSize="11" />
                                             </Border>
+                                            <Border Style="{StaticResource AccentChip}" Visibility="{Binding IsPractice, Converter={StaticResource BoolToVis}}">
+                                                <TextBlock Text="Practice" FontSize="11" />
+                                            </Border>
                                         </WrapPanel>
                                         <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0">
                                             <Run Text="{Binding When, Mode=OneWay}" /><Run Text="  ·  " /><Run Text="{Binding AnswerKind, Mode=OneWay}" />
@@ -143,6 +161,9 @@
                             <Border Style="{StaticResource Chip}" Visibility="{Binding DetailIsFollowUp, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Text="Follow-up" FontSize="12" />
                             </Border>
+                            <Border Style="{StaticResource AccentChip}" Visibility="{Binding DetailIsPractice, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="Practice" FontSize="12" />
+                            </Border>
                         </StackPanel>
 
                         <TextBlock Visibility="{Binding DetailIsFollowUp, Converter={StaticResource BoolToVis}}" TextWrapping="Wrap" Margin="0,0,0,10"
@@ -162,6 +183,21 @@
                         </Border>
 
                         <TextBlock Text="{Binding DetailMeta}" Style="{StaticResource Hint}" Margin="2,0,0,14" />
+
+                        <!-- What the candidate wrote, for an answer given in Practice -->
+                        <Border Style="{StaticResource Card}" Visibility="{Binding HasDetailAnswer, Converter={StaticResource BoolToVis}}">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,8">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Style="{StaticResource Glyph}" Text="&#xE70F;" FontSize="14" Margin="0,0,9,0" VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                                        <TextBlock Style="{StaticResource CardTitle}" Text="YOUR ANSWER" VerticalAlignment="Center" Margin="0" />
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding DetailAnswerMeta}" Style="{StaticResource Hint}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                </Grid>
+                                <TextBlock Text="{Binding DetailAnswer}" TextWrapping="Wrap" FontSize="15" LineHeight="23" />
+                            </StackPanel>
+                        </Border>
 
                         <Border Style="{StaticResource Card}" Background="{DynamicResource SystemFillColorCautionBackgroundBrush}"
                                 BorderBrush="{DynamicResource SystemFillColorCautionBrush}" Visibility="{Binding HasMessage, Converter={StaticResource BoolToVis}}">

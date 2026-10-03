@@ -378,7 +378,7 @@ public class LibraryTests
 
         Assert.Equal("What is a struct?", vm.Selected?.Question); // stays where it was
         Assert.True(vm.HasMessage);
-        Assert.Contains("not opened this follow-up in Learn mode", vm.Message);
+        Assert.Contains("not opened this follow-up in Learn or Practice", vm.Message);
     }
 
     [Fact]
@@ -547,7 +547,7 @@ public class LibraryTests
             // The type chips: All plus the three types present.
             var chips = Descendants<RadioButton>(view).Where(Shown).Select(r => r.Content as string).ToList();
             Assert.Equal(["All  5", "Technical concept  3", "System design  1", "Behavioral  1"], chips);
-            Assert.Equal(1, Descendants<RadioButton>(view).Count(r => r.IsChecked == true));
+            Assert.Equal(1, Descendants<RadioButton>(view).Where(Shown).Count(r => r.IsChecked == true));   // the Learned / Practised chips stay hidden until there is a practice answer
 
             Assert.Equal(4, Descendants<ComboBox>(view).Single().Items.Count);
         });

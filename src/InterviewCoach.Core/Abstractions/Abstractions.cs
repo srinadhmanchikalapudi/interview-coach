@@ -77,3 +77,20 @@ public interface ILearnHistory
 
     Task ClearAsync(CancellationToken ct = default);
 }
+
+/// <summary>
+/// Every answer given in Practice mode with its feedback, so the Library can show it again. Recording is best effort and must never
+/// interrupt a session.
+/// </summary>
+public interface IPracticeHistory
+{
+    /// <summary>Adds the attempt as a new record (every attempt is kept).</summary>
+    Task RecordAsync(PracticeRecord record, CancellationToken ct = default);
+
+    /// <summary>Everything recorded, newest first.</summary>
+    Task<IReadOnlyList<PracticeRecord>> ListAsync(CancellationToken ct = default);
+
+    Task DeleteAsync(int id, CancellationToken ct = default);
+
+    Task ClearAsync(CancellationToken ct = default);
+}

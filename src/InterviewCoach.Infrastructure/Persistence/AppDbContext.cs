@@ -13,6 +13,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<JdTechnologiesEntity> JdTechnologies => Set<JdTechnologiesEntity>();
     public DbSet<LearnHistoryEntity> LearnHistory => Set<LearnHistoryEntity>();
     public DbSet<ResumeTopicsEntity> ResumeTopics => Set<ResumeTopicsEntity>();
+    public DbSet<PracticeAttemptEntity> PracticeAttempts => Set<PracticeAttemptEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -55,6 +56,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.ToTable("JdTechnologies");
             e.HasKey(j => j.Fingerprint);
             e.Property(j => j.TechnologiesJson).IsRequired();
+        });
+
+        modelBuilder.Entity<PracticeAttemptEntity>(e =>
+        {
+            e.ToTable("PracticeAttempts");
+            e.HasKey(a => a.Id);
+            e.Property(a => a.Question).IsRequired();
+            e.Property(a => a.AnswerText).IsRequired();
+            e.Property(a => a.CoachJson).IsRequired();
+            e.HasIndex(a => a.CreatedAt);
         });
 
         modelBuilder.Entity<ResumeTopicsEntity>(e =>
