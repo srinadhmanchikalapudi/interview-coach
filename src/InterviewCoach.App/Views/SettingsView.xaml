@@ -271,7 +271,7 @@
                     <StackPanel>
                         <TextBlock Text="Speech" Style="{StaticResource CardHeading}" />
                         <TextBlock Style="{StaticResource Hint}" Margin="0,2,0,16"
-                                   Text="Voice practice is on its way. These settings are saved now and will be used when it arrives, along with a voice picker, microphone choice and test buttons." />
+                                   Text="Dictate your answers and hear the questions in Practice. The Windows voice needs no key. The OpenAI choices use the OpenAI key above." />
 
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -297,10 +297,28 @@
                             <TextBlock Style="{StaticResource FieldLabel}" Text="Azure Speech region (for example westeurope)" />
                             <TextBox Text="{Binding AzureSpeechRegion, UpdateSourceTrigger=PropertyChanged}" />
                         </StackPanel>
-                        <StackPanel>
+                        <StackPanel Style="{StaticResource Field}">
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="Voice (leave empty for the default one)" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ComboBox ItemsSource="{Binding Voices}" DisplayMemberPath="DisplayName" SelectedValuePath="Id" SelectedValue="{Binding Voice}"
+                                          HorizontalAlignment="Stretch" AutomationProperties.Name="Voice" />
+                                <Button Grid.Column="1" Content="Load voices" Command="{Binding LoadVoicesCommand}" Padding="14,6" Margin="10,0,0,0" />
+                            </Grid>
+                            <TextBlock Style="{StaticResource Hint}" Text="{Binding Voice, StringFormat='Saved voice: {0}'}" Visibility="{Binding HasVoice, Converter={StaticResource BoolToVis}}" />
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Field}">
                             <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding SpeakingRate, StringFormat='Speaking rate: {0:0.0}x'}" />
                             <Slider Minimum="0.5" Maximum="1.5" TickFrequency="0.1" IsSnapToTickEnabled="True" Value="{Binding SpeakingRate}" Width="300" HorizontalAlignment="Left" />
                         </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="Test voice" Command="{Binding TestVoiceCommand}" Padding="16,7" />
+                            <Button Content="{Binding MicTestLabel}" Command="{Binding TestMicCommand}" Padding="16,7" Margin="10,0,0,0" />
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource Hint}" Text="{Binding SpeechStatus}" Visibility="{Binding HasSpeechStatus, Converter={StaticResource BoolToVis}}" />
                     </StackPanel>
                 </Border>
 
@@ -308,6 +326,7 @@
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
                         <TextBlock Text="Behavior" Style="{StaticResource CardHeading}" Margin="0,0,0,14" />
+                        <CheckBox Content="Speak each Practice question aloud" IsChecked="{Binding SpeakQuestions}" Margin="0,0,0,8" />
                         <CheckBox Content="Auto-listen: start the mic when the interviewer finishes speaking" IsChecked="{Binding AutoListen}" Margin="0,0,0,8" />
                         <CheckBox Content="Silence auto-submit" IsChecked="{Binding SilenceAutoSubmit}" Margin="0,0,0,8" />
                         <StackPanel Orientation="Horizontal" Margin="28,0,0,8" IsEnabled="{Binding SilenceAutoSubmit}">

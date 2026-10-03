@@ -2,6 +2,9 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ctl="clr-namespace:InterviewCoach.App.Controls">
+    <UserControl.InputBindings>
+        <KeyBinding Key="F2" Command="{Binding ToggleMicCommand}" />
+    </UserControl.InputBindings>
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
 
@@ -107,12 +110,15 @@
                         <TextBox x:Name="AnswerBox" Text="{Binding AnswerText, UpdateSourceTrigger=PropertyChanged}"
                                  AcceptsReturn="True" TextWrapping="Wrap" MinHeight="200" MaxHeight="420" FontSize="15"
                                  VerticalScrollBarVisibility="Auto" ctl:WheelScrolling.PassToPage="True"
-                                 AutomationProperties.Name="Your answer">
+                                 AutomationProperties.Name="Your answer" SelectionChanged="AnswerBox_SelectionChanged">
                             <TextBox.InputBindings>
                                 <KeyBinding Key="Enter" Modifiers="Control" Command="{Binding SubmitCommand}" />
                             </TextBox.InputBindings>
                         </TextBox>
 
+                        <!-- What the microphone is hearing, before it is put into the box -->
+                        <TextBlock Text="{Binding PartialText, StringFormat='… {0}'}" Style="{StaticResource Hint}" FontStyle="Italic" Margin="0,8,0,0"
+                                   Visibility="{Binding HasPartial, Converter={StaticResource BoolToVis}}" />
                         <Grid Margin="0,10,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -128,15 +134,40 @@
                             </StackPanel>
                         </Grid>
 
-                        <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                        <!-- Speech trouble: said in words, the text stays, typing still works -->
+                        <Border Style="{StaticResource InsetCard}" Margin="0,12,0,0" Background="{DynamicResource SystemFillColorCautionBackgroundBrush}"
+                                Visibility="{Binding HasSpeechMessage, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="{Binding SpeechMessage}" TextWrapping="Wrap" />
+                        </Border>
+
+                        <WrapPanel Orientation="Horizontal" Margin="0,14,0,0">
                             <Button Command="{Binding SubmitCommand}" Padding="28,9" Style="{DynamicResource AccentButtonStyle}">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Submit" FontWeight="SemiBold" />
                                     <TextBlock Style="{StaticResource Glyph}" Text="&#xE724;" FontSize="12" Margin="10,0,0,0" />
                                 </StackPanel>
                             </Button>
+                            <Button Command="{Binding ToggleMicCommand}" Padding="16,9" Margin="10,0,0,0" AutomationProperties.Name="Dictate your answer"
+                                    ToolTip="Dictate your answer (F2). You can type and talk in the same box."
+                                    Visibility="{Binding HasSpeech, Converter={StaticResource BoolToVis}}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource Glyph}" Text="{Binding MicGlyph}" FontSize="13" Margin="0,0,8,0" />
+                                    <TextBlock Text="{Binding MicLabel}" />
+                                </StackPanel>
+                            </Button>
+                            <Button Command="{Binding RepeatQuestionCommand}" Padding="14,9" Margin="10,0,0,0" ToolTip="Hear the question again"
+                                    AutomationProperties.Name="Repeat the question"
+                                    Visibility="{Binding HasSpeech, Converter={StaticResource BoolToVis}}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource Glyph}" Text="&#xE767;" FontSize="13" Margin="0,0,8,0" />
+                                    <TextBlock Text="Repeat" />
+                                </StackPanel>
+                            </Button>
+                            <TextBlock Text="{Binding ListeningStatus}" Style="{StaticResource Hint}" VerticalAlignment="Center" Margin="14,0,0,0" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                                       Visibility="{Binding IsListening, Converter={StaticResource BoolToVis}}" />
                             <TextBlock Text="Ctrl+Enter to submit. You get feedback only after you submit." Style="{StaticResource Hint}" VerticalAlignment="Center" Margin="14,0,0,0" />
-                        </StackPanel>
+                        </WrapPanel>
                     </StackPanel>
                 </Border>
 

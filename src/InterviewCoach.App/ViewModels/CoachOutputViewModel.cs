@@ -1,4 +1,5 @@
 using System.Windows.Input;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using InterviewCoach.Core.Models;
 
@@ -14,10 +15,12 @@ public record FeedbackItem(string Kind, string Icon, string Label, string Point,
 public record FollowUpItem(string Question, string Hint, ICommand OpenCommand);
 
 /// <summary>Display model for one Coach reply (spec 4.7). Immutable: a new instance is made for each reply.</summary>
-public sealed class CoachOutputViewModel
+public sealed partial class CoachOutputViewModel : ObservableObject
 {
-    public CoachOutputViewModel(CoachOutput coach, Action<FollowUp> openFollowUp, string? questionTypeId = null, string? followUpPrompt = null)
+    public CoachOutputViewModel(CoachOutput coach, Action<FollowUp> openFollowUp, string? questionTypeId = null, string? followUpPrompt = null,
+        ICommand? readAloud = null)
     {
+        ReadAloudCommand = readAloud;
         FollowUpPrompt = followUpPrompt ?? "Click one to see how to answer it.";
         WhatTheyreTesting = coach.WhatTheyreTesting;
         ModelAnswer = coach.ModelAnswer;
@@ -35,6 +38,14 @@ public sealed class CoachOutputViewModel
             .Select(f => new FollowUpItem(f.Question, f.Hint, new RelayCommand(() => openFollowUp(f))))
             .ToList();
     }
+
+    /// <summary>Reads the model answer aloud; null where speech is not available (Learn mode, or no voice built in).</summary>
+    public ICommand? ReadAloudCommand { get; }
+    public bool CanReadAloud => ReadAloudCommand is not null;
+
+    /// <summary>True while the model answer is being read, so the button offers to stop it.</summary>
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(ReadAloudLabel))] private bool _isReading;
+    public string ReadAloudLabel => IsReading ? "Stop reading" : "Read aloud";
 
     /// <summary>The line under the follow-ups: in Learn they show how to answer, in Practice they become the next question.</summary>
     public string FollowUpPrompt { get; }

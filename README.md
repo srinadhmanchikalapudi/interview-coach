@@ -12,7 +12,7 @@
 <p align="center">
   <img alt=".NET 10" src="https://img.shields.io/badge/.NET-10-512BD4">
   <img alt="WPF" src="https://img.shields.io/badge/UI-WPF%20%28MVVM%29-0078D4">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-725%20passing-2EA043">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-822%20passing-2EA043">
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%2010%2F11-lightgrey">
   <img alt="Status" src="https://img.shields.io/badge/status-Learn%20mode%20complete-blue">
 </p>
@@ -94,6 +94,10 @@ Rendered from the real views by the repository's own snapshot test, in Demo mode
 |---|---|
 | <img src="docs/images/practice-answer-light.png" alt="Practice, answering"> | <img src="docs/images/practice-feedback-dark.png" alt="Practice, feedback"> |
 
+With a microphone: **Speak** (or F2) dictates into the box, the words being heard show in grey, **Repeat** says the question again.
+
+<img src="docs/images/practice-listening-light.png" alt="Practice, listening" width="560">
+
 **Library: go back to every question and answer you have seen**
 
 | Light | Dark |
@@ -114,7 +118,7 @@ To regenerate them, see [Testing](#testing).
 | 2. Profiles: create, edit, delete; paste or load JD and resume; SQLite with migrations | Done |
 | 3. **Learn mode**: question generator, coach, coach cards, follow-ups | Done |
 | 4. **Practice (typed)**: answer first, then get feedback; try again with comparison; follow-ups | Done |
-| 5. Voice: speech to text and text to speech (Azure, OpenAI, Windows), mic in the composer | Not started (settings and fakes exist) |
+| 5. **Voice**: dictate answers, hear questions, read answers aloud (Azure, OpenAI, Windows voices) | Done (the real services are untested against live keys; see HANDOFF section 22) |
 | 6. Mock Interview: planned interview, live interviewer, parallel coaching, debrief, Markdown export | Not started (prompts exist) |
 | 7. History and polish | Partly: the **Library** of questions and answers you have seen is built (see below); a history of mock interviews and the final polish are not started |
 
@@ -188,7 +192,7 @@ measurements this app's coach call took about 21 seconds at the default and abou
 
 ### Optional: speech keys
 
-The speech settings are stored now and will be used when voice practice (milestone 5) arrives. With an Azure for Students
+Voice is optional: Practice works fully by typing. **Hear questions** needs nothing (the Windows voice is the default). **Dictation** needs an Azure Speech key and region (live transcript) or an OpenAI key (records, then transcribes), set in Settings, Speech, where **Load voices**, **Test voice** and **Test microphone** check them (they use the saved settings, so click Save first). In Practice, **Speak** or **F2** starts and stops the microphone, the words go into the answer box at the cursor so you can type and talk in the same box, **Repeat** says the question again, and **Read aloud** on the model answer reads it. With an Azure for Students
 subscription, some regions are blocked by policy; if creating a Speech resource fails with `RequestDisallowedByAzure`, pick one of the
 regions your subscription allows (the error lists them).
 
@@ -387,7 +391,7 @@ on its OpenRouter page if that matters to you. The model list for the OpenRouter
 ## Testing
 
 ```bash
-dotnet test                                     # all 725 tests
+dotnet test                                     # all 822 tests
 dotnet test tests/InterviewCoach.Core.Tests     # one project
 dotnet build InterviewCoach.sln -c Release      # use this if the Debug exe is running (it locks its DLLs)
 ```

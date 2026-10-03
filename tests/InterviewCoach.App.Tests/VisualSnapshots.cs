@@ -115,6 +115,8 @@ public class VisualSnapshots
             var practiceClock = new DateTime(2026, 10, 3, 12, 0, 0, DateTimeKind.Utc);
             var practiceLlm = new StubLlm { QuestionText = "Tell me about a time you pushed back on a deadline." };
             var practiceVm = new PracticeViewModel(practiceLlm, prompts, settings, null, () => 0.0, () => practiceClock);
+            var demoSpeech = new InterviewCoach.Infrastructure.Speech.SpeechFactory(new MemorySettings(new AppSettings { DemoMode = true }));
+            var voiceVm = new PracticeViewModel(practiceLlm, prompts, new MemorySettings(new AppSettings { SpeakQuestions = false, AutoListen = false }), null, () => 0.0, () => practiceClock, speech: demoSpeech);
             var main = new MainViewModel(home, settingsVm, learn, settings, library);
 
             var window = new MainWindow(main);
@@ -139,7 +141,7 @@ public class VisualSnapshots
 
                 settingsVm.Load();
                 main.CurrentPage = settingsVm;
-                Save(window, 1180, 2000, Path.Combine(dir, $"4-settings-{name}.png"));
+                Save(window, 1180, 2500, Path.Combine(dir, $"4-settings-{name}.png"));
 
                 var openRouter = new SettingsViewModel(new MemorySettings(new AppSettings { Provider = LlmProvider.OpenRouter }), llm, bank, new ScriptedDialogs(),
                     new FakeCatalog(
@@ -169,6 +171,15 @@ public class VisualSnapshots
 
                 practiceVm.SubmitCommand.ExecuteAsync(null).GetAwaiter().GetResult();
                 Save(window, 1180, 1850, Path.Combine(dir, $"8-practice-feedback-{name}.png"));
+
+                practiceClock = new DateTime(2026, 10, 3, 12, 0, 0, DateTimeKind.Utc);
+                voiceVm.Begin(new LearnSessionRequest(repo.ListAsync().GetAwaiter().GetResult()[0], [QuestionType.Behavioral], null, [], EmploymentType.FullTime));
+                voiceVm.ToggleMicCommand.ExecuteAsync(null).GetAwaiter().GetResult();   // the demo microphone starts with a partial result
+                practiceClock = practiceClock.AddSeconds(38);
+                voiceVm.Tick();
+                main.CurrentPage = voiceVm;
+                Save(window, 1180, 820, Path.Combine(dir, $"9-practice-listening-{name}.png"));
+                voiceVm.ToggleMicCommand.ExecuteAsync(null).GetAwaiter().GetResult();
             }
         });
     }

@@ -94,6 +94,7 @@ internal static class ServiceRegistration
         s.AddSingleton<IPracticeHistory, RoutingPracticeHistory>(); // practice answers and their feedback, shown in the library
         s.AddSingleton<IDocumentTextExtractor, ResumeTextExtractor>();
         s.AddSingleton<IDialogService, WpfDialogService>();
+        s.AddSingleton<ISpeechFactory, InterviewCoach.Infrastructure.Speech.SpeechFactory>(); // dictation and spoken questions (Azure, OpenAI or Windows voices)
 
         s.AddSingleton<HomeViewModel>();
         s.AddSingleton<SettingsViewModel>();

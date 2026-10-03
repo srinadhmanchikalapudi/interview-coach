@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using InterviewCoach.Core.Abstractions;
 using InterviewCoach.Core.Engines;
 using InterviewCoach.Core.Models;
+using InterviewCoach.Core.Speech;
 
 namespace InterviewCoach.App.ViewModels;
 
@@ -45,9 +46,12 @@ public partial class PracticeViewModel : ObservableObject
 
     public PracticeViewModel(
         ILlmService llm, IPromptLibrary prompts, ISettingsStore settings, TechBank? bank = null, Func<double>? random = null, Func<DateTime>? now = null,
-        IPracticeHistory? history = null)
+        IPracticeHistory? history = null, ISpeechFactory? speech = null)
     {
         _history = history;
+        _speech = speech;
+        _silence = new SilenceDetector(now ?? (() => DateTime.UtcNow));
+        ReadAloudCommand = new AsyncRelayCommand(ReadAloudAsync);
         _llm = llm;
         _prompts = prompts;
         _settings = settings;
@@ -81,6 +85,7 @@ public partial class PracticeViewModel : ObservableObject
     private void StartEngine(LearnSessionRequest request)
     {
         _engine?.Cancel();
+        StopVoice();
         _request = request;
         // The technology bank is optional, as in Learn mode: with it off every question is written from the resume and job description.
         _engine = new PracticeEngine(_llm, _prompts, _settings.Current.ReuseGeneralAnswers ? _bank : null, _random, _history);
@@ -91,8 +96,9 @@ public partial class PracticeViewModel : ObservableObject
         _shownAttempt = 1;
         _lastAnswerText = "";
         Coach = null;
-        AnswerText = "";
+        SetAnswer("");
         EmptyMessage = "";
+        SpeechMessage = "";
         ResetTimer();
         Refresh();
     }
@@ -170,6 +176,7 @@ public partial class PracticeViewModel : ObservableObject
         OnPropertyChanged(nameof(TimerLevel));
         OnPropertyChanged(nameof(IsTimerAmber));
         OnPropertyChanged(nameof(IsTimerRed));
+        CheckSilence();
     }
 
     partial void OnAnswerTextChanged(string value)
@@ -177,6 +184,7 @@ public partial class PracticeViewModel : ObservableObject
         // The timer starts at the first keystroke (spec 4.6).
         if (_startedAt is null && IsAnswering && _frozenSeconds == 0 && value.Length > 0) _startedAt = _now();
         if (EmptyMessage.Length > 0 && value.Trim().Length > 0) EmptyMessage = "";
+        NoteTextChanged(value);
         OnPropertyChanged(nameof(WordCount));
         OnPropertyChanged(nameof(WordCountText));
         Tick();
@@ -191,8 +199,12 @@ public partial class PracticeViewModel : ObservableObject
     private async Task SubmitAsync()
     {
         if (_engine is null || !IsAnswering) return;
+        await StopListeningAsync(); // the last words are put into the box before the answer is read
+        StopSpeaking();
+        if (_engine is null || !IsAnswering) return;
         var seconds = ElapsedSeconds;
-        var result = await RunAsync(() => _engine.SubmitAsync(AnswerText, AnswerInputMethod.Typed, seconds));
+        var method = _input.Method;
+        var result = await RunAsync(() => _engine.SubmitAsync(AnswerText, method, seconds));
         if (result == SubmitResult.Empty)
         {
             EmptyMessage = EmptyAnswerMessage;
@@ -233,13 +245,14 @@ public partial class PracticeViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanUsePreviousAnswer))]
     private void UsePreviousAnswer()
     {
-        AnswerText = _lastAnswerText;
+        SetAnswer(_lastAnswerText, typed: true);
     }
 
     [RelayCommand]
     private void Exit()
     {
         _engine?.Cancel();
+        StopVoice();
         ExitRequested?.Invoke();
     }
 
@@ -287,16 +300,18 @@ public partial class PracticeViewModel : ObservableObject
             _shownItem = item;
             _shownAttempt = attempt;
             _lastAnswerText = "";
-            AnswerText = "";
+            SetAnswer("");
             EmptyMessage = "";
             ResetTimer();
+            StopSpeaking();
             QuestionChanged?.Invoke();
+            if (item is not null && IsAnswering && _settings.Current.SpeakQuestions) _ = SpeakQuestionAsync(automatic: true);
         }
         else if (attempt != _shownAttempt)
         {
             // Trying the same question again: an empty box, with the last answer one click away.
             _shownAttempt = attempt;
-            AnswerText = "";
+            SetAnswer("");
             EmptyMessage = "";
             ResetTimer();
         }
@@ -308,8 +323,12 @@ public partial class PracticeViewModel : ObservableObject
             if (latest is not null) _lastAnswerText = latest.AnswerText;
             Coach = latest is null
                 ? null
-                : new CoachOutputViewModel(latest.Coach, OpenFollowUp, _engine?.Current?.QuestionType, "Click one to answer it.");
+                : new CoachOutputViewModel(latest.Coach, OpenFollowUp, _engine?.Current?.QuestionType, "Click one to answer it.",
+                    _speech is null ? null : ReadAloudCommand);
         }
+
+        if (!IsAnswering && IsListening) _ = StopListeningAsync();
+        if (_readingAnswer && !IsFeedback) StopSpeaking();
 
         OnPropertyChanged(string.Empty); // everything above is derived from the engine; refresh all bindings
         NextCommand.NotifyCanExecuteChanged();

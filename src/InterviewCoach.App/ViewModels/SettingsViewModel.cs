@@ -6,6 +6,7 @@ using InterviewCoach.App.Services;
 using InterviewCoach.Core.Abstractions;
 using InterviewCoach.Core.Engines;
 using InterviewCoach.Core.Models;
+using InterviewCoach.Core.Speech;
 
 namespace InterviewCoach.App.ViewModels;
 
@@ -29,6 +30,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly TechBank? _bank;
     private readonly IDialogService? _dialogs;
     private readonly IOpenRouterCatalog? _catalog;
+    private readonly ISpeechFactory? _speech;
 
     // Both sets of per-role models (the Anthropic/OpenAI one and the OpenRouter one) are held here, so switching the
     // provider on screen swaps the boxes without losing what was typed for the other provider.
@@ -36,8 +38,10 @@ public partial class SettingsViewModel : ObservableObject
     private bool _loading;
     private IReadOnlyList<OpenRouterModel> _catalogModels = [];
 
-    public SettingsViewModel(ISettingsStore store, ILlmService llm, TechBank? bank = null, IDialogService? dialogs = null, IOpenRouterCatalog? catalog = null)
+    public SettingsViewModel(ISettingsStore store, ILlmService llm, TechBank? bank = null, IDialogService? dialogs = null, IOpenRouterCatalog? catalog = null,
+        ISpeechFactory? speech = null)
     {
+        _speech = speech;
         _store = store;
         _llm = llm;
         _bank = bank;
@@ -105,6 +109,10 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private string _azureSpeechKey = "";
     [ObservableProperty] private string _azureSpeechRegion = "";
     [ObservableProperty] private double _speakingRate = 1.0;
+    [ObservableProperty] private string _voice = "";
+    [ObservableProperty] private bool _speakQuestions = true;
+    [ObservableProperty] private string _speechStatus = "";
+    [ObservableProperty] private bool _isListeningTest;
 
     // Behavior
     [ObservableProperty] private bool _autoListen;
@@ -190,6 +198,9 @@ public partial class SettingsViewModel : ObservableObject
         AzureSpeechKey = s.AzureSpeechKey ?? "";
         AzureSpeechRegion = s.AzureSpeechRegion ?? "";
         SpeakingRate = s.SpeakingRate;
+        Voice = s.Voice ?? "";
+        SpeakQuestions = s.SpeakQuestions;
+        SpeechStatus = "";
         AutoListen = s.AutoListen;
         SilenceAutoSubmit = s.SilenceAutoSubmit;
         SilenceSeconds = s.SilenceSeconds;
@@ -221,6 +232,8 @@ public partial class SettingsViewModel : ObservableObject
         s.AzureSpeechKey = NullIfBlank(AzureSpeechKey);
         s.AzureSpeechRegion = NullIfBlank(AzureSpeechRegion);
         s.SpeakingRate = SpeakingRate;
+        s.Voice = NullIfBlank(Voice);
+        s.SpeakQuestions = SpeakQuestions;
         s.AutoListen = AutoListen;
         s.SilenceAutoSubmit = SilenceAutoSubmit;
         s.SilenceSeconds = Math.Max(1, SilenceSeconds);
@@ -441,6 +454,127 @@ public partial class SettingsViewModel : ObservableObject
         {
             IsTesting = false;
         }
+    }
+
+    // ---- Speech tests. They use the saved settings (the speech services read them), so unsaved changes are pointed out.
+
+    public ObservableCollection<VoiceInfo> Voices { get; } = [];
+    public bool HasSpeech => _speech is not null;
+    public bool HasVoice => !string.IsNullOrEmpty(Voice);
+    public bool HasSpeechStatus => SpeechStatus.Length > 0;
+    public string MicTestLabel => IsListeningTest ? "Stop and show what was heard" : "Test microphone";
+
+    partial void OnVoiceChanged(string value) => OnPropertyChanged(nameof(HasVoice));
+    partial void OnSpeechStatusChanged(string value) => OnPropertyChanged(nameof(HasSpeechStatus));
+    partial void OnIsListeningTestChanged(bool value) => OnPropertyChanged(nameof(MicTestLabel));
+
+    // The speech services read the saved settings, so a test of what is on screen would test something else.
+    private bool SpeechChangedSinceSave()
+    {
+        var saved = _store.Current;
+        var shown = ToSettings();
+        return saved.SpeechToText != shown.SpeechToText || saved.TextToSpeech != shown.TextToSpeech
+            || saved.AzureSpeechKey != shown.AzureSpeechKey || saved.AzureSpeechRegion != shown.AzureSpeechRegion
+            || saved.Voice != shown.Voice || Math.Abs(saved.SpeakingRate - shown.SpeakingRate) > 0.001
+            || saved.OpenAiApiKey != shown.OpenAiApiKey || saved.OpenAiBaseUrl != shown.OpenAiBaseUrl;
+    }
+
+    private bool NeedsSaveFirst()
+    {
+        if (!SpeechChangedSinceSave()) return false;
+        SpeechStatus = "Click Save first. The speech test uses your saved settings.";
+        return true;
+    }
+
+    [RelayCommand]
+    private async Task LoadVoicesAsync()
+    {
+        if (_speech is null || NeedsSaveFirst()) return;
+        SpeechStatus = "Loading voices…";
+        try
+        {
+            var voices = await _speech.TextToSpeech.GetVoicesAsync(CancellationToken.None);
+            var current = Voice;
+            Voices.Clear();
+            foreach (var v in voices) Voices.Add(v);
+            Voice = current;
+            SpeechStatus = voices.Count == 0 ? "No voices were found." : $"{voices.Count} voices. Pick one, then click Save.";
+        }
+        catch (SpeechException ex)
+        {
+            SpeechStatus = ex.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task TestVoiceAsync()
+    {
+        if (_speech is null || NeedsSaveFirst()) return;
+        var ready = _speech.TextToSpeechReadiness;
+        if (!ready.IsReady)
+        {
+            SpeechStatus = ready.Message;
+            return;
+        }
+
+        SpeechStatus = "Speaking…";
+        try
+        {
+            await _speech.TextToSpeech.SpeakAsync("Hello. This is how I will read your interview questions.", CancellationToken.None);
+            SpeechStatus = "If you heard that, the voice works.";
+        }
+        catch (SpeechException ex)
+        {
+            SpeechStatus = ex.Message;
+        }
+    }
+
+    private ISpeechToText? _micTest;
+    private readonly List<string> _micHeard = [];
+    private SynchronizationContext? _ui;
+
+    /// <summary>First click: listens. Second click: stops and shows what was heard, so the microphone and the key can be checked.</summary>
+    [RelayCommand]
+    private async Task TestMicAsync()
+    {
+        if (_speech is null) return;
+        if (_micTest is { } running)
+        {
+            IsListeningTest = false;
+            try { await running.StopAsync(); }
+            catch (Exception ex) { SpeechStatus = ex.Message; }
+            _micTest = null;
+            try { await running.DisposeAsync(); }
+            catch (Exception) { /* being thrown away */ }
+            if (SpeechStatus.StartsWith("Listening", StringComparison.Ordinal) || SpeechStatus.StartsWith("Recording", StringComparison.Ordinal))
+                SpeechStatus = _micHeard.Count == 0 ? "Nothing was heard. Check the microphone and try again." : "Heard: " + string.Join(" ", _micHeard);
+            return;
+        }
+
+        if (NeedsSaveFirst()) return;
+        var ready = _speech.SpeechToTextReadiness;
+        if (!ready.IsReady)
+        {
+            SpeechStatus = ready.Message;
+            return;
+        }
+
+        _ui = SynchronizationContext.Current;
+        _micHeard.Clear();
+        var stt = _speech.CreateSpeechToText();
+        stt.FinalRecognized += (_, text) => OnUi(() => { _micHeard.Add(text); });
+        stt.PartialRecognized += (_, text) => OnUi(() => { if (_micTest == stt) SpeechStatus = "Listening… " + text; });
+        stt.Error += (_, message) => OnUi(() => { SpeechStatus = message; });
+        _micTest = stt;
+        IsListeningTest = true;
+        SpeechStatus = stt.SupportsPartials ? "Listening… say a sentence, then click again." : "Recording… say a sentence, then click again.";
+        await stt.StartAsync(CancellationToken.None);
+    }
+
+    private void OnUi(Action action)
+    {
+        if (_ui is null || SynchronizationContext.Current == _ui) action();
+        else _ui.Post(_ => action(), null);
     }
 
     private static string? NullIfBlank(string value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
