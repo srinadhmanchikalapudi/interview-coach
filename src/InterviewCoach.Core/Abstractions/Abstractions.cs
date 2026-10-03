@@ -95,6 +95,23 @@ public interface IPracticeHistory
     Task ClearAsync(CancellationToken ct = default);
 }
 
+/// <summary>
+/// Storage for finished mock interviews. Recording is best effort: a failure here must never interrupt an interview or its debrief.
+/// </summary>
+public interface IMockHistory
+{
+    /// <summary>Adds the interview and returns its id.</summary>
+    Task<int> AddAsync(MockRecord record, CancellationToken ct = default);
+
+    /// <summary>Replaces what changed after the interview ended: the debrief, the coaching of each question, the signal.</summary>
+    Task UpdateAsync(MockRecord record, CancellationToken ct = default);
+
+    /// <summary>Everything recorded, newest first.</summary>
+    Task<IReadOnlyList<MockRecord>> ListAsync(CancellationToken ct = default);
+
+    Task DeleteAsync(int id, CancellationToken ct = default);
+}
+
 /// <summary>Whether a speech feature can be used right now, and if not, what to tell the user to do about it.</summary>
 public sealed record SpeechReadiness(bool IsReady, string Message)
 {
