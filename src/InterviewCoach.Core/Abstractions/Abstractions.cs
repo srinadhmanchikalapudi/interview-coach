@@ -94,3 +94,26 @@ public interface IPracticeHistory
 
     Task ClearAsync(CancellationToken ct = default);
 }
+
+/// <summary>Whether a speech feature can be used right now, and if not, what to tell the user to do about it.</summary>
+public sealed record SpeechReadiness(bool IsReady, string Message)
+{
+    public static SpeechReadiness Ready { get; } = new(true, "");
+    public static SpeechReadiness NotReady(string message) => new(false, message);
+}
+
+/// <summary>
+/// The speech services chosen in Settings. It is asked each time, so changing a provider, key or voice takes effect at once. In Demo mode
+/// it hands out fakes that need no keys and make no sound.
+/// </summary>
+public interface ISpeechFactory
+{
+    /// <summary>Speaks text. The same instance is returned until the settings that affect it change.</summary>
+    ITextToSpeech TextToSpeech { get; }
+
+    /// <summary>A new recognizer for one listening session.</summary>
+    ISpeechToText CreateSpeechToText();
+
+    SpeechReadiness TextToSpeechReadiness { get; }
+    SpeechReadiness SpeechToTextReadiness { get; }
+}

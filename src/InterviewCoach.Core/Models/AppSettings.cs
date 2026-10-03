@@ -49,7 +49,8 @@ public class AppSettings
 
     // Speech
     public SttProvider SpeechToText { get; set; } = SttProvider.Azure;
-    public TtsProvider TextToSpeech { get; set; } = TtsProvider.Azure;
+    // The Windows voice needs no key, so a new install can speak questions straight away; Azure and OpenAI voices are chosen in Settings.
+    public TtsProvider TextToSpeech { get; set; } = TtsProvider.Windows;
     public string? AzureSpeechKey { get; set; }
     public string? AzureSpeechRegion { get; set; }
     public string? Voice { get; set; }
@@ -57,6 +58,8 @@ public class AppSettings
     public string? MicrophoneDeviceId { get; set; }
 
     // Behavior
+    /// <summary>Speak each Practice question aloud when it appears (when a voice is ready).</summary>
+    public bool SpeakQuestions { get; set; } = true;
     public bool AutoListen { get; set; } = true;
     public bool SilenceAutoSubmit { get; set; }
     public int SilenceSeconds { get; set; } = 6;
