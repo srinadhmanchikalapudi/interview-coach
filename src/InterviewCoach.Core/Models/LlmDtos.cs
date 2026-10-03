@@ -76,6 +76,20 @@ public class CoachOutput
     };
 
     /// <summary>
+    /// What Practice mode shows: the feedback and the delivery comment stay (they are the point of Practice), and the model answer
+    /// loses an opening warm-up such as "Sure. Short version:", as in Learn mode.
+    /// </summary>
+    public CoachOutput ForPractice() => new()
+    {
+        WhatTheyreTesting = WhatTheyreTesting,
+        Feedback = Feedback,
+        ModelAnswer = CoachText.WithoutOpeningFiller(ModelAnswer),
+        Shape = Shape,
+        Delivery = Delivery,
+        FollowUps = FollowUps,
+    };
+
+    /// <summary>
     /// What Learn mode shows: no invented feedback, and a model answer that starts with the point rather than a warm-up such as
     /// "Sure. Short version:". Applied to fresh replies and to answers saved before the prompt was changed.
     /// </summary>
