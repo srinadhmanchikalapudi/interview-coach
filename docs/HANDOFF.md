@@ -31,7 +31,7 @@ background preparation of the next question; the technology bank (saved technica
 and seniority); By technology with an Other box; interviewer-style question length rules; full-time or contract role type with two
 extra question types; scroll-wheel behaviour on Home; app icon; a full visual redesign.
 
-Test status: **571 tests passing** (Core 234, Infrastructure 147, App 190). The last full verification was done with
+Test status: **610 tests passing** (Core 262, Infrastructure 158, App 190). The last full verification was done with
 `-c Release` because the user had the Debug build running (see section 2).
 
 **Version control.** The folder is a git repository (branch `main`). History is written to be read; see "Commit conventions" in `README.md`.
@@ -315,7 +315,7 @@ cache read about 0.1x, cache write about 1.25x; the user's balance drop was cons
 
 ## 10. Tests
 
-571 tests: Core 234, Infrastructure 147, App 190.
+610 tests: Core 262, Infrastructure 158, App 190.
 
 - **Core.Tests**: prompt rendering, engine behaviour (`LearnEngineTests`, `LearnEngineBankTests`, `LearnEngineTechnologyTests`,
   `EmploymentTypeTests`), bank service, answer length, question types, text helpers. Helpers in `TestDoubles.cs`:
@@ -570,3 +570,38 @@ Checked on 2 October 2026 after the batch and Library work (20 new calls, Haiku 
   next step is code, not prose: measure the question (over 20 words, or "and" followed by a new request) and make one cheap retry asking for the
   short form, or accept it; both cost a call.
 - Not addressed: near-duplicates across technologies in the bank.
+
+---
+
+## 18. Fourth log window: spreading resume questions and catching near-repeats
+
+**What the log showed** (13 generated questions, all resume-based plus two contract-engagement ones): 0 filler openers in 14 coach answers (the
+fix holds), 0 of 13 questions with a second ask (the "Too long / Right" pairs fixed that), but 0 of 11 resume questions at or under 20 words
+(21 to 30, mean about 25) and a dash lead-in in all 13; 10 of 13 began "At CPF, you...". The user's current client is CPF, so many CPF questions
+are natural, but the model had no reason to spread out: it asked RabbitMQ versus Service Bus twice in one session even though the first question
+was in the avoid list (13 entries), and asked about JWT, middleware and PII isolation three times in seven minutes. Prompt prose to vary or to
+shorten had now failed three times, so the choice moved into code.
+
+**Resume focus** (`ResumeFocusPicker`, `TechBank.GetResumeTopicsAsync`, table `ResumeTopics`, migration `AddResumeTopics`, prompt `resume_topics.md`):
+see SPEC section 14 for the rules. Design notes:
+
+- Topics are read once per resume text with one cheap QuestionGenerator-role call and stored by `TextTools.Fingerprint(resume)`; a blank result is
+  stored too so it is not asked again. Saved as JSON of `ResumeTopic(Employer, Project, Highlight)`. Clearing the saved technical questions keeps them.
+- Selection is two-level so an employer with many highlights does not crowd out the others: least-used employer first, then least-used highlight
+  within it. `Pick` changes nothing; `Commit` is called by `LearnEngine.GenerateQuestionAsync` only when the model returned a `resume_deep_dive`
+  question. The picker lives for one session (made in `StartAsync`).
+- It needs the saved bank (it stores the topics); with "Reuse saved general answers" off there is no focus and no extra call. The first resume question
+  of a new resume costs one extra call (about 2 s, a few tenths of a cent); later sessions with the same resume cost nothing extra.
+- The focus text is deliberately concrete, names the first word, and forbids "At <employer>, you" and a list of technologies. The word list is
+  Why, How, What, When, Which, never the same twice in a row. **Not yet measured live:** whether Haiku now keeps to one short sentence starting with
+  the given word, and whether the spread across employers shows in the next log.
+- A tidy-up of the model's reading: employer trimmed (blank becomes "Other work"), at most 8 employers and 5 highlights each, blanks and repeats dropped.
+
+**Near-duplicates** (`TextTools.IsNearDuplicate`): topic words are the normalised words minus a filler list; the same question when at least four
+topic words are shared and they are at least half of the shorter question's topic words. Four, not three: three flagged "Redis concept question 1"
+against "...2" in tests and would flag "How does garbage collection work in .NET?" against "...in Go?". The real RabbitMQ pair shares eight; the real
+JWT/middleware pair (different questions on one topic) shares four of 15 and is not flagged. In `GenerateQuestionAsync` a repeat gets one retry as a
+three-turn conversation (the first request, the model's own question as the assistant turn, then the "too close" note); a second repeat is accepted
+rather than looping. The batch writer uses the same test against the bank and the session. Bank questions served from the saved bank still use the exact
+check, so the same bank question is not blocked by a similar one from another technology. Limits: it compares words, not meaning, so a paraphrase with
+different vocabulary passes; the topic-word list is English only.

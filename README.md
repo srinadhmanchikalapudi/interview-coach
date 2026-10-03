@@ -12,7 +12,7 @@
 <p align="center">
   <img alt=".NET 10" src="https://img.shields.io/badge/.NET-10-512BD4">
   <img alt="WPF" src="https://img.shields.io/badge/UI-WPF%20%28MVVM%29-0078D4">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-571%20passing-2EA043">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-610%20passing-2EA043">
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%2010%2F11-lightgrey">
   <img alt="Status" src="https://img.shields.io/badge/status-Learn%20mode%20complete-blue">
 </p>
@@ -62,6 +62,7 @@ Things that make it more than a question generator:
 | **Full-time or contract** | The two interview styles differ, so the role type changes which questions are offered and how they are written and coached. |
 | **By technology** | Reads the technologies out of the job description (or lets you type your own under **Other**) and asks questions about the ones you pick. |
 | **Saved technical questions** | Technical-concept questions and their general answers are saved per technology and seniority, so repeats cost nothing and survive edits to your resume. When a technology runs out of saved questions the model writes ten common ones in a single call (most common first, spread over different areas, mixed phrasing) instead of one at a time. |
+| **Questions spread across your resume** | Resume questions take turns between your employers and projects (the least used first, then a different highlight each time) instead of always asking about the current job, and each starts with a different word. A question that repeats an earlier one in other words is sent back once. |
 | **Library (Revisit)** | Every question and answer you see is kept, so you can go back to it: filter by question type, search, sort, reopen the full answer, remove an entry. |
 | **Tailor to my resume** | Turn any general answer into one built from your own experience, on demand. |
 | **Answer length control** | Short, Medium, Long or a custom word count. By default the model aims for the same range the screen shows. |
@@ -307,6 +308,7 @@ build time and also embedded in Infrastructure as a fallback. You can edit the c
 | `coach.md` | Learn (later Practice and Mock) | Writes the answer, the shape, and the follow-ups |
 | `tech_tags.md` | By technology | Extracts up to eight technologies from a job description |
 | `question_batch.md` | The technology bank | Writes ten common questions about one technology in one call, for the bank |
+| `resume_topics.md` | Resume questions | Lists the employers and projects on a resume with what was done on each, once per resume, so questions can be spread over them |
 | `planner.md`, `interviewer.md`, `debrief.md` | Mock Interview (milestone 6) | Present, not yet used |
 
 `PromptRenderer` fills `{{VARIABLES}}` in a single pass, throws on a missing key, and renders a blank value as `(none)`.
@@ -355,20 +357,20 @@ on its OpenRouter page if that matters to you. The model list for the OpenRouter
 
 **Key fallbacks** when a Settings field is empty: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION`.
 
-**Database tables:** `Profiles`, `TechQuestions`, `TechAnswers`, `JdTechnologies`, `LearnHistory` (the Library).
+**Database tables:** `Profiles`, `TechQuestions`, `TechAnswers`, `JdTechnologies`, `ResumeTopics` (employers and projects read from a resume), `LearnHistory` (the Library).
 
 ## Testing
 
 ```bash
-dotnet test                                     # all 571 tests
+dotnet test                                     # all 610 tests
 dotnet test tests/InterviewCoach.Core.Tests     # one project
 dotnet build InterviewCoach.sln -c Release      # use this if the Debug exe is running (it locks its DLLs)
 ```
 
 | Project | Tests | Covers |
 |---|---|---|
-| `InterviewCoach.Core.Tests` | 234 | Prompt rendering, engine behaviour, the bank, answer lengths, question types, text helpers, role type |
-| `InterviewCoach.Infrastructure.Tests` | 147 | JSON parsing, LLM service (retry, cache split, options), settings (DPAPI round trip, no plaintext), SQLite repositories on real files, file extractors, prompt guards, Demo-mode isolation |
+| `InterviewCoach.Core.Tests` | 262 | Prompt rendering, engine behaviour, the bank, answer lengths, question types, text helpers, role type |
+| `InterviewCoach.Infrastructure.Tests` | 158 | JSON parsing, LLM service (retry, cache split, options), settings (DPAPI round trip, no plaintext), SQLite repositories on real files, file extractors, prompt guards, Demo-mode isolation |
 | `InterviewCoach.App.Tests` | 190 | View models and **real WPF views** on a shared STA dispatcher; fails on any binding error |
 
 Test names are sentences that describe behaviour. Scripted test doubles (`ScriptedLlmService`, `BankScript`) let tests control exactly
