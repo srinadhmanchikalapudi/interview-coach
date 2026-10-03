@@ -65,6 +65,7 @@ public class PromptLibraryTests
         Assert.Contains("At most three questions may start with \"What's the difference between\"", rendered);
         Assert.Contains("at least three situational ones", rendered);
         Assert.Contains("about 6 to 18 words", rendered);
+        Assert.Contains("Too long: \"How does async/await work in C#, and why can you not use it in a static constructor?\"", rendered);
         Assert.Contains("<<FOCUS_TECHNOLOGY>>", rendered);
         Assert.Contains("<<ALREADY_ASKED>>", rendered);
         Assert.DoesNotContain("<candidate_resume>", rendered); // a saved question never depends on a person's details
@@ -78,7 +79,10 @@ public class PromptLibraryTests
         // type had examples, and it was the only one that obeyed.
         var rendered = EmbeddedOnly().Render(PromptName.QuestionGenerator, FullVars());
 
-        Assert.Contains("resume_deep_dive: one sentence of about 12 to 25 words", rendered);
+        Assert.Contains("resume_deep_dive: one sentence of 10 to 20 words, never more than 20", rendered);
+        Assert.Contains("Too long: ", rendered);                       // worked examples of a long question and the short way to ask it
+        Assert.Contains("Right: \"When could you start?\"", rendered);
+        Assert.Contains("Do not join a lead-in about the resume to the question with a dash", rendered);
         Assert.Contains("Why did you choose Redis over Memcached", rendered);
         Assert.Contains("system_design: one sentence of up to 15 words", rendered);
         Assert.Contains("with no list of requirements", rendered);
