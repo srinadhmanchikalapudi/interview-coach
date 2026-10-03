@@ -170,7 +170,7 @@ public class PracticeEngineTests
         var prompt = Prompt(rig);
         Assert.Contains("Mode: practice", prompt);
         Assert.Contains("<question>\nModel question 1?\n</question>", prompt.Replace("\r\n", "\n"));
-        Assert.Contains("<candidate_answer input_method=\"typed\" duration_seconds=\"95\" word_count=\"10\">", prompt);
+        Assert.Contains("<candidate_answer input_method=\"typed\" duration_seconds=\"(none)\" word_count=\"10\">", prompt);   // typing time is not speaking time
         Assert.Contains("We cut p99 from 300ms to 80ms by adding Redis.", prompt);
         Assert.Contains("Employment type: Contract", prompt);
         Assert.Contains("Requested model answer length: about 120 words", prompt);
@@ -191,6 +191,22 @@ public class PracticeEngineTests
         var prompt = Prompt(rig).Replace("\r\n", "\n");
         Assert.Contains("<previous_attempt>\n(none)\n</previous_attempt>", prompt);
         Assert.Contains("Earlier in this session: (none)", prompt);
+    }
+
+    [Fact]
+    public async Task A_typed_answer_never_reports_a_duration_but_a_spoken_one_does()
+    {
+        var rig = new Rig();
+        var engine = rig.NewEngine();
+        await engine.StartAsync(Profile(), Behavioral);
+
+        await engine.SubmitAsync("typed answer", AnswerInputMethod.Typed, durationSeconds: 219);
+        Assert.Contains("duration_seconds=\"(none)\"", Prompt(rig));
+        Assert.Equal(219, engine.LastAttempt!.DurationSeconds);   // the screen still shows how long it took
+
+        engine.TryAgain();
+        await engine.SubmitAsync("spoken answer", AnswerInputMethod.Voice, durationSeconds: 61);
+        Assert.Contains("input_method=\"voice\" duration_seconds=\"61\"", Prompt(rig));
     }
 
     [Fact]

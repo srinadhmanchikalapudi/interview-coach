@@ -53,6 +53,17 @@ public class PromptLibraryTests
     }
 
     [Fact]
+    public void The_coach_prompt_tells_the_model_not_to_comment_on_pace_for_a_typed_answer()
+    {
+        // The log of 2 October 2026: the coach called a 5-second typed answer "1 to 2 seconds" and a 38-second typed answer a speaking time.
+        var rendered = EmbeddedOnly().Render(PromptName.Coach, FullVars());
+
+        Assert.Contains("A typed answer has no speaking time, so never comment on pace or seconds for it", rendered);
+        Assert.Contains("about 130 words a minute", rendered);
+        Assert.DoesNotContain("\"delivery\" is null unless the answer has a duration or came from voice", rendered);
+    }
+
+    [Fact]
     public void The_batch_prompt_asks_for_ten_common_questions_spread_over_areas_in_mixed_forms()
     {
         // The debug log of 2 October 2026 showed one-at-a-time questions drifting into obscure corners (ConditionalWeakTable)
@@ -66,6 +77,8 @@ public class PromptLibraryTests
         Assert.Contains("at least three situational ones", rendered);
         Assert.Contains("about 6 to 18 words", rendered);
         Assert.Contains("Too long: \"How does async/await work in C#, and why can you not use it in a static constructor?\"", rendered);
+        Assert.Contains("Ask only about things that really exist in the focus technology as named", rendered);
+        Assert.Contains("Right: \"When would you denormalize a schema?\"", rendered);
         Assert.Contains("<<FOCUS_TECHNOLOGY>>", rendered);
         Assert.Contains("<<ALREADY_ASKED>>", rendered);
         Assert.DoesNotContain("<candidate_resume>", rendered); // a saved question never depends on a person's details

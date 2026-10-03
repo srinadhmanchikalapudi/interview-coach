@@ -265,7 +265,11 @@ public sealed class PracticeEngine(ILlmService llm, IPromptLibrary prompts, Tech
         vars["CANDIDATE_ANSWER"] = submission.Answer;
         vars["PREVIOUS_ATTEMPT"] = _previousAttempt;
         vars["INPUT_METHOD"] = submission.InputMethod;
-        vars["DURATION_SECONDS"] = submission.DurationSeconds > 0 ? submission.DurationSeconds.ToString() : null;
+        // The time on the answer timer is how long it took to type, not how long it would take to say, and the Coach read it as
+        // speaking pace (it called a 5-second typed answer "1 to 2 seconds"). Only spoken answers report a duration.
+        vars["DURATION_SECONDS"] = submission.InputMethod != AnswerInputMethod.Typed && submission.DurationSeconds > 0
+            ? submission.DurationSeconds.ToString()
+            : null;
         vars["WORD_COUNT"] = submission.WordCount.ToString();
         return prompts.Render(PromptName.Coach, vars);
     }

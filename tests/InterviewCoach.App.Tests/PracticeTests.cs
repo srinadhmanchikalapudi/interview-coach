@@ -187,7 +187,7 @@ public class PracticeTests
         Assert.True(vm.Coach.HasDelivery);
         var prompt = Assert.Single(llm.CoachPrompts);
         Assert.Contains("Mode: practice", prompt);
-        Assert.Contains("duration_seconds=\"95\"", prompt);       // the timer's reading is what the Coach is told
+        Assert.Contains("duration_seconds=\"(none)\"", prompt);   // the timer shows typing time, which the Coach is not told
         Assert.Contains("input_method=\"typed\"", prompt);
         Assert.Equal("Click one to answer it.", vm.Coach.FollowUpPrompt);
         Assert.True(vm.TryAgainCommand.CanExecute(null));

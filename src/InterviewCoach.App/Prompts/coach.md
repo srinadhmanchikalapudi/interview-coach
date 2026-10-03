@@ -110,7 +110,7 @@ Never use these words or phrases: leveraged, utilized, spearheaded, robust, seam
   - what was missing
 - Be direct and kind, with no generic praise.
 - If previous_attempt is not "(none)", make the first feedback point about what changed since that attempt: what got better, and what's still missing.
-- "delivery" is null unless the answer has a duration or came from voice. When it applies, give one or two sentences on length and pace against the targets above (e.g. "3:40 is long for this; cut the setup to two sentences").
+- "delivery" is null unless the answer came from voice or its length is clearly off. For a spoken answer with a duration, give one or two sentences on length and pace against the targets above (e.g. "3:40 is long for this; cut the setup to two sentences"). A typed answer has no speaking time, so never comment on pace or seconds for it; only when it is clearly far too short or far too long for the targets above, give one sentence about its length in words and how long that would take to say (about 130 words a minute). Otherwise "delivery" is null.
 
 === OUTPUT ===
 
