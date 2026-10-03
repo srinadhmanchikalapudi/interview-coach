@@ -18,8 +18,8 @@ public record ProfileListItem(int Id, string Title, string Subtitle)
 
 public enum AnswerLengthChoice { InterviewerNorm, Short, Medium, Long, Custom }
 
-/// <summary>The kind of session Start begins. Mock Interview arrives in a later milestone.</summary>
-public enum SessionMode { Learn, Practice }
+/// <summary>The kind of session Start begins.</summary>
+public enum SessionMode { Learn, Practice, Mock }
 
 /// <summary>Everything Start hands over to begin a Learn or Practice session.</summary>
 public record LearnSessionRequest(
@@ -28,6 +28,24 @@ public record LearnSessionRequest(
     int? AnswerWords,
     IReadOnlyList<string> Technologies,
     EmploymentType Employment);
+
+/// <summary>Everything Start hands over to begin a Mock Interview.</summary>
+public record MockSessionRequest(
+    CandidateProfile Profile, RoundType Round, int DurationMinutes, bool ShowQuestionText, EmploymentType Employment);
+
+/// <summary>One choice among several shown as chips (a round type, a length). Choosing one raises the callback.</summary>
+public partial class SelectOption<T>(T value, string label, Action<SelectOption<T>> selected) : ObservableObject
+{
+    public T Value { get; } = value;
+    public string Label { get; } = label;
+
+    [ObservableProperty] private bool _isSelected;
+
+    partial void OnIsSelectedChanged(bool value)
+    {
+        if (value) selected(this);
+    }
+}
 
 /// <summary>One choice in the Role type control (Full-time or Contract).</summary>
 public partial class EmploymentOption(EmploymentType type, Action<EmploymentOption> selected) : ObservableObject
@@ -102,6 +120,73 @@ public partial class HomeViewModel : ObservableObject
         SyncEmploymentOptions(); // the property may not have changed from its default, so mark the chosen chip explicitly
         TypeOptions = new ObservableCollection<TypeOption>(
             QuestionTypes.Applicable(EmploymentType).Select(t => new TypeOption(t, OnTypeOptionChanged)));
+        InitMockOptions();
+    }
+
+    // ---- Mock Interview options: the round, its length, and whether the interviewer's words are shown
+
+    public ObservableCollection<SelectOption<RoundType>> RoundOptions { get; private set; } = [];
+    public ObservableCollection<SelectOption<int>> DurationOptions { get; private set; } = [];
+
+    [ObservableProperty] private RoundType _round = RoundType.Mixed;
+    [ObservableProperty] private int _durationMinutes = RoundTypes.DefaultDuration;
+    [ObservableProperty] private bool _showQuestionText = true;
+
+    public string RoundDescription => Round.Description();
+
+    private bool _syncingMock;
+
+    private void InitMockOptions()
+    {
+        RoundOptions = new ObservableCollection<SelectOption<RoundType>>(
+            RoundTypes.All.Select(r => new SelectOption<RoundType>(r, r.Label(), o => { if (!_syncingMock) Round = o.Value; })));
+        DurationOptions = new ObservableCollection<SelectOption<int>>(
+            RoundTypes.Durations.Select(d => new SelectOption<int>(d, $"{d} min", o => { if (!_syncingMock) DurationMinutes = o.Value; })));
+        Round = _settings?.Current.MockRoundType ?? RoundType.Mixed;
+        DurationMinutes = RoundTypes.Durations.Contains(_settings?.Current.MockDurationMinutes ?? 0) ? _settings!.Current.MockDurationMinutes : RoundTypes.DefaultDuration;
+        ShowQuestionText = _settings?.Current.ShowQuestionTextDefault ?? true;
+        SyncMockOptions();
+        _mockReady = true;
+    }
+
+    private bool _mockReady;
+
+    private void SyncMockOptions()
+    {
+        _syncingMock = true;
+        try
+        {
+            foreach (var o in RoundOptions) o.IsSelected = o.Value == Round;
+            foreach (var o in DurationOptions) o.IsSelected = o.Value == DurationMinutes;
+        }
+        finally { _syncingMock = false; }
+    }
+
+    partial void OnRoundChanged(RoundType value)
+    {
+        if (RoundOptions is null) return;
+        SyncMockOptions();
+        OnPropertyChanged(nameof(RoundDescription));
+        RememberMock();
+    }
+
+    partial void OnDurationMinutesChanged(int value)
+    {
+        if (DurationOptions is null) return;
+        SyncMockOptions();
+        RememberMock();
+    }
+
+    // The last round and length are remembered between runs, as the role type is.
+    private void RememberMock()
+    {
+        if (_settings is null || !_mockReady) return;
+        if (_settings.Current.MockRoundType == Round && _settings.Current.MockDurationMinutes == DurationMinutes) return;
+        var updated = _settings.Current.Clone();
+        updated.MockRoundType = Round;
+        updated.MockDurationMinutes = DurationMinutes;
+        try { _settings.Save(updated); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* a choice that is not remembered is not worth an error */ }
     }
 
     // ---- Role type: full-time or contract
@@ -176,6 +261,9 @@ public partial class HomeViewModel : ObservableObject
     /// <summary>Raised by Start in Practice mode with the same details as <see cref="LearnRequested"/>.</summary>
     public event Action<LearnSessionRequest>? PracticeRequested;
 
+    /// <summary>Raised by Start in Mock Interview mode with the saved profile, the round, its length and whether to show the question text.</summary>
+    public event Action<MockSessionRequest>? MockRequested;
+
     /// <summary>Raised when the user opens the library of questions and answers they have already seen.</summary>
     public event Action? LibraryRequested;
 
@@ -225,18 +313,25 @@ public partial class HomeViewModel : ObservableObject
     /// <see cref="IsPracticeMode"/>) instead of using a radio group, because a group's state is shared between view instances and
     /// the Learn card once came back unselected whenever the Home view was created again after visiting another page.
     /// </summary>
-    [ObservableProperty, NotifyPropertyChangedFor(nameof(IsLearnMode), nameof(IsPracticeMode), nameof(StartLabel))]
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(IsLearnMode), nameof(IsPracticeMode), nameof(IsMockMode), nameof(StartLabel), nameof(ShowQuestionTypes), nameof(CanStart), nameof(StartHint))]
     private SessionMode _mode = SessionMode.Learn;
 
     public bool IsLearnMode => Mode == SessionMode.Learn;
     public bool IsPracticeMode => Mode == SessionMode.Practice;
-    public string StartLabel => IsPracticeMode ? "Start Practice" : "Start Learn";
+    public bool IsMockMode => Mode == SessionMode.Mock;
+    public string StartLabel => IsMockMode ? "Start Mock Interview" : IsPracticeMode ? "Start Practice" : "Start Learn";
+
+    /// <summary>Question types, By technology and answer length belong to Learn and Practice; a mock interview chooses its own questions.</summary>
+    public bool ShowQuestionTypes => !IsMockMode;
 
     [RelayCommand]
     private void SelectLearn() => Mode = SessionMode.Learn;
 
     [RelayCommand]
     private void SelectPractice() => Mode = SessionMode.Practice;
+
+    [RelayCommand]
+    private void SelectMock() => Mode = SessionMode.Mock;
 
     /// <summary>The By technology option needs the technology bank, which also finds the technologies in a job description.</summary>
     public bool HasTechnologyOption => _bank is not null;
@@ -424,13 +519,14 @@ public partial class HomeViewModel : ObservableObject
 
     /// <summary>A session needs a saved, complete profile: what runs is the saved copy, not unsaved edits.</summary>
     public bool CanStart => HasEditor && EditingId != 0 && !IsDirty && IsReady &&
-                            (AnswerLengthChoice != AnswerLengthChoice.Custom || CustomWordsValid) &&
-                            (!TechnologyMode || (!IsLoadingTechnologies && SelectedTechnologies.Count > 0));
+                            (IsMockMode || ((AnswerLengthChoice != AnswerLengthChoice.Custom || CustomWordsValid) &&
+                                            (!TechnologyMode || (!IsLoadingTechnologies && SelectedTechnologies.Count > 0))));
 
     public string StartHint =>
         !HasEditor ? "Select or create a profile first."
         : EditingId == 0 || IsDirty ? "Save the profile first. Sessions use the saved version."
         : !IsReady ? ReadinessText
+        : IsMockMode ? ""
         : AnswerLengthChoice == AnswerLengthChoice.Custom && !CustomWordsValid ? AnswerLengthHint
         : TechnologyMode && IsLoadingTechnologies ? "Reading the job description for technologies…"
         : TechnologyMode && SelectedTechnologies.Count == 0 && OtherTechnologyChecked ? "Type a technology next to Other, or untick it."
@@ -442,6 +538,12 @@ public partial class HomeViewModel : ObservableObject
     {
         var saved = _profiles.FirstOrDefault(p => p.Id == EditingId);
         if (saved is null) return;
+
+        if (Mode == SessionMode.Mock)
+        {
+            MockRequested?.Invoke(new MockSessionRequest(saved.Clone(), Round, DurationMinutes, ShowQuestionText, EmploymentType));
+            return;
+        }
 
         var request = new LearnSessionRequest(saved.Clone(), AllowedTypes, AnswerWords, SelectedTechnologies, EmploymentType);
         if (Mode == SessionMode.Practice) PracticeRequested?.Invoke(request);

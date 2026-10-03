@@ -59,6 +59,7 @@ public sealed class MockEngine(ILlmService llm, IPromptLibrary prompts, Func<Dat
     private bool _timeUpSent;
     private bool _threadsStarted;
     private bool _userEnded;
+    private bool _cancelled;
     private Step _failedStep;
     private int _operation;
     private CancellationTokenSource? _cts;
@@ -70,6 +71,7 @@ public sealed class MockEngine(ILlmService llm, IPromptLibrary prompts, Func<Dat
     public RoundType RoundType { get; private set; } = RoundType.Mixed;
     public int DurationMinutes { get; private set; } = RoundTypes.DefaultDuration;
     public CandidateProfile Profile => _profile;
+    public EmploymentType Employment => _employment;
     public InterviewPlanDto? Plan { get; private set; }
     public DebriefDto? Debrief { get; private set; }
 
@@ -88,7 +90,7 @@ public sealed class MockEngine(ILlmService llm, IPromptLibrary prompts, Func<Dat
     public bool HasEnded => Phase is MockPhase.Ending or MockPhase.Debriefing or MockPhase.Done || (Phase == MockPhase.Failed && _failedStep == Step.Debrief);
 
     /// <summary>True while the interview is running, so End interview makes sense.</summary>
-    public bool CanEnd => Phase is MockPhase.InterviewerThinking or MockPhase.InterviewerSpeaking or MockPhase.CandidateAnswering;
+    public bool CanEnd => !_cancelled && Phase is MockPhase.InterviewerThinking or MockPhase.InterviewerSpeaking or MockPhase.CandidateAnswering;
 
     /// <summary>Seconds since the interviewer's first turn began (frozen once the round has ended).</summary>
     public int ElapsedSeconds => _startedAt is { } start ? Math.Max(0, (int)((_endedAt ?? _now()) - start).TotalSeconds) : 0;
@@ -212,7 +214,7 @@ public sealed class MockEngine(ILlmService llm, IPromptLibrary prompts, Func<Dat
     /// <summary>The screen has finished saying the interviewer's line: the candidate's turn starts, or the round ends after the closing.</summary>
     public async Task FinishedSpeakingAsync()
     {
-        if (Phase != MockPhase.InterviewerSpeaking) return;
+        if (_cancelled || Phase != MockPhase.InterviewerSpeaking) return;
         if (IsClosing) await EndRoundAsync();
         else SetPhase(MockPhase.CandidateAnswering);
     }
@@ -225,7 +227,7 @@ public sealed class MockEngine(ILlmService llm, IPromptLibrary prompts, Func<Dat
     /// </summary>
     public async Task<SubmitResult> SubmitAnswerAsync(string answer, string inputMethod = AnswerInputMethod.Typed, int durationSeconds = 0)
     {
-        if (Phase != MockPhase.CandidateAnswering) return SubmitResult.NotReady;
+        if (_cancelled || Phase != MockPhase.CandidateAnswering) return SubmitResult.NotReady;
         var text = answer?.Trim() ?? "";
         if (text.Length == 0) return SubmitResult.Empty;
 
@@ -441,6 +443,7 @@ public sealed class MockEngine(ILlmService llm, IPromptLibrary prompts, Func<Dat
     /// <summary>Stops everything that is still running (leaving the screen).</summary>
     public void Cancel()
     {
+        _cancelled = true;
         _cts?.Cancel();
         _lifetime.Cancel();
         _operation++;

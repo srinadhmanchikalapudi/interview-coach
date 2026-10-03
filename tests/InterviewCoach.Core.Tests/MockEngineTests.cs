@@ -613,6 +613,23 @@ public class MockEngineTests
         Assert.Empty(h.Engine.Turns);
     }
 
+    [Fact]
+    public async Task A_cancelled_interview_accepts_nothing_more_and_starts_no_debrief()
+    {
+        var h = Standard();
+        await h.Engine.StartAsync(Profile(), RoundType.Technical, 30);
+        await Speak(h.Engine);
+
+        h.Engine.Cancel();
+
+        Assert.False(h.Engine.CanEnd);
+        Assert.Equal(SubmitResult.NotReady, await h.Engine.SubmitAnswerAsync("too late"));
+        await h.Engine.FinishedSpeakingAsync();
+        await h.Engine.EndNowAsync();
+        Assert.Empty(h.Script.Debriefs);
+        Assert.Null(h.Engine.Debrief);
+    }
+
     // ---- recording
 
     [Fact]

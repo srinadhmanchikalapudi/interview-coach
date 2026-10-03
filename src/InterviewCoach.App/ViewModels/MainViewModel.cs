@@ -19,7 +19,7 @@ public partial class MainViewModel : ObservableObject
 
     public MainViewModel(
         HomeViewModel home, SettingsViewModel settings, LearnViewModel learn, ISettingsStore store, LibraryViewModel? library = null,
-        PracticeViewModel? practice = null, ConceptsViewModel? concepts = null)
+        PracticeViewModel? practice = null, ConceptsViewModel? concepts = null, MockViewModel? mock = null)
     {
         _concepts = concepts;
         _home = home;
@@ -53,6 +53,28 @@ public partial class MainViewModel : ObservableObject
             };
             practice.ExitRequested += () => CurrentPage = _sessionOrigin;
         }
+        if (mock is not null)
+        {
+            home.MockRequested += request =>
+            {
+                _sessionOrigin = _home;
+                mock.Begin(request);
+                CurrentPage = mock;
+            };
+            mock.ExitRequested += () => CurrentPage = _home;
+            mock.DebriefReady += debrief =>
+            {
+                debrief.ExitRequested += () => CurrentPage = _home;
+                if (practice is not null)
+                    debrief.PracticeRequested += (request, item) =>
+                    {
+                        _sessionOrigin = debrief; // leaving Practice returns to the debrief
+                        practice.BeginFrom(request, item);
+                        CurrentPage = practice;
+                    };
+                CurrentPage = debrief;
+            };
+        }
         if (concepts is not null)
         {
             concepts.LearnRequested += request =>
@@ -74,6 +96,14 @@ public partial class MainViewModel : ObservableObject
             home.LibraryRequested += ShowLibrary;
             library.ExitRequested += () => CurrentPage = _home;
         }
+    }
+
+    // Leaving a page for another one stops what it was doing: a mock interview ends its voice and its microphone, and Practice stops talking.
+    partial void OnCurrentPageChanged(object? oldValue, object newValue)
+    {
+        if (ReferenceEquals(oldValue, newValue)) return;
+        if (oldValue is MockViewModel mock && newValue is not DebriefViewModel) mock.Abandon();
+        else if (oldValue is PracticeViewModel practice) practice.Leave();
     }
 
     public bool IsDemoMode => _store.Current.DemoMode;

@@ -61,6 +61,10 @@ public class AppSettings
     public string? ConceptRole { get; set; }
     public Difficulty ConceptDifficulty { get; set; } = Difficulty.Medium;
 
+    // Mock Interview (the Home screen remembers the last round and length)
+    public RoundType MockRoundType { get; set; } = RoundType.Mixed;
+    public int MockDurationMinutes { get; set; } = RoundTypes.DefaultDuration;
+
     // Behavior
     /// <summary>Speak each Practice question aloud when it appears (when a voice is ready).</summary>
     public bool SpeakQuestions { get; set; } = true;

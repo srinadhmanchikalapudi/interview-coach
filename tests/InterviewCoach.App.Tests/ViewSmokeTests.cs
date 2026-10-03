@@ -116,13 +116,14 @@ public class ViewSmokeTests
                 var view = new HomeView { DataContext = vm };
                 Layout(view);
 
-                // Only the three mode cards, not the Role type chips, which are radio buttons too.
+                // Only the four mode cards, not the Role type chips, which are radio buttons too.
                 var cards = Descendants<RadioButton>(view).Where(r => r.Template.FindName("Card", r) is Border).ToList();
                 var selected = Assert.Single(cards, c => c.IsChecked == true);
                 Assert.True(selected.IsEnabled, $"visit {visit}: the selected card must be the usable one");
                 Assert.Equal(2, ((Border)selected.Template.FindName("Card", selected)).BorderThickness.Left); // drawn as selected
                 Assert.Equal(Visibility.Visible, ((Border)selected.Template.FindName("Check", selected)).Visibility);
-                Assert.Equal(1, cards.Count(c => !c.IsEnabled)); // only Mock Interview is not available yet
+                Assert.Equal(4, cards.Count);
+                Assert.All(cards, c => Assert.True(c.IsEnabled)); // Mock Interview, Learn, Practice and Revisit are all available
             }
         });
     }

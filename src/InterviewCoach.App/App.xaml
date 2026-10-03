@@ -17,6 +17,12 @@
         <DataTemplate DataType="{x:Type vm:PracticeViewModel}">
             <views:PracticeView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:MockViewModel}">
+            <views:MockView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:DebriefViewModel}">
+            <views:DebriefView />
+        </DataTemplate>
         <DataTemplate DataType="{x:Type vm:ConceptsViewModel}">
             <views:ConceptsView />
         </DataTemplate>

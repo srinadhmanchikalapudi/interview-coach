@@ -92,6 +92,9 @@ internal static class ServiceRegistration
         s.AddSingleton<PracticeHistoryRepository>();
         s.AddSingleton<InterviewCoach.Infrastructure.Fakes.InMemoryPracticeHistory>(_ => new InterviewCoach.Infrastructure.Fakes.InMemoryPracticeHistory());
         s.AddSingleton<IPracticeHistory, RoutingPracticeHistory>(); // practice answers and their feedback, shown in the library
+        s.AddSingleton<MockHistoryRepository>();
+        s.AddSingleton<InterviewCoach.Infrastructure.Fakes.InMemoryMockHistory>();
+        s.AddSingleton<IMockHistory, RoutingMockHistory>(); // finished mock interviews; Demo mode keeps them in memory only
         s.AddSingleton<IDocumentTextExtractor, ResumeTextExtractor>();
         s.AddSingleton<IDialogService, WpfDialogService>();
         s.AddSingleton<ISpeechFactory, InterviewCoach.Infrastructure.Speech.SpeechFactory>(); // dictation and spoken questions (Azure, OpenAI or Windows voices)
@@ -102,6 +105,7 @@ internal static class ServiceRegistration
         s.AddSingleton<LibraryViewModel>();
         s.AddSingleton<PracticeViewModel>();
         s.AddSingleton<ConceptsViewModel>();
+        s.AddSingleton<MockViewModel>();
         s.AddSingleton<MainViewModel>();
         s.AddSingleton<MainWindow>();
         return builder;

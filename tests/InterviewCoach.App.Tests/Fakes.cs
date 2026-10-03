@@ -54,6 +54,16 @@ internal sealed class ScriptedDialogs : IDialogService
 
     public string? PickFile(string title, string filter) => FileToPick;
 
+    /// <summary>The path the "user" chooses in a save dialog (null to cancel). The last name offered is kept.</summary>
+    public string? FileToSave { get; set; }
+    public string? OfferedFileName { get; private set; }
+
+    public string? PickSaveFile(string title, string filter, string defaultName)
+    {
+        OfferedFileName = defaultName;
+        return FileToSave;
+    }
+
     public bool Confirm(string title, string message)
     {
         Confirmations.Add(title);

@@ -8,6 +8,9 @@ public interface IDialogService
     /// <summary>Shows a file picker and returns the chosen path, or null if cancelled.</summary>
     string? PickFile(string title, string filter);
 
+    /// <summary>Shows a save dialog and returns the chosen path (asking before an existing file is replaced), or null if cancelled.</summary>
+    string? PickSaveFile(string title, string filter, string defaultName);
+
     /// <summary>Yes/No question; true for Yes.</summary>
     bool Confirm(string title, string message);
 }
@@ -17,6 +20,12 @@ public sealed class WpfDialogService : IDialogService
     public string? PickFile(string title, string filter)
     {
         var dialog = new OpenFileDialog { Title = title, Filter = filter, CheckFileExists = true };
+        return dialog.ShowDialog() == true ? dialog.FileName : null;
+    }
+
+    public string? PickSaveFile(string title, string filter, string defaultName)
+    {
+        var dialog = new SaveFileDialog { Title = title, Filter = filter, FileName = defaultName, OverwritePrompt = true };
         return dialog.ShowDialog() == true ? dialog.FileName : null;
     }
 

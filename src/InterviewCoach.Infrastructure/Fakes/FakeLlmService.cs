@@ -144,7 +144,10 @@ public sealed class FakeLlmService(Func<LlmRole, string, string>? responder = nu
           "model_answer": "I started by measuring where the time went. At [Company] we had [a specific problem, with a number], and I [what you personally did]. The result was [your before and after metric].",
           "shape": "Direct answer → what you did → result with a number",
           "delivery": null,
-          "follow_ups": []
+          "follow_ups": [
+            { "question": "What would you do differently now?", "hint": "Name one honest change and why." },
+            { "question": "How did you know it worked?", "hint": "Give the metric you watched, before and after." }
+          ]
         }
         """;
 

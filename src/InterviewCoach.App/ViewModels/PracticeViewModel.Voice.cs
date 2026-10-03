@@ -122,6 +122,9 @@ public partial class PracticeViewModel
         _speaker?.Stop();
     }
 
+    /// <summary>The user went to another page: nothing keeps talking and the microphone is closed.</summary>
+    public void Leave() => StopVoice();
+
     /// <summary>Leaving the question or the screen: nothing keeps talking and the microphone is closed.</summary>
     private void StopVoice()
     {

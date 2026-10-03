@@ -123,7 +123,12 @@ public class VisualSnapshots
             foreach (var option in conceptsVm.Technologies.Where(t => t.Name is "C#" or "SQL Server" or "Docker")) option.IsChecked = true;
             conceptsVm.OtherTechnologies = "Kafka";
             conceptsVm.DifficultyOptions.First(o => o.Difficulty == Difficulty.Advanced).IsSelected = true;
-            var main = new MainViewModel(home, settingsVm, learn, settings, library, null, conceptsVm);
+            var mockLlm = new FakeLlmService();
+            var mockSpeech = new TestSpeech();
+            var mockVm = new MockViewModel(mockLlm, prompts, new MemorySettings(new AppSettings { AutoListen = false }), mockSpeech, new ScriptedDialogs(), null, () => practiceClock);
+            DebriefViewModel? debriefVm = null;
+            mockVm.DebriefReady += d => debriefVm = d;
+            var main = new MainViewModel(home, settingsVm, learn, settings, library, null, conceptsVm, mockVm);
 
             var window = new MainWindow(main);
 
@@ -189,6 +194,38 @@ public class VisualSnapshots
 
                 main.CurrentPage = conceptsVm;
                 Save(window, 1180, 1500, Path.Combine(dir, $"10-concepts-{name}.png"));
+
+                // Mock Interview: the Home options, a running interview with a partial answer, and the debrief.
+                main.CurrentPage = home;
+                home.SelectMockCommand.Execute(null);
+                Save(window, 1180, 1500, Path.Combine(dir, $"11-home-mock-{name}.png"));
+                home.SelectLearnCommand.Execute(null);
+
+                practiceClock = new DateTime(2026, 10, 3, 12, 0, 0, DateTimeKind.Utc);
+                debriefVm = null;
+                mockVm.Begin(new MockSessionRequest(repo.ListAsync().GetAwaiter().GetResult()[0], RoundType.Technical, 30, true, EmploymentType.FullTime));
+                mockVm.AnswerText = "Good, thanks. I have been looking forward to this one.";
+                mockVm.SubmitCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+                mockVm.Composer.ToggleMicCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+                mockSpeech.Mic.Final("On the claims migration the date was set before the data was clean.");
+                mockSpeech.Mic.Partial("so I ran a trial cutover and showed the team a four percent");
+                practiceClock = practiceClock.AddSeconds(262);
+                mockVm.Tick();
+                main.CurrentPage = mockVm;
+                Save(window, 1180, 1100, Path.Combine(dir, $"12-mock-interview-{name}.png"));
+
+                mockVm.Composer.StopListeningAsync().GetAwaiter().GetResult();
+                for (var guard = 0; debriefVm is null && guard < 20; guard++)
+                {
+                    if (mockVm.IsAnswering)
+                    {
+                        mockVm.AnswerText = "I compared the failure rate before and after on the migration dashboard.";
+                        mockVm.SubmitCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+                    }
+                }
+                main.CurrentPage = debriefVm!;
+                Save(window, 1180, 2000, Path.Combine(dir, $"13-debrief-{name}.png"));
+                foreach (var card in debriefVm!.Threads.Take(1)) { /* cards stay collapsed in the picture */ }
             }
         });
     }
