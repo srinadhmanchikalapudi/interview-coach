@@ -12,7 +12,7 @@
 <p align="center">
   <img alt=".NET 10" src="https://img.shields.io/badge/.NET-10-512BD4">
   <img alt="WPF" src="https://img.shields.io/badge/UI-WPF%20%28MVVM%29-0078D4">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-872%20passing-2EA043">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-975%20passing-2EA043">
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%2010%2F11-lightgrey">
   <img alt="Status" src="https://img.shields.io/badge/status-Learn%20mode%20complete-blue">
 </p>
@@ -64,6 +64,7 @@ Things that make it more than a question generator:
 | **Technology concepts** | A **Concepts** page for drilling one technology at a time, with no resume or job description: type a job role, tick the technologies it uses (found once by the model and saved), or type your own, then pick **Beginner**, **Medium** or **Advanced**. Works in Learn and Practice. |
 | **Saved technical questions** | Technical-concept questions and their general answers are saved per technology and seniority, so repeats cost nothing and survive edits to your resume. When a technology runs out of saved questions the model writes ten common ones in a single call (most common first, spread over different areas, mixed phrasing) instead of one at a time. |
 | **Questions spread across your resume** | Resume questions take turns between your employers and projects (the least used first, then a different highlight each time) instead of always asking about the current job, and each starts with a different word. A question that repeats an earlier one in other words is sent back once. |
+| **Mock Interview** | A planned round (recruiter screen, technical, system design, behavioral, hiring manager or mixed; 15 to 60 minutes) with a live interviewer who speaks, listens, follows up on what you say and closes at the end. No feedback until it is over, then a **debrief**: hire signal, ratings per focus area with evidence, strengths, top fixes, and the coach's view of every question, exportable to Markdown. |
 | **Practice (typed)** | Answer a question yourself, with a live word count and an answer timer, then get feedback that quotes your own words, what the interviewer is testing, a strong answer and a delivery comment. Try again passes your last answer to the coach so it can say what changed; follow-ups become the next question. |
 | **Library (Revisit)** | Every question you learn and every answer you practise is kept, so you can go back to it: filter by Learned or Practised and by question type, search (including your own words), sort, reopen the full answer with your feedback, remove an entry. |
 | **Tailor to my resume** | Turn any general answer into one built from your own experience, on demand. |
@@ -120,7 +121,7 @@ To regenerate them, see [Testing](#testing).
 | 3. **Learn mode**: question generator, coach, coach cards, follow-ups | Done |
 | 4. **Practice (typed)**: answer first, then get feedback; try again with comparison; follow-ups | Done |
 | 5. **Voice**: dictate answers, hear questions, read answers aloud (Azure, OpenAI, Windows voices) | Done (the real services are untested against live keys; see HANDOFF section 22) |
-| 6. Mock Interview: planned interview, live interviewer, parallel coaching, debrief, Markdown export | Not started (prompts exist) |
+| 6. **Mock Interview**: planned round, live interviewer who speaks and listens, time pacing, debrief, Markdown export | Done (the voice parts are untested against live services; see HANDOFF section 24) |
 | 7. History and polish | Partly: the **Library** of questions and answers you have seen is built (see below); a history of mock interviews and the final polish are not started |
 
 Beyond the original spec, these were added during the build: scenario questions, answer-length control, technology bank,
@@ -177,8 +178,8 @@ saved until **Save**.
 |---|---|---|
 | Question generator | `claude-haiku-4-5-20251001` (OpenRouter: `anthropic/claude-haiku-4.5`) | One short question per call, so a small, fast model is enough |
 | Coach | `claude-sonnet-5-5` (OpenRouter: `anthropic/claude-sonnet-5.5`) | Writes the answer you practise from, so quality matters most |
-| Planner, Debrief | the strong model | Used by Mock Interview, which is not built yet |
-| Interviewer | the fast model | Speaks live in Mock Interview, so speed matters |
+| Planner, Debrief | the strong model | Used by Mock Interview: the plan of the round and the debrief |
+| Interviewer | the fast model | Speaks live in Mock Interview, so speed matters: it answers after every answer you give |
 
 These are the models the prompts were written and measured against. For OpenRouter there is also a **Lower cost** setup:
 Haiku still writes the questions and `openai/gpt-5-mini` does the coaching. It was tried on seven C# questions (5 to 9 seconds per
@@ -275,6 +276,21 @@ click **Try it myself** in Learn mode to practise the question you are looking a
 
 Every answer you submit is kept in the Library with its feedback (see below), including each try and each follow-up.
 
+### Mock Interview
+
+Choose **Mock Interview** on Home, then the **round**, its **length** (15, 30, 45 or 60 minutes) and whether to **show the interviewer's words** (turn it off for audio only; it is shown anyway when no voice works). The last round and length are remembered. Start needs a saved, complete profile.
+
+1. The app **plans the round** from your resume and the job description (focus areas, resume claims worth probing, phases with minutes, an opening line), then the interviewer speaks first.
+2. A **status pill** says who has the floor: Speaking, Thinking, Your turn or Listening, next to the clock (elapsed / length). Answer by typing or by voice: **Speak** or **F2** dictates into the box, and **talking over the interviewer** stops them (barge-in). With auto-listen on, the microphone opens by itself when they finish. **Ctrl+Enter** or **Send** sends the answer; **Repeat** says the last line again. Silence auto-submit works as in Practice.
+3. The interviewer reacts to what you actually said: usually one or two follow-ups per main question, a hint if you are stuck, your own questions near the end. Nothing here is graded or hinted; **no feedback of any kind appears until the round is over**.
+4. The round ends when the interviewer closes it, when you click **End interview** (after a confirmation; no closing line is spoken), or when it is five minutes over its length (the interviewer is then told to wrap up). **Conversation so far** (collapsed) shows the dialogue.
+5. The **debrief** opens as soon as it is written: how the round went with a hire-signal badge, ratings of 1 to 4 per focus area with what you said as evidence (or "Not covered"), strengths, top fixes with a drill each, and what to practise next. Below it is a card for every question you were asked, with the exchange and the coach's view of it (what they were testing, what landed, a strong answer, follow-ups). The cards fill in as their coaching finishes (three at a time); one that fails has **Try again**.
+6. **Practise this question** opens a card's question in Practice (leaving Practice returns to the debrief), and a follow-up from the coaching opens as a follow-up. **Export to Markdown** saves the whole debrief. Finished interviews are kept in the database (`MockSessions`) for a History screen.
+
+If the interviewer or the debrief fails, the screen says why and **Retry** repeats just that step; the conversation so far is kept. Opening another page during an interview ends its voice and microphone and the interview is abandoned (it is not recorded).
+
+<img src="docs/images/mock-interview-light.png" alt="Mock interview" width="460"> <img src="docs/images/debrief-light.png" alt="Debrief" width="460">
+
 ### In a session
 
 - **Next question** moves on; the following question is prepared in the background, so it usually appears instantly.
@@ -348,12 +364,14 @@ build time and also embedded in Infrastructure as a fallback. You can edit the c
 | File | Used by | Purpose |
 |---|---|---|
 | `question_generator.md` | Learn; the bank when it writes a question | Writes one question; per-type length rules; role-type rule; optional focus technology |
-| `coach.md` | Learn and Practice (Mock later) | Writes the answer, the shape, and the follow-ups; in Practice also feedback on your answer |
+| `coach.md` | Learn, Practice and the debrief of Mock Interview | Writes the answer, the shape, and the follow-ups; in Practice also feedback on your answer |
 | `tech_tags.md` | By technology | Extracts up to eight technologies from a job description |
 | `role_technologies.md` | Concepts page | Lists the main technologies a job role uses (up to 24), once per role, saved |
 | `question_batch.md` | The technology bank | Writes ten common questions about one technology in one call, for the bank |
 | `resume_topics.md` | Resume questions | Lists the employers and projects on a resume with what was done on each, once per resume, so questions can be spread over them |
-| `planner.md`, `interviewer.md`, `debrief.md` | Mock Interview (milestone 6) | Present, not yet used |
+| `planner.md` | Mock Interview | Plans the round: focus areas, resume claims to probe, phases with minutes, the opening line |
+| `interviewer.md` | Mock Interview | The live interviewer: one short spoken turn at a time, reacting to what you said, pacing itself against the plan |
+| `debrief.md` | Mock Interview | The honest debrief after the round: summary, hire signal, ratings with evidence, fixes, what to practise |
 
 `PromptRenderer` fills `{{VARIABLES}}` in a single pass, throws on a missing key, and renders a blank value as `(none)`.
 
@@ -401,21 +419,21 @@ on its OpenRouter page if that matters to you. The model list for the OpenRouter
 
 **Key fallbacks** when a Settings field is empty: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION`.
 
-**Database tables:** `Profiles`, `TechQuestions`, `TechAnswers`, `JdTechnologies`, `RoleTechnologies` (the technologies of a job role, fetched once), `ResumeTopics` (employers and projects read from a resume), `LearnHistory` and `PracticeAttempts` (the Library).
+**Database tables:** `Profiles`, `TechQuestions`, `TechAnswers`, `JdTechnologies`, `RoleTechnologies` (the technologies of a job role, fetched once), `ResumeTopics` (employers and projects read from a resume), `LearnHistory` and `PracticeAttempts` (the Library), `MockSessions` (finished mock interviews: plan, conversation, debrief and the coaching of each question as JSON).
 
 ## Testing
 
 ```bash
-dotnet test                                     # all 872 tests
+dotnet test                                     # all 975 tests
 dotnet test tests/InterviewCoach.Core.Tests     # one project
 dotnet build InterviewCoach.sln -c Release      # use this if the Debug exe is running (it locks its DLLs)
 ```
 
 | Project | Tests | Covers |
 |---|---|---|
-| `InterviewCoach.Core.Tests` | 365 | Prompt rendering, engine behaviour, the bank, answer lengths, question types, text helpers, role type |
-| `InterviewCoach.Infrastructure.Tests` | 206 | JSON parsing, LLM service (retry, cache split, options), settings (DPAPI round trip, no plaintext), SQLite repositories on real files, file extractors, prompt guards, Demo-mode isolation |
-| `InterviewCoach.App.Tests` | 301 | View models and **real WPF views** on a shared STA dispatcher; fails on any binding error |
+| `InterviewCoach.Core.Tests` | 417 | Prompt rendering, engine behaviour, the bank, answer lengths, question types, text helpers, role type |
+| `InterviewCoach.Infrastructure.Tests` | 213 | JSON parsing, LLM service (retry, cache split, options), settings (DPAPI round trip, no plaintext), SQLite repositories on real files, file extractors, prompt guards, Demo-mode isolation |
+| `InterviewCoach.App.Tests` | 345 | View models and **real WPF views** on a shared STA dispatcher; fails on any binding error |
 
 Test names are sentences that describe behaviour. Scripted test doubles (`ScriptedLlmService`, `BankScript`) let tests control exactly
 what the model "says", including delays and failures.
