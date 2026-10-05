@@ -787,6 +787,8 @@ of how retries improved.
 
 **Known limits.** Not code-signed, so SmartScreen warns on first run from the internet ("More info", "Run anyway"); signing needs a certificate (SignPath Foundation signs open-source projects for free, an application is needed). There is no auto-update (the app does not check for new releases; people reinstall from the Releases page). x64 only; `-Runtime win-arm64` works for the exe but the installer script allows x64-compatible only. The repository has no licence file yet, which anyone installing from a public repository will notice.
 
+**Release notes.** `tools/release-notes.ps1 -Tag vX.Y.Z` (called by the release workflow, which checks out with `fetch-depth: 0` so the tags are there) writes the notes: "What's new in X.Y.Z" as the subjects of the commits between the previous tag (by version order) and this one, at most 40, then the install paragraph and the SmartScreen note; `gh release create` still adds `--generate-notes` for the compare link. It exists because commits go straight to `main`, so GitHub's generated list (merged pull requests) was always empty. Consequence: **commit subjects are the release notes**, so write them to read well to a user ("Settings: an Update now button once a newer version is found"). Not filtered (docs and test commits appear too); the first release lists the last 40 commits. Tried locally for v1.1.1, v1.1.0 and v1.0.0; not yet run in the workflow on GitHub. Notes of releases published earlier are unchanged (edit with `gh release edit vX.Y.Z --notes-file ...`).
+
 ## 29. Licence, auto-update, signing
 
 **Licence.** MIT (`LICENSE`, 2026, holder `srinadhmanchikalapudi`, the git user name; change it to a legal name if wanted). `THIRD-PARTY-NOTICES.md` lists the direct dependencies and their licenses (read from the NuGet metadata of every package in the build: 76 MIT, 5 Apache-2.0, NAudio's own MIT text, and one exception). **The exception is `Microsoft.CognitiveServices.Speech`** (Azure speech): it is under Microsoft's Software License Terms, copied to `licenses/`. Those terms let the SDK's redistributable code be shipped in an application but require that recipients agree to terms that protect Microsoft at least as much, an indemnity from the distributor, and a notice that the SDK may send usage data to Microsoft. The installer shows the MIT license, installs `LICENSE`, `THIRD-PARTY-NOTICES.md` and `licenses/` next to the program (the zip carries them too), and the notices say the speech feature is under Microsoft's terms and can be avoided (OpenAI or Windows voices, or typing). This is not legal advice: if the project becomes more than a hobby, read section 2 of that license or drop the Azure option. The project file carries `Copyright`, `Company`, `PackageLicenseExpression`.
@@ -812,3 +814,151 @@ of how retries improved.
 **Tests.** `AnswerRulesTests` (Core: the variable, which prompts carry it, Learn with and without rules, Personalize), `AnswerRulesUiTests` (App: shown, dirty, save, revert, session request, buttons, limit, counter), the repository round trip, and `PromptLibraryTests` with the new variable. 1212 tests in all.
 
 **Fix after 1.1.0 (found by use).** "Check for updates now" in Settings only reported "Version X is available." and offered no way to install it, because the update bar is hidden on Settings. Settings now shows an **Update now** button (**Download the update** for an unzipped copy) once a version is known: `UpdateService.InstallWithConfirmAsync` (the confirmation plus install, shared with the bar), `UpdateService.HasUpdateToInstall`, `SettingsViewModel.InstallUpdateCommand`, `CanInstallUpdate`, `InstallUpdateText`. Five new tests; 1212 in all. The button was not seen on screen in a real update.
+
+## 31. Backlog (not started)
+
+**Coding practice page (LeetCode style).** Asked about on 5 October 2026; deferred by the owner ("nothing for now"). Idea: a **Code** page next to Concepts. Pick a language (SQL, C#, Python), a difficulty (Easy, Medium, Hard) and optionally a topic; get an original problem with examples, a code editor, Run and Submit, a three-step hint ladder (nudge, approach, nearly the solution; reveals are recorded), and feedback with three parts: correctness against tests, a code review (complexity, edge cases, readability, naming) and room for improvement (a cleaner or faster alternative). Attempts go to the Library like Practice answers.
+
+Design notes from the discussion. The existing "Coding talk-through" question type only judges an explanation; nothing runs code. The key choice is whether code runs. Model-judged only works for every language and is cheapest but can wrongly say "correct". Running code: **SQL** on in-memory SQLite (already a dependency; result-set comparison with a reference query; dialect differs from T-SQL), **C#** through Roslyn scripting (adds about 10 to 20 MB; separate process with time limit), **Python** through an installed interpreter (not bundled; model-only feedback when absent). Make problems trustworthy by having the model write a problem **and a reference solution** and deriving the expected outputs by running the reference, never from the model's stated outputs; add a "report a bad problem" button; write original problems, not copies of real LeetCode ones; save problems per language and level like the question bank. A new engine (state machine like Practice), prompts, DTOs and tables would follow the existing patterns. Code goes to the model provider (update the privacy text). Rough effort: a first version (editor, generated problems, hints, model-judged review, Library) one to two days, then half a day to a day and a half per language for real execution (SQL, then C#, then Python).
+
+Recommended order: first version for all three languages with model-judged feedback labelled "not run", then real execution for SQL, C#, Python. Open questions for the owner: model-judged first or real execution from day one; a syntax-highlighting editor package (AvalonEdit, MIT) or a plain monospace box; tailored to the profile's role and job description, or standalone like Concepts.
+
+**macOS version.** Asked about on 5 October 2026; planned in detail in section 32, not started. Summary: WPF is Windows-only, so this is a port with an Avalonia UI for macOS next to the WPF app (shared view models), a small set of platform adapters (Keychain for keys, the system voice and audio capture, paths), a signed and notarized `.dmg` built by CI, and a Mac update path. Only 4 Infrastructure files use Windows APIs and the view models are already WPF-free, so the work is mostly the 12 views (about 2,900 lines of XAML), the platform adapters, tests and packaging. Estimate four to six weeks of focused work (first usable text-only build in about two to three weeks). Needs a Mac for testing and an Apple Developer account (about $99 a year) for signing. Decisions to make first are in 32.2.
+
+## 32. macOS port plan
+
+**Status:** planned, not started. Asked about on 5 October 2026; the owner asked for a detailed plan and a backlog entry (section 31). Nothing here has been tried: there was no Mac available, and every Mac-specific claim below is from documentation and experience, marked **verify** where it matters.
+
+**Goal.** A macOS version with the same features (Learn, Practice, Mock Interview, Concepts, Library, History, Settings, answer rules, voice with Azure, OpenAI or the system voice, updates from GitHub Releases), signed and notarized, downloadable from the same GitHub release as the Windows installer. The Windows app keeps working throughout; no step may reduce it.
+
+### 32.1 Inventory (measured from the code on 5 October 2026)
+
+| Part | State | What it means |
+|---|---|---|
+| `Core` | `net10.0`, no UI or SDKs | Runs on a Mac unchanged (engines, prompts, models, ports, about 500 tests) |
+| `Infrastructure` | targets `net10.0-windows10.0.19041.0`, but **only 4 files** use Windows APIs | `SettingsStore` (DPAPI `ProtectedData`), `NAudioDevices` (NAudio recorder and player), `WindowsAndFactory` (System.Speech voice and the speech factory), `UpdateInstaller` (registry `InstallationInfo`, Inno Setup launch). Everything else is portable: `LlmService`, `ChatClientFactory`, parsers, EF Core SQLite (native SQLite ships for macOS), PdfPig, OpenXml, the OpenAI calls, the GitHub checker, the Azure Speech SDK (**verify** it ships macOS runtimes for arm64 and x64) |
+| Audio ports | `IAudioRecorder`, `IAudioPlayer` already exist | Only NAudio implements them: a Mac needs its own |
+| `App` view models | about 4,400 lines; **WPF-free** in practice (the only `System.Windows` use is `ICommand`, which is portable) | Can be shared as they are |
+| `App` services | `WpfDialogService` is the only WPF service. `IDialogService` is synchronous (`Confirm`, `PickFile`, `PickSaveFile`) | Avalonia dialogs are async: 11 call sites in `src` and about 19 test references change |
+| `App` views | 12 XAML files, about 2,900 lines, plus `App.xaml` (308) and 3 controls (`HighlightedTextBlock`, `PasswordBoxBinder`, `WheelScrolling`), code-behind about 200 lines | The real porting work |
+| Look | Fluent theme `DynamicResource` keys, `Segoe UI`, **32 distinct Segoe Fluent Icons glyphs**, `BoolToVis` converters | Re-map to Avalonia theme resources, replace the icons with an icon set, use bound `IsVisible` |
+| Shortcuts | Ctrl+1..5, Ctrl+N, Ctrl+R, Ctrl+Enter, F2, F1, Esc | Cmd on Mac; F2 needs Fn on laptop keyboards |
+| Tests | Core 496 portable; Infrastructure 280 mostly portable (DPAPI and Windows voice tests are not); App 436 run real **WPF** views (Windows only) | Avalonia headless view tests needed |
+| Packaging | Inno Setup, `publish.ps1`, workflows on `windows-latest` | New: `.app` bundle, signing, notarization, `.dmg`, a macOS CI job |
+
+### 32.2 Decisions to make first (recommendation first)
+
+| # | Decision | Recommendation | Why |
+|---|---|---|---|
+| D1 | UI strategy | **Avalonia app for macOS next to the WPF app**, sharing view models; keep WPF until the Avalonia app reaches parity; decide later whether to retire WPF | Lowest risk to Windows users; the views are thin because view models hold all state. Cost: two view layers to keep in step. Replacing WPF outright would give one UI codebase but changes the Windows look at the same time as the port. |
+| D2 | CPU | Apple Silicon (`osx-arm64`) first, Intel (`osx-x64`) as a second asset once the pipeline works | Same code, one more build and download |
+| D3 | Distribution | Direct download (`.dmg` on GitHub Releases), signed and notarized. Not the Mac App Store | The store needs the app sandbox and review; out of scope |
+| D4 | Apple Developer Program (about $99 a year) | Needed for a Developer ID certificate and notarization. Without it builds are unsigned and users must right-click Open (or clear the quarantine flag): acceptable for a beta only | Gatekeeper |
+| D5 | A Mac | Needed for the microphone, Keychain, signing checks and a clean-machine test. GitHub's `macos-latest` runners can build and run headless tests but cannot test the microphone or a person's Gatekeeper experience | |
+| D6 | Updates on Mac | Version 1: **Download the update** (opens the release page), as for any copy not installed by Setup. Version 2: replace the `.app` in place after the program quits | In-place needs a writable location and handling of App Translocation |
+
+### 32.3 Target structure
+
+```
+Core                       net10.0                       unchanged
+Infrastructure             net10.0                       portable adapters (was Windows-targeted)
+Platform.Windows           net10.0-windows10.0.19041.0   DPAPI, System.Speech, NAudio, registry install info, Inno Setup launch
+Platform.Mac               net10.0                       Keychain, say and afplay, audio capture, bundle install info
+Presentation               net10.0                       view models and UI services (moved out of App), no WPF or Avalonia types
+App                        WPF, Windows                  views, theme, host (existing)
+App.Avalonia               net10.0                       views, theme, host for macOS (also run on Windows in CI)
+```
+
+New or changed ports: `ISecretProtector` (protect and unprotect a string), `IAppPaths` (data folder, logs folder, install folder), `ISystemVoice` (or a platform `ITextToSpeech` registered per OS), `IClipboard` if a view model needs it, `IDialogService` made async, and the existing `IAudioRecorder`, `IAudioPlayer`, `IInstallationInfo`, `IProcessLauncher`. Registration moves into a per-platform `AddPlatformServices()`.
+
+### 32.4 Workstreams
+
+Effort is focused working days for one developer who is also testing; ranges, not promises.
+
+**P0. Seams on Windows, no behaviour change (about 3 days).**
+1. Add `ISecretProtector`; `SettingsStore` takes it (Windows implementation: DPAPI). Keep the `dpapi:` marker; add a `keychain:` marker for Mac.
+2. Add `IAppPaths`; replace `Environment.SpecialFolder.LocalApplicationData` uses (`SettingsStore.AppDataDirectory`, `Database.DefaultPath`, logs). Reason: on macOS .NET returns `~/.local/share` for that folder, which is not where a Mac app belongs; Mac path is `~/Library/Application Support/InterviewCoach` (logs `~/Library/Logs/InterviewCoach`).
+3. Move `NAudioDevices`, the Windows voice and the registry `InstallationInfo` into `Platform.Windows`; retarget `Infrastructure` to `net10.0`; keep the Windows tests green.
+4. Add a speech provider value `System` (the operating system's voice); treat the stored `Windows` as an alias on load so existing `settings.json` files still work.
+5. Make `IDialogService` async (11 source call sites, about 19 test references).
+6. Generalise the update checker to per-OS asset patterns (`InterviewCoach-Setup-*.exe` for Windows, `InterviewCoach-<version>-osx-<arch>.dmg` for Mac, chosen with `RuntimeInformation`).
+*Exit:* Windows app and all 1,212 tests unchanged in behaviour; `Infrastructure` builds for `net10.0`.
+
+**P1. Presentation project (about 1 day).** Move view models and the services that are not WPF (`UpdateService`, `AnswerComposer`, `Speaker`, converters of logic) from `App` to `Presentation`; `App` references it. Keep namespaces so tests do not change.
+*Exit:* tests green; `Presentation` has no `System.Windows` reference.
+
+**P2. Avalonia app (about 8 to 11 days).**
+1. Project, host and DI (`App.Avalonia`), `ThemeVariant` following the system (light and dark), the window with sidebar, notice bar, update bar, shortcut overlay.
+2. Theme: map the Fluent resource keys the WPF styles use to Avalonia's Fluent theme resources; define the shared styles (`Card`, `Chip`, `ChipRadio`, `ModeCard`, ...) again; system UI font.
+3. Icons: replace the 32 Segoe glyphs with one icon set (an Avalonia icon package or SVG path data) so the same names work on both.
+4. Port the views in order of value: Main, Home (the largest, 447 lines), Learn, Coach output, Practice, Settings (385), Mock, Debrief, Library, History, Concepts. Bindings stay the same (`IsVisible` bound to bools replaces `BoolToVis`).
+5. Controls: `HighlightedTextBlock` (inlines), `PasswordBoxBinder` (a `TextBox` with a password character and a two-way binding needs no helper), `WheelScrolling` (re-check on a trackpad; may be unnecessary).
+6. Shortcuts: Cmd in place of Ctrl; the microphone toggle gets a Mac-friendly key (F2 stays as a second binding); a native menu (About, Settings with Cmd+comma, Quit with Cmd+Q).
+*Exit (M1):* the app starts on a Mac in Demo mode and Home, Learn and Settings work; all screens by the end of P2.
+
+**P3. Mac platform adapters (about 4 to 5 days).**
+1. `MacSecretProtector`: API keys in the **Keychain** (service `InterviewCoach`, account = setting name) through the `security` command or Security.framework calls; `settings.json` stores a `keychain:` marker, never the key. Keys do not roam between Macs.
+2. System voice: `say` (voice list from `say -v '?'`, rate), cancellation by ending the process; WAV playback (OpenAI voice) through `afplay`.
+3. Dictation: Azure through the SDK's default microphone (**verify** the macOS native libraries load and the microphone works); OpenAI path needs a recorder for 16 kHz mono WAV: evaluate PortAudio bindings, miniaudio-based libraries and OpenAL; pick one in a one-day spike.
+4. Microphone permission: `NSMicrophoneUsageDescription` and the audio-input entitlement; a clear message when permission is denied.
+5. `MacInstallationInfo`: installed when the app runs from `/Applications` or `~/Applications` (not from a mounted `.dmg` or an App Translocation path).
+*Exit (M2/M3):* text features with a real model and Keychain keys; then voice.
+
+**P4. Tests and CI (about 3 to 4 days).** Avalonia headless view tests replacing `WpfHost` for the new views (a binding error must fail a test: hook Avalonia's binding log); a snapshot harness for light and dark; platform-specific tests marked so DPAPI and Windows-voice tests run only on Windows and Keychain tests only on macOS; a `macos-latest` job in `ci.yml` that builds everything and runs Core, Infrastructure and the Avalonia tests (the WPF tests stay on Windows).
+*Exit:* CI green on both runners.
+
+**P5. Packaging, signing, notarization, release (about 3 days plus waiting for the Apple account).**
+1. `tools/publish-mac.sh`: `dotnet publish -r osx-arm64 --self-contained` (not single file: extracting native libraries at run time interferes with signing), assemble `Interview Coach.app` (`Info.plist` with bundle id and version, `AppIcon.icns` made from the existing icon with `iconutil`, `Prompts` inside the bundle).
+2. Sign every Mach-O file and the bundle with a **Developer ID Application** certificate and the hardened runtime; entitlements for .NET: `allow-jit`, `allow-unsigned-executable-memory`, `disable-library-validation` (third-party native libraries), `device.audio-input`.
+3. Notarize with `xcrun notarytool submit --wait`, staple the ticket, build the `.dmg` (`create-dmg` or `hdiutil`), sign and notarize it, name it `InterviewCoach-<version>-osx-arm64.dmg`.
+4. `release.yml` gets a macOS job (secrets: certificate as base64 `.p12` and its password, Apple team id, an App Store Connect API key or app-specific password) that attaches the `.dmg` to the same release; the Windows job is unchanged. Release notes gain a Mac install paragraph (drag to Applications; first run).
+*Exit (M4):* a tag produces both installers; `spctl --assess` accepts the app on a clean Mac.
+
+**P6. Updates on Mac.** v1 (about 0.5 day): the checker picks the Mac asset and the button reads **Download the update**. v2 (about 2 days): download and verify the checksum, quit, a small helper script replaces the `.app` and relaunches; handle a read-only location and App Translocation by telling the user to move the app to Applications.
+
+**P7. Documentation and polish (about 1 to 2 days).** README (Mac install steps and the Gatekeeper note), docs set (platform section, new ADRs), troubleshooting (Keychain prompts, microphone permission, "app is damaged" and quarantine), test counts, release checklist.
+
+**Total:** about 24 to 31 working days, roughly **four to six weeks** of focused work. The earlier figure of one to two weeks covered only a text-only UI port without tests, packaging or Mac verification.
+
+### 32.5 Milestones
+
+| | What works | Rough point |
+|---|---|---|
+| M1 | Starts on a Mac in Demo mode; Home, Learn, Settings | after about 2 weeks |
+| M2 | All screens, real model, Keychain keys, unsigned build | after about 3 to 4 weeks |
+| M3 | Voice: Azure and OpenAI dictation, system voice, microphone permission | after about 4 weeks |
+| M4 | Signed, notarized `.dmg` built and attached by CI | after about 5 weeks |
+| M5 | In-place update | after about 6 weeks (optional) |
+
+### 32.6 Mac-specific things to remember
+
+- **Data folder:** do not use `LocalApplicationData` on macOS (it is `~/.local/share`); use `IAppPaths`.
+- **Secrets:** Keychain, not a file; the first access may prompt; deleting the keychain item removes the key.
+- **Gatekeeper and quarantine:** a downloaded `.dmg` is quarantined; notarized and stapled apps open normally; an unsigned build needs right-click Open.
+- **App Translocation:** an app run straight from Downloads or a mounted image runs from a read-only random path, so in-place update cannot work there.
+- **Keyboard:** Cmd replaces Ctrl; F2 needs Fn; reserve Cmd+Q, Cmd+comma, Cmd+W for the system meaning.
+- **Voices:** `say` voices differ from Windows voices; the voice list and the default must be re-chosen on first run.
+- **Fonts and icons:** the system font is San Francisco; Segoe fonts are not there.
+- **Both CPUs:** an Intel Mac needs the `osx-x64` build until the Apple-Silicon-only decision is made.
+- **Case:** the default Mac file system ignores case; a Linux CI runner does not (file names and resource names must match exactly).
+
+### 32.7 Risks
+
+| Risk | Impact | Mitigation |
+|---|---|---|
+| Avalonia theme and control differences take longer than planned | Schedule | Port Home and Learn first as a vertical slice; keep the shared styles small |
+| Azure Speech SDK does not work on macOS as expected | No Azure dictation | Spike in P3; fall back to the OpenAI path or system dictation |
+| No good cross-platform audio capture library | No OpenAI dictation | One-day spike; fallback: record with `ffmpeg` or `sox` if installed, or ship Azure only on Mac |
+| Async dialogs ripple through view models and tests | Regression | Do it first, on Windows, in P0 where the existing tests catch mistakes |
+| Notarization or hardened-runtime entitlements are fiddly | Release delay | Start with an unsigned build; get the signing pipeline working on a tiny sample early |
+| No Mac available | Cannot verify | Borrow or rent one before M2; mark unverified items in the docs |
+| Two view layers drift apart | Maintenance | Keep views thin; share view models and tests; decide on retiring WPF after M4 |
+| Package size grows | Download size | Self-contained arm64 build is about the same as Windows; measure |
+
+### 32.8 Out of scope
+
+Mac App Store, iOS, Linux (Avalonia would make it cheap to add later: one more RID, a packaging format and a secret store), a universal binary (two downloads instead).
+
+### 32.9 Definition of done
+
+A tag builds a Windows installer and a signed, notarized macOS `.dmg`; the Mac app does everything the Windows app does except where listed in the known limits; keys are in the Keychain; CI is green on Windows and macOS; the Mac install and update steps are in the README; the Windows app and its 1,212 tests were never broken along the way.
