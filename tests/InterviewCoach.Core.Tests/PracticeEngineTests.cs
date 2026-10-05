@@ -578,15 +578,15 @@ public class PracticeEngineTests
     {
         var rig = new Rig();
         rig.Script.ModelQuestionType = "resume_deep_dive";
-        rig.Script.ResumeEntries = [new ResumeTopicEntryDto { Employer = "CPF", Highlights = ["a"] }, new ResumeTopicEntryDto { Employer = "EDF", Highlights = ["b"] }];
+        rig.Script.ResumeEntries = [new ResumeTopicEntryDto { Employer = "Acme", Highlights = ["a"] }, new ResumeTopicEntryDto { Employer = "Globex", Highlights = ["b"] }];
         var engine = rig.NewEngine();
 
         await engine.StartAsync(Profile(), [QuestionType.ResumeDeepDive]);
         await engine.NextAsync();
 
         var prompts = rig.Llm.ModelQuestionCalls.Select(c => c.Prompt).ToList();
-        Assert.Contains("CPF", prompts[0].Split("<resume_focus>")[1]);
-        Assert.Contains("EDF", prompts[1].Split("<resume_focus>")[1]);
+        Assert.Contains("Acme", prompts[0].Split("<resume_focus>")[1]);
+        Assert.Contains("Globex", prompts[1].Split("<resume_focus>")[1]);
     }
 
     // ---- starting from a question the user already read

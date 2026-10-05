@@ -66,8 +66,8 @@ public class PromptLibraryTests
     [Fact]
     public void The_interviewer_is_told_to_ask_open_questions_keep_recaps_short_and_not_invent_a_name()
     {
-        // The first real mock interview log (3 October 2026): two follow-ups listed the possible answers ("parallel tasks, thread pool
-        // tuning, or something else?"; "SemaphoreSlim, or a channel, or a custom queue?") and the candidate then repeated one of them.
+        // The first real mock interview log (3 October 2026): two follow-ups listed the possible answers ("a queue, a cache, or
+        // something else?"; "a lock, a semaphore, or a custom queue?") and the candidate then repeated one of them.
         var rendered = EmbeddedOnly().Render(PromptName.Interviewer, FullVars());
 
         Assert.Contains("Never list the possible answers inside your question", rendered);
@@ -100,7 +100,7 @@ public class PromptLibraryTests
     [Fact]
     public void The_coach_is_told_a_mis_heard_word_is_not_a_mistake_and_that_a_mock_duration_is_a_total()
     {
-        // The same log: "bounded cube pattern" (queue) was quoted as imprecise wording, and the 2:47 total of three answers was read as one.
+        // The same log: "cube pattern" (queue) was quoted as imprecise wording, and the 2:47 total of three answers was read as one.
         var rendered = EmbeddedOnly().Render(PromptName.Coach, FullVars());
 
         Assert.Contains("A word that makes no sense in context is a mis-heard word, not the candidate's mistake", rendered);

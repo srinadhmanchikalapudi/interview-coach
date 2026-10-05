@@ -33,8 +33,8 @@ public static partial class TextTools
             .Where(w => w.Length >= 2 && !FillerWords.Contains(w)).ToHashSet(StringComparer.Ordinal);
 
     /// <summary>
-    /// True when two questions ask about the same thing in different words, for example "Why did you choose RabbitMQ over Service Bus
-    /// for specific workloads?" and "How would you choose between RabbitMQ and Service Bus for a new workload?". They count as the same
+    /// True when two questions ask about the same thing in different words, for example "Why did you choose Kafka over RabbitMQ
+    /// for specific workloads?" and "How would you choose between Kafka and RabbitMQ for a new workload?". They count as the same
     /// when they share at least four topic words and those make up at least half of the shorter question's topic words.
     /// </summary>
     public static bool IsNearDuplicate(string a, string b)

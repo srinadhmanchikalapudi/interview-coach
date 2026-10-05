@@ -12,8 +12,8 @@ public class ResumeFocusTests
     [Fact]
     public void The_two_RabbitMQ_questions_from_the_real_log_count_as_the_same_question()
     {
-        const string first = "You've built messaging pipelines with both RabbitMQ and Azure Service Bus at CPF—what made you choose one over the other for specific workloads?";
-        const string second = "At CPF, you built event-driven messaging with RabbitMQ, Azure Service Bus, and Event Grid—how would you choose between them for a new workload in our architecture?";
+        const string first = "You've built messaging pipelines with both Kafka and RabbitMQ at Acme—what made you choose one over the other for specific workloads?";
+        const string second = "At Acme, you built event-driven messaging with Kafka, RabbitMQ, and NATS—how would you choose between them for a new workload in our architecture?";
 
         Assert.True(TextTools.IsNearDuplicate(first, second));
         Assert.True(TextTools.IsNearDuplicate(second, first));
@@ -22,10 +22,10 @@ public class ResumeFocusTests
     [Fact]
     public void Questions_that_only_share_a_topic_or_a_template_are_not_duplicates()
     {
-        // Two real questions from the same session about JWT and middleware, but asking different things.
+        // Two real questions from the same session about authentication middleware, but asking different things.
         Assert.False(TextTools.IsNearDuplicate(
-            "At CPF, you implemented custom ASP.NET Core middleware for JWT validation and request logging—what specific security risks were you protecting against?",
-            "At CPF, you handled cross-trust data isolation with JWT-based RBAC—how would you prevent a claimant from accessing another trust's claim data if the JWT validation middleware failed?"));
+            "At Acme, you implemented custom ASP.NET Core middleware for request validation and logging—what specific risks were you protecting against?",
+            "At Acme, you handled per-store data isolation with token-based access control—how would you prevent a customer from reading another store's orders if the validation middleware failed?"));
         Assert.False(TextTools.IsNearDuplicate("How does garbage collection work in .NET?", "How does garbage collection work in Go?"));
         Assert.False(TextTools.IsNearDuplicate("Redis concept question 1?", "Redis concept question 2?"));
         Assert.False(TextTools.IsNearDuplicate("What is a struct?", "What is a class?"));
@@ -43,13 +43,13 @@ public class ResumeFocusTests
 
     private static readonly ResumeTopic[] Topics =
     [
-        new("CPF", "claims platform", "built the claims ranking service"),
-        new("CPF", "claims platform", "added Redis caching"),
-        new("CPF", "claims platform", "wrote JWT middleware"),
-        new("CPF", "claims platform", "ran per-trust queues"),
-        new("EDF", "monolith migration", "applied the strangler fig pattern"),
-        new("EDF", "monolith migration", "moved WCF services to ASP.NET Core"),
-        new("TCS", "", "maintained the billing module"),
+        new("Acme", "orders platform", "built the product search service"),
+        new("Acme", "orders platform", "added Redis caching"),
+        new("Acme", "orders platform", "wrote auth middleware"),
+        new("Acme", "orders platform", "ran per-store queues"),
+        new("Globex", "monolith migration", "applied feature flags during cutover"),
+        new("Globex", "monolith migration", "moved legacy services to .NET 8"),
+        new("Initech", "", "maintained the billing module"),
     ];
 
     private static List<ResumeFocus> Take(ResumeFocusPicker picker, int count)
@@ -69,9 +69,9 @@ public class ResumeFocusTests
     {
         var picks = Take(new ResumeFocusPicker(Random.Shared.NextDouble), 9);
 
-        Assert.Equal(3, picks.Count(p => p.Topic.Employer == "CPF"));
-        Assert.Equal(3, picks.Count(p => p.Topic.Employer == "EDF"));
-        Assert.Equal(3, picks.Count(p => p.Topic.Employer == "TCS"));
+        Assert.Equal(3, picks.Count(p => p.Topic.Employer == "Acme"));
+        Assert.Equal(3, picks.Count(p => p.Topic.Employer == "Globex"));
+        Assert.Equal(3, picks.Count(p => p.Topic.Employer == "Initech"));
     }
 
     [Fact]
@@ -92,10 +92,10 @@ public class ResumeFocusTests
     {
         var picks = Take(new ResumeFocusPicker(Random.Shared.NextDouble), 12);
 
-        var cpf = picks.Where(p => p.Topic.Employer == "CPF").Select(p => p.Topic.Highlight).ToList();
-        Assert.Equal(4, cpf.Take(4).Distinct().Count());  // the first four CPF questions are about four different things
-        var edf = picks.Where(p => p.Topic.Employer == "EDF").Select(p => p.Topic.Highlight).ToList();
-        Assert.Equal(2, edf.Take(2).Distinct().Count());
+        var acme = picks.Where(p => p.Topic.Employer == "Acme").Select(p => p.Topic.Highlight).ToList();
+        Assert.Equal(4, acme.Take(4).Distinct().Count());  // the first four Acme questions are about four different things
+        var globex = picks.Where(p => p.Topic.Employer == "Globex").Select(p => p.Topic.Highlight).ToList();
+        Assert.Equal(2, globex.Take(2).Distinct().Count());
     }
 
     [Fact]
@@ -144,18 +144,18 @@ public class ResumeFocusTests
     [Fact]
     public void The_focus_text_names_the_part_of_the_resume_the_word_and_forbids_the_usual_opening()
     {
-        var text = new ResumeFocus(new ResumeTopic("EDF", "monolith migration", "applied the strangler fig pattern"), "Why").Describe();
+        var text = new ResumeFocus(new ResumeTopic("Globex", "monolith migration", "applied feature flags during cutover"), "Why").Describe();
 
-        Assert.Contains("EDF, monolith migration: applied the strangler fig pattern", text);
+        Assert.Contains("Globex, monolith migration: applied feature flags during cutover", text);
         Assert.Contains("Begin the question with the word \"Why\"", text);
-        Assert.Contains("do not start with \"At EDF, you\"", text);
+        Assert.Contains("do not start with \"At Globex, you\"", text);
     }
 
     [Fact]
     public void A_job_without_a_project_is_named_by_the_employer_alone()
     {
-        Assert.Equal("TCS", new ResumeTopic("TCS", "", "x").Where);
-        Assert.Equal("EDF, monolith migration", new ResumeTopic("EDF", "monolith migration", "x").Where);
+        Assert.Equal("Initech", new ResumeTopic("Initech", "", "x").Where);
+        Assert.Equal("Globex, monolith migration", new ResumeTopic("Globex", "monolith migration", "x").Where);
     }
 
     // ---- reading topics out of a resume
@@ -179,7 +179,7 @@ public class ResumeFocusTests
     public async Task The_resume_is_read_once_and_remembered_whatever_happens_to_the_job_description()
     {
         var (bank, llm, script) = NewBank();
-        script.ResumeEntries = [Entry("CPF", "claims", "built the ranking service", "added Redis caching"), Entry("EDF", "", "migrated the monolith")];
+        script.ResumeEntries = [Entry("Acme", "claims", "built the ranking service", "added Redis caching"), Entry("Globex", "", "migrated the monolith")];
 
         var first = await bank.GetResumeTopicsAsync(Profile());
         var again = await bank.GetResumeTopicsAsync(Profile(jd: "a completely different job description"));
@@ -189,7 +189,7 @@ public class ResumeFocusTests
         Assert.Equal(3, first.Count);
         Assert.Equal(first, again);
         Assert.Equal(first, spaced);
-        Assert.Equal(new ResumeTopic("CPF", "claims", "built the ranking service"), first[0]);
+        Assert.Equal(new ResumeTopic("Acme", "claims", "built the ranking service"), first[0]);
         Assert.Contains("RESUME-ONE", llm.ResumeTopicCalls.Single().Prompt);
     }
 
@@ -197,7 +197,7 @@ public class ResumeFocusTests
     public async Task Changing_the_resume_reads_it_again()
     {
         var (bank, llm, script) = NewBank();
-        script.ResumeEntries = [Entry("CPF", "", "a")];
+        script.ResumeEntries = [Entry("Acme", "", "a")];
 
         await bank.GetResumeTopicsAsync(Profile(resume: "old resume"));
         await bank.GetResumeTopicsAsync(Profile(resume: "a new resume with a new job on it"));
@@ -211,14 +211,14 @@ public class ResumeFocusTests
         var (bank, _, script) = NewBank();
         script.ResumeEntries =
         [
-            Entry("  CPF  ", "  claims  ", "  one  ", "ONE", "", "two", "three", "four", "five", "six"),   // trimmed, a repeat and a blank dropped, at most five kept
+            Entry("  Acme  ", "  claims  ", "  one  ", "ONE", "", "two", "three", "four", "five", "six"),   // trimmed, a repeat and a blank dropped, at most five kept
             Entry("", "", "work with no employer named"),                                                     // becomes Other work
             .. Enumerable.Range(1, 12).Select(i => Entry($"Client {i}", "", "something")),                  // only eight entries are kept in all
         ];
 
         var topics = await bank.GetResumeTopicsAsync(Profile());
 
-        Assert.Equal(["one", "two", "three", "four", "five"], topics.Where(t => t.Employer == "CPF").Select(t => t.Highlight).ToArray());
+        Assert.Equal(["one", "two", "three", "four", "five"], topics.Where(t => t.Employer == "Acme").Select(t => t.Highlight).ToArray());
         Assert.Equal("claims", topics[0].Project);
         Assert.Contains(topics, t => t.Employer == "Other work");
         Assert.Equal(TechBank.MaxEmployers, topics.Select(t => t.Employer).Distinct().Count());
@@ -270,16 +270,16 @@ public class ResumeFocusTests
     public async Task Resume_questions_take_turns_between_the_employers_on_the_resume()
     {
         var rig = new Rig();
-        rig.Script.ResumeEntries = [Entry("CPF", "claims", "built the ranking service", "added Redis caching"), Entry("EDF", "migration", "applied the strangler fig pattern")];
+        rig.Script.ResumeEntries = [Entry("Acme", "claims", "built the ranking service", "added Redis caching"), Entry("Globex", "migration", "applied feature flags during cutover")];
         var engine = rig.NewEngine();
 
         await engine.StartAsync(Profile(), ResumeOnly);
         for (var i = 0; i < 3; i++) await engine.NextAsync();
 
-        var employers = rig.Llm.ModelQuestionCalls.Select(c => FocusBlock(c)).Select(b => b.Contains("EDF") ? "EDF" : "CPF").ToList();
+        var employers = rig.Llm.ModelQuestionCalls.Select(c => FocusBlock(c)).Select(b => b.Contains("Globex") ? "Globex" : "Acme").ToList();
         Assert.Equal(4, employers.Count);
-        Assert.Equal(2, employers.Count(e => e == "CPF"));
-        Assert.Equal(2, employers.Count(e => e == "EDF"));
+        Assert.Equal(2, employers.Count(e => e == "Acme"));
+        Assert.Equal(2, employers.Count(e => e == "Globex"));
         for (var i = 1; i < employers.Count; i++) Assert.NotEqual(employers[i - 1], employers[i]);
     }
 
@@ -287,7 +287,7 @@ public class ResumeFocusTests
     public async Task The_resume_is_read_once_per_session_not_once_per_question()
     {
         var rig = new Rig();
-        rig.Script.ResumeEntries = [Entry("CPF", "", "a"), Entry("EDF", "", "b")];
+        rig.Script.ResumeEntries = [Entry("Acme", "", "a"), Entry("Globex", "", "b")];
         var engine = rig.NewEngine();
 
         await engine.StartAsync(Profile(), ResumeOnly);
@@ -302,12 +302,12 @@ public class ResumeFocusTests
     public async Task The_focus_says_which_part_of_the_resume_and_the_first_word()
     {
         var rig = new Rig();
-        rig.Script.ResumeEntries = [Entry("EDF", "monolith migration", "applied the strangler fig pattern")];
+        rig.Script.ResumeEntries = [Entry("Globex", "monolith migration", "applied feature flags during cutover")];
 
         await rig.NewEngine().StartAsync(Profile(), ResumeOnly);
 
         var block = FocusBlock(rig.Llm.ModelQuestionCalls.Single());
-        Assert.Contains("EDF, monolith migration: applied the strangler fig pattern", block);
+        Assert.Contains("Globex, monolith migration: applied feature flags during cutover", block);
         Assert.Matches("Begin the question with the word \"(Why|How|What|When|Which)\"", block);
     }
 
@@ -315,19 +315,19 @@ public class ResumeFocusTests
     public async Task With_several_types_including_resume_questions_the_focus_is_offered_because_the_model_may_write_one()
     {
         var rig = new Rig();
-        rig.Script.ResumeEntries = [Entry("CPF", "", "a")];
+        rig.Script.ResumeEntries = [Entry("Acme", "", "a")];
 
         await rig.NewEngine().StartAsync(Profile(), [QuestionType.ResumeDeepDive, QuestionType.Behavioral]);
 
         Assert.Single(rig.Llm.ResumeTopicCalls);
-        Assert.Contains("CPF", FocusBlock(rig.Llm.ModelQuestionCalls.First()));
+        Assert.Contains("Acme", FocusBlock(rig.Llm.ModelQuestionCalls.First()));
     }
 
     [Fact]
     public async Task When_resume_questions_are_not_wanted_the_resume_is_not_read_and_no_focus_is_given()
     {
         var rig = new Rig();
-        rig.Script.ResumeEntries = [Entry("CPF", "", "a")];
+        rig.Script.ResumeEntries = [Entry("Acme", "", "a")];
 
         await rig.NewEngine().StartAsync(Profile(), [QuestionType.Behavioral, QuestionType.SystemDesign]);
 
@@ -339,7 +339,7 @@ public class ResumeFocusTests
     public async Task Without_the_saved_bank_there_is_no_focus_and_no_extra_call()
     {
         var rig = new Rig();
-        rig.Script.ResumeEntries = [Entry("CPF", "", "a")];
+        rig.Script.ResumeEntries = [Entry("Acme", "", "a")];
 
         await rig.NewEngine(withBank: false).StartAsync(Profile(), ResumeOnly);
 
@@ -365,14 +365,14 @@ public class ResumeFocusTests
     {
         var rig = new Rig();
         rig.Script.ModelQuestionType = "behavioral"; // the model chose another type, so the focus was not used
-        rig.Script.ResumeEntries = [Entry("CPF", "", "a"), Entry("EDF", "", "b")];
+        rig.Script.ResumeEntries = [Entry("Acme", "", "a"), Entry("Globex", "", "b")];
         var engine = rig.NewEngine();
 
         await engine.StartAsync(Profile(), [QuestionType.Behavioral, QuestionType.ResumeDeepDive]);
         await engine.NextAsync();
 
         var blocks = rig.Llm.ModelQuestionCalls.Select(FocusBlock).ToList();
-        Assert.Equal(blocks[0].Contains("CPF"), blocks[1].Contains("CPF")); // the same employer is offered again
+        Assert.Equal(blocks[0].Contains("Acme"), blocks[1].Contains("Acme")); // the same employer is offered again
     }
 
     // ---- asking again when a question is too close to an earlier one
@@ -398,16 +398,16 @@ public class ResumeFocusTests
     public async Task A_question_in_other_words_is_sent_back_once_with_the_reason()
     {
         var model = new NearDuplicateModel(
-            "Why did you choose RabbitMQ over Azure Service Bus for specific workloads at CPF?",
-            "How would you choose between RabbitMQ and Azure Service Bus for a new workload at CPF?",       // the same question again
-            "What was the hardest part of the strangler fig migration at EDF?");
+            "Why did you choose RabbitMQ over Azure Service Bus for specific workloads at Acme?",
+            "How would you choose between RabbitMQ and Azure Service Bus for a new workload at Acme?",       // the same question again
+            "What was the hardest part of the feature-flag migration at Globex?");
         var llm = new ScriptedLlmService(model.Handle);
         var engine = EngineFor(llm);
         await engine.StartAsync(Profile(), [QuestionType.Behavioral]);
 
         await engine.NextAsync();
 
-        Assert.Equal("What was the hardest part of the strangler fig migration at EDF?", engine.Current!.Question);
+        Assert.Equal("What was the hardest part of the feature-flag migration at Globex?", engine.Current!.Question);
         var retry = llm.To(LlmRole.QuestionGenerator).Last();
         Assert.Equal(3, retry.Messages.Count);
         Assert.Equal(ChatTurnRole.Assistant, retry.Messages[1].Role);
@@ -433,9 +433,9 @@ public class ResumeFocusTests
     public async Task If_the_model_repeats_itself_a_second_time_the_question_is_accepted_rather_than_looping()
     {
         var model = new NearDuplicateModel(
-            "Why did you choose RabbitMQ over Azure Service Bus for specific workloads at CPF?",
-            "Why did you choose RabbitMQ over Azure Service Bus for specific workloads at CPF?",
-            "How would you choose between RabbitMQ and Azure Service Bus for a new workload at CPF?");
+            "Why did you choose RabbitMQ over Azure Service Bus for specific workloads at Acme?",
+            "Why did you choose RabbitMQ over Azure Service Bus for specific workloads at Acme?",
+            "How would you choose between RabbitMQ and Azure Service Bus for a new workload at Acme?");
         var llm = new ScriptedLlmService(model.Handle);
         var engine = EngineFor(llm);
         await engine.StartAsync(Profile(), [QuestionType.Behavioral]);

@@ -147,13 +147,13 @@ public class SpeechTests
     {
         using var server = new FakeOpenAiAudio();
         await using var stt = new OpenAiSpeechToText(OpenAi(), new FakeRecorder(), server.Endpoint);
-        stt.SetPhrases([".NET", "SignalR", "Claims Processing Facility"]);
+        stt.SetPhrases([".NET", "gRPC", "Acme Retail"]);
         await stt.StartAsync(CancellationToken.None);
 
         await server.ServeAsync(() => stt.StopAsync());
 
         Assert.Contains("name=prompt", server.BodyText);
-        Assert.Contains("A technical job interview. Terms that may be spoken: .NET, SignalR, Claims Processing Facility.", server.BodyText);
+        Assert.Contains("A technical job interview. Terms that may be spoken: .NET, gRPC, Acme Retail.", server.BodyText);
     }
 
     [Fact]
@@ -344,7 +344,7 @@ public class SpeechTests
         await using var stt = new AzureSpeechToText("", "");
         var errors = new List<string>();
         stt.Error += (_, e) => errors.Add(e);
-        stt.SetPhrases(["SignalR", ".NET"]);
+        stt.SetPhrases(["gRPC", ".NET"]);
 
         await stt.StartAsync(CancellationToken.None);
         await stt.StopAsync();

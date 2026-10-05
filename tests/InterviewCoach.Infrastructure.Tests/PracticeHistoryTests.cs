@@ -50,7 +50,7 @@ public class PracticeHistoryTests : IDisposable
     private static PracticeRecord Record(string question = "What is a struct?", string answer = "A value type.", int attempt = 1, string? parent = null) => new()
     {
         Question = question, QuestionType = "technical_concept", Technology = "C#", Seniority = "Senior", Source = "fundamentals",
-        IsFollowUp = parent is not null, ParentQuestion = parent, ProfileName = "Claims platform", AttemptNumber = attempt,
+        IsFollowUp = parent is not null, ParentQuestion = parent, ProfileName = "Orders platform", AttemptNumber = attempt,
         AnswerText = answer, InputMethod = "typed", DurationSeconds = 139, WordCount = 3,
         Coach = new CoachOutput
         {
@@ -72,7 +72,7 @@ public class PracticeHistoryTests : IDisposable
         Assert.Equal("C#", record.Technology);
         Assert.Equal("Senior", record.Seniority);
         Assert.Equal("fundamentals", record.Source);
-        Assert.Equal("Claims platform", record.ProfileName);
+        Assert.Equal("Orders platform", record.ProfileName);
         Assert.Equal("A value type.", record.AnswerText);
         Assert.Equal("typed", record.InputMethod);
         Assert.Equal(139, record.DurationSeconds);

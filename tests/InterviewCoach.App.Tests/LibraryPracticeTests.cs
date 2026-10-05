@@ -43,7 +43,7 @@ public class LibraryPracticeTests
         string question, string answer = "My own answer.", string type = "technical_concept", int attempt = 1, string? parent = null,
         int seconds = 0, string? quote = "My own", params FollowUp[] followUps) => new()
     {
-        Question = question, QuestionType = type, Technology = type == "technical_concept" ? "C#" : null, ProfileName = "Claims platform",
+        Question = question, QuestionType = type, Technology = type == "technical_concept" ? "C#" : null, ProfileName = "Orders platform",
         IsFollowUp = parent is not null, ParentQuestion = parent, AttemptNumber = attempt, AnswerText = answer, DurationSeconds = seconds,
         WordCount = AnswerLength.CountWords(answer),
         Coach = new CoachOutput
@@ -196,7 +196,7 @@ public class LibraryPracticeTests
         Assert.True(vm.Detail.HasDelivery);
         Assert.Equal("Technical concept", vm.DetailTypeLabel);
         Assert.StartsWith("Practised ", vm.DetailMeta);
-        Assert.Contains("Feedback for Claims platform", vm.DetailMeta);
+        Assert.Contains("Feedback for Orders platform", vm.DetailMeta);
     }
 
     [Fact]

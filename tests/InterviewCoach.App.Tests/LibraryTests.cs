@@ -72,9 +72,9 @@ public class LibraryTests
         clock.Advance(TimeSpan.FromMinutes(10));
         await h.RecordAsync(Entry("What is a hook?", technology: "React", answer: "A hook lets a function component keep state."));
         clock.Advance(TimeSpan.FromMinutes(10));
-        await h.RecordAsync(Entry("Tell me about a hard deadline.", type: "behavioral", technology: null, general: false, profile: "Claims platform", answer: "We cut scope and shipped the core."));
+        await h.RecordAsync(Entry("Tell me about a hard deadline.", type: "behavioral", technology: null, general: false, profile: "Orders platform", answer: "We cut scope and shipped the core."));
         clock.Advance(TimeSpan.FromMinutes(10));
-        await h.RecordAsync(Entry("Design a rate limiter.", type: "system_design", technology: null, general: false, profile: "Claims platform", answer: "A token bucket per client."));
+        await h.RecordAsync(Entry("Design a rate limiter.", type: "system_design", technology: null, general: false, profile: "Orders platform", answer: "A token bucket per client."));
         clock.Advance(TimeSpan.FromMinutes(10));
         await h.RecordAsync(Entry("What is a class?", answer: "A class is a reference type."));
     }
@@ -274,7 +274,7 @@ public class LibraryTests
         Assert.Equal("Behavioral", vm.DetailTypeLabel);
         Assert.False(vm.HasDetailTechnology);
         Assert.Equal("We cut scope and shipped the core.", vm.Detail!.ModelAnswer);
-        Assert.Contains("Tailored to your resume for Claims platform", vm.DetailMeta);
+        Assert.Contains("Tailored to your resume for Orders platform", vm.DetailMeta);
         Assert.StartsWith("Last seen ", vm.DetailMeta);
     }
 

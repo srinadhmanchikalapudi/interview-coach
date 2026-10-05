@@ -32,7 +32,7 @@ public class LearnHistoryEngineTests
 
     private static CandidateProfile Profile() => new()
     {
-        Name = "Claims platform", JobRole = "Backend Engineer", Seniority = Seniority.Senior, JobDescription = "We use C# and SQL Server.", ResumeText = "RESUME",
+        Name = "Orders platform", JobRole = "Backend Engineer", Seniority = Seniority.Senior, JobDescription = "We use C# and SQL Server.", ResumeText = "RESUME",
     };
 
     private static readonly QuestionType[] TechnicalOnly = [QuestionType.TechnicalConcept];
@@ -66,7 +66,7 @@ public class LearnHistoryEngineTests
         Assert.Equal("Model question 1?", entry.Question);
         Assert.Equal("behavioral", entry.QuestionType);
         Assert.False(entry.IsGeneral);
-        Assert.Equal("Claims platform", entry.ProfileName);
+        Assert.Equal("Orders platform", entry.ProfileName);
         Assert.Equal("TAILORED answer", entry.Coach.ModelAnswer);
     }
 
@@ -119,7 +119,7 @@ public class LearnHistoryEngineTests
         Assert.Equal("GENERAL answer", entries.Single(e => e.IsGeneral).Coach.ModelAnswer);
         var tailored = entries.Single(e => !e.IsGeneral);
         Assert.Equal("TAILORED answer", tailored.Coach.ModelAnswer);
-        Assert.Equal("Claims platform", tailored.ProfileName);
+        Assert.Equal("Orders platform", tailored.ProfileName);
     }
 
     [Fact]

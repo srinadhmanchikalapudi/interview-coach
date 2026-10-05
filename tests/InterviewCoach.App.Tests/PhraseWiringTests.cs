@@ -23,9 +23,9 @@ public class PhraseWiringTests
 
     private static CandidateProfile Profile() => new()
     {
-        Id = 1, Name = "Claims platform", JobRole = "Senior Backend Engineer", Seniority = Seniority.Senior,
-        JobDescription = "We build claims services in C# and .NET.",
-        ResumeText = "Built the ranking service.\nSkills: Redis, RabbitMQ, SignalR, SQL Server 2019",
+        Id = 1, Name = "Orders platform", JobRole = "Senior Backend Engineer", Seniority = Seniority.Senior,
+        JobDescription = "We build order services in C# and .NET.",
+        ResumeText = "Built the ranking service.\nSkills: Redis, Kafka, gRPC, SQL Server 2019",
     };
 
     private sealed class World
@@ -67,7 +67,7 @@ public class PhraseWiringTests
         Assert.Contains("C#", phrases);
         Assert.Contains("SQL Server", phrases);                             // the demo model's job description technologies, saved earlier
         Assert.Contains("Redis", phrases);
-        Assert.Contains("SignalR", phrases);
+        Assert.Contains("gRPC", phrases);
         Assert.DoesNotContain(phrases, p => p.Contains("2019"));            // version numbers are noise
         Assert.Contains("Senior Backend Engineer", phrases);
     }

@@ -48,8 +48,8 @@ public class ResumeTopicsTests : IDisposable
 
     private static readonly ResumeTopic[] Topics =
     [
-        new("CPF", "claims platform", "built the claims ranking service"),
-        new("EDF", "", "applied the strangler fig pattern"),
+        new("Acme", "orders platform", "built the product search service"),
+        new("Globex", "", "applied feature flags during cutover"),
     ];
 
     [Fact]
@@ -81,9 +81,9 @@ public class ResumeTopicsTests : IDisposable
         var repo = Open();
         await repo.SaveResumeTopicsAsync("abc", Topics);
 
-        await repo.SaveResumeTopicsAsync("abc", [new ResumeTopic("TCS", "", "maintained billing")]);
+        await repo.SaveResumeTopicsAsync("abc", [new ResumeTopic("Initech", "", "maintained billing")]);
 
-        Assert.Equal([new ResumeTopic("TCS", "", "maintained billing")], await repo.GetResumeTopicsAsync("abc"));
+        Assert.Equal([new ResumeTopic("Initech", "", "maintained billing")], await repo.GetResumeTopicsAsync("abc"));
     }
 
     [Fact]

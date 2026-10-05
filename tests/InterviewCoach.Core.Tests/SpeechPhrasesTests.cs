@@ -113,11 +113,11 @@ public class SpeechPhrasesTests
     public void A_session_gets_the_picked_technologies_first_then_the_job_description_the_resume_the_employers_and_the_role()
     {
         var profile = new CandidateProfile { JobRole = "Backend Engineer", ResumeText = "Skills: Redis, Docker" };
-        var topics = new[] { new ResumeTopic("Claims Processing Facility", "Notification PDFs", "Redesigned the pipeline") };
+        var topics = new[] { new ResumeTopic("Acme Retail", "Order emails", "Redesigned the pipeline") };
 
         var phrases = SpeechPhrases.ForProfile(profile, ["Kafka"], ["C#", "Redis"], topics);
 
-        Assert.Equal(["Kafka", "C#", "Redis", "Docker", "Claims Processing Facility", "Notification PDFs", "Backend Engineer"], phrases);
+        Assert.Equal(["Kafka", "C#", "Redis", "Docker", "Acme Retail", "Order emails", "Backend Engineer"], phrases);
     }
 
     [Fact]
@@ -133,9 +133,9 @@ public class SpeechPhrasesTests
     [Fact]
     public void The_prompt_for_Whisper_is_a_short_sentence_and_the_terms()
     {
-        var prompt = SpeechPhrases.AsPrompt([".NET", "SignalR", "Redis"]);
+        var prompt = SpeechPhrases.AsPrompt([".NET", "gRPC", "Redis"]);
 
-        Assert.Equal("A technical job interview. Terms that may be spoken: .NET, SignalR, Redis.", prompt);
+        Assert.Equal("A technical job interview. Terms that may be spoken: .NET, gRPC, Redis.", prompt);
     }
 
     [Fact]

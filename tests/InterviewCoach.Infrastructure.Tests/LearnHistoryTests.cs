@@ -109,27 +109,27 @@ public class LearnHistoryTests : IDisposable
     {
         var repo = Open();
         await repo.RecordAsync(Entry(general: true));
-        await repo.RecordAsync(Entry(general: false, profile: "Claims platform", answer: "tailored"));
+        await repo.RecordAsync(Entry(general: false, profile: "Orders platform", answer: "tailored"));
 
         var entries = await repo.ListAsync();
 
         Assert.Equal(2, entries.Count);
         Assert.Contains(entries, e => e.IsGeneral && e.ProfileName is null);
-        Assert.Contains(entries, e => !e.IsGeneral && e.ProfileName == "Claims platform" && e.Coach.ModelAnswer == "tailored");
+        Assert.Contains(entries, e => !e.IsGeneral && e.ProfileName == "Orders platform" && e.Coach.ModelAnswer == "tailored");
     }
 
     [Fact]
     public async Task Answers_tailored_for_two_profiles_are_kept_apart()
     {
         var repo = Open();
-        await repo.RecordAsync(Entry(general: false, profile: "Claims platform"));
+        await repo.RecordAsync(Entry(general: false, profile: "Orders platform"));
         await repo.RecordAsync(Entry(general: false, profile: "Fintech startup"));
-        await repo.RecordAsync(Entry(general: false, profile: "Claims platform")); // seen again
+        await repo.RecordAsync(Entry(general: false, profile: "Orders platform")); // seen again
 
         var entries = await repo.ListAsync();
 
         Assert.Equal(2, entries.Count);
-        Assert.Equal(2, entries.Single(e => e.ProfileName == "Claims platform").TimesSeen);
+        Assert.Equal(2, entries.Single(e => e.ProfileName == "Orders platform").TimesSeen);
     }
 
     [Fact]

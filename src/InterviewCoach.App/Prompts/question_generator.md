@@ -45,8 +45,8 @@ Pick one question that a real interviewer for this role would plausibly ask this
 - Phrase it exactly as an interviewer would say it out loud: short, natural, and with one question only. Real interviewers keep fundamentals questions brief, so match these lengths:
   - technical_concept: one direct sentence of about 6 to 18 words, with no setup and no "walk me through". The style is "What's the difference between checked and unchecked exceptions?", "When would you use a struct instead of a class?", "What happens if you await inside a lock?" or "How does garbage collection decide what to free?". Do not explain the concept inside the question.
   - tell_me_about_yourself and behavioral: one sentence, such as "Tell me about a time you pushed back on a deadline."
-  - resume_deep_dive: one sentence of 10 to 20 words, never more than 20, that names the project or system and asks one thing about it. The style is "Why did you choose Redis over Memcached for the claims cache?" or "What was the hardest part of moving the billing service to microservices?", using the real project and technology from the resume. Do not list the technologies the resume mentions.
-  - system_design: one sentence of up to 15 words naming the system to design, with no list of requirements, such as "Design a rate limiter for a public API." or "Design a notification service for a claims platform."
+  - resume_deep_dive: one sentence of 10 to 20 words, never more than 20, that names the project or system and asks one thing about it. The style is "Why did you choose Redis over Memcached for the catalog cache?" or "What was the hardest part of moving the billing service to microservices?", using the real project and technology from the resume. Do not list the technologies the resume mentions.
+  - system_design: one sentence of up to 15 words naming the system to design, with no list of requirements, such as "Design a rate limiter for a public API." or "Design a notification service for a orders platform."
   - coding_talkthrough: a short problem statement of up to three sentences, then the question.
   - scenario: up to three short sentences to set the situation, then one question.
   - motivation_fit: one short sentence, such as "Why this role, and why now?"
@@ -54,7 +54,7 @@ Pick one question that a real interviewer for this role would plausibly ask this
 - Real questions are short. These are examples of a question that is too long and the short way to ask the same thing. Never write the long form:
   - Too long: "You've built services with Kafka and RabbitMQ—what would make you choose one over the other for a new microservice at this company?" Right: "Why would you pick Kafka over RabbitMQ for a new service?"
   - Too long: "Your current role uses tools like Docker and Terraform—how are you applying them day to day, and what is your experience with infrastructure as code?" Right: "How do you use Terraform in your daily work?"
-  - Too long: "Walk me through how you would design the messaging layer for a multi-tenant platform where each tenant has its own routing rules." Right: "Design a messaging service for a multi-tenant platform."
+  - Too long: "Walk me through how you would design the notification layer for a retail platform where each store has its own delivery rules." Right: "Design a notification service for a retail platform."
   - Too long: "When could you start this engagement, and do you have a notice period with your current employer?" Right: "When could you start?"
 - Do not join a lead-in about the resume to the question with a dash. Name the project or technology inside one short question.
 - Ask one thing only. A second request joined with "and" makes it two questions, so do not write "..., and what trade-offs did you face?", "..., and how would you handle X?" or "walk me through how you decided ... and ...". The interviewer saves those for the next turn.

@@ -367,7 +367,7 @@ public partial class MockViewModel : ObservableObject
         UpdatePhrases();
     }
 
-    // Once the round is planned, its topics ("PDF/SignalR pipeline", "strangler fig migration") are the words most likely to be spoken next.
+    // Once the round is planned, its topics ("order import pipeline", "checkout migration") are the words most likely to be spoken next.
     private void UpdatePhrases()
     {
         if (_engine?.Plan is not { } plan)

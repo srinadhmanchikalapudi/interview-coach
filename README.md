@@ -6,7 +6,14 @@
 
 <p align="center">
   A Windows desktop app that helps you prepare for a specific job interview.<br>
-  Give it a job description and your resume; an LLM writes the questions an interviewer would ask and shows you how to answer them.
+  Give it a job description and your resume: it asks the questions an interviewer would ask, coaches your answers, and runs spoken mock interviews with a debrief at the end.
+</p>
+
+<p align="center">
+  <a href="https://github.com/srinadhmanchikalapudi/interview-coach/releases/latest"><b>Download for Windows</b></a> &nbsp;·&nbsp;
+  <a href="#install">Install</a> &nbsp;·&nbsp;
+  <a href="#using-the-app">Using the app</a> &nbsp;·&nbsp;
+  <a href="#screenshots">Screenshots</a>
 </p>
 
 <p align="center">
@@ -15,7 +22,8 @@
   <img alt="Tests" src="https://img.shields.io/badge/tests-1181%20passing-2EA043">
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%2010%2F11-lightgrey">
   <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green">
-  <img alt="Status" src="https://img.shields.io/badge/status-Learn%20mode%20complete-blue">
+  <a href="https://github.com/srinadhmanchikalapudi/interview-coach/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/srinadhmanchikalapudi/interview-coach?include_prereleases&label=release"></a>
+  <a href="https://github.com/srinadhmanchikalapudi/interview-coach/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/srinadhmanchikalapudi/interview-coach/actions/workflows/ci.yml/badge.svg"></a>
 </p>
 
 ---
@@ -46,7 +54,19 @@
 Most interview practice is generic. Interview Coach is built around **one real job**: you save a *profile* (job role, seniority,
 job description, resume) and every session is generated from it.
 
-**Learn mode** (built) picks a question an interviewer could plausibly ask for that job, then shows:
+Four ways to practise, plus a record of what you did:
+
+| Mode | What you do |
+|---|---|
+| **Learn** | See a question an interviewer could ask for that job, and how to answer it, straight away. |
+| **Practice** | Answer the question yourself, by typing or by voice, then get feedback that quotes your own words. Try again, or answer a follow-up. |
+| **Mock Interview** | A spoken round with a live interviewer who follows up on what you say, then a debrief with a hire signal, ratings and coaching on every question. |
+| **Concepts** | Drill one technology at a time by its concepts (Beginner, Medium or Advanced) with no resume or job description. |
+| **Library** and **History** | Every question you learned, every answer you practised (with its feedback), and every mock interview, to come back to. A mock interview you left can be resumed. |
+
+You can use it with no keys at all in **Demo mode**, or bring a key for Anthropic, OpenRouter or any OpenAI-compatible server. Speech is optional.
+
+**Learn mode** picks a question an interviewer could plausibly ask for that job, then shows:
 
 - **What they are testing**, the signal the interviewer is looking for at your level.
 - **A strong answer, said out loud**, written the way a person speaks, with `[bracketed placeholders]` wherever the answer needs a
@@ -231,7 +251,7 @@ measurements this app's coach call took about 21 seconds at the default and abou
 
 ### Optional: speech keys
 
-Voice is optional: Practice works fully by typing. **Hear questions** needs nothing (the Windows voice is the default). **Dictation** needs an Azure Speech key and region (live transcript) or an OpenAI key (records, then transcribes), set in Settings, Speech, where **Load voices**, **Test voice** and **Test microphone** check them (they use the saved settings, so click Save first). In Practice, **Speak** or **F2** starts and stops the microphone, the words go into the answer box at the cursor so you can type and talk in the same box, **Repeat** says the question again, and **Read aloud** on the model answer reads it. The recognizer is told which words to expect (the technologies of your job description, the skills line of your resume, your employers and projects, the role, and in a mock interview the topics of its plan), so ".NET", "SignalR" or the name of your employer come out right far more often. This costs nothing: it uses what was already read and saved, never a model call. With an Azure for Students
+Voice is optional: Practice works fully by typing. **Hear questions** needs nothing (the Windows voice is the default). **Dictation** needs an Azure Speech key and region (live transcript) or an OpenAI key (records, then transcribes), set in Settings, Speech, where **Load voices**, **Test voice** and **Test microphone** check them (they use the saved settings, so click Save first). In Practice, **Speak** or **F2** starts and stops the microphone, the words go into the answer box at the cursor so you can type and talk in the same box, **Repeat** says the question again, and **Read aloud** on the model answer reads it. The recognizer is told which words to expect (the technologies of your job description, the skills line of your resume, your employers and projects, the role, and in a mock interview the topics of its plan), so ".NET", "gRPC" or the name of your employer come out right far more often. This costs nothing: it uses what was already read and saved, never a model call. With an Azure for Students
 subscription, some regions are blocked by policy; if creating a Speech resource fails with `RequestDisallowedByAzure`, pick one of the
 regions your subscription allows (the error lists them).
 

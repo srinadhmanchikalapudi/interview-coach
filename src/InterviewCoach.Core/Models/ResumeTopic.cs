@@ -3,7 +3,7 @@ namespace InterviewCoach.Core.Models;
 /// <summary>One thing the resume says was done, with the employer (or client) and project it belongs to. Questions are spread over these.</summary>
 public sealed record ResumeTopic(string Employer, string Project, string Highlight)
 {
-    /// <summary>The employer, plus the project when there is one: "EDF, monolith migration".</summary>
+    /// <summary>The employer, plus the project when there is one: "Globex, monolith migration".</summary>
     public string Where => string.IsNullOrWhiteSpace(Project) ? Employer : $"{Employer}, {Project}";
 }
 

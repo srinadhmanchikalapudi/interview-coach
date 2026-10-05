@@ -26,14 +26,14 @@ public class VisualSnapshots
     }
 
     private const string JobDescription =
-        "Senior Backend Engineer, Claims Platform\n\nWe are looking for an engineer to own services that process claims for eight regional trusts.\n\n" +
-        "Requirements\n- 6+ years building services in C# and .NET\n- Strong SQL Server and query tuning skills\n- Experience with Redis, RabbitMQ or Azure Service Bus\n" +
+        "Senior Backend Engineer, Orders Platform\n\nWe are looking for an engineer to own services that process orders for eight regional stores.\n\n" +
+        "Requirements\n- 6+ years building services in C# and .NET\n- Strong SQL Server and query tuning skills\n- Experience with Redis, Kafka or Azure Service Bus\n" +
         "- Comfortable with Docker and CI/CD\n- You review code carefully and write tests that fail for the right reason\n\nNice to have\n- React front ends\n- Kubernetes";
 
     private const string Resume =
-        "Jane Doe - Senior Software Engineer\n\nExperience\nClaims Processing Facility (2021 - present)\n- Built the claims ranking service in C# on .NET 8, cutting p99 from 300ms to 80ms\n" +
-        "- Introduced RabbitMQ for notification fan-out and Redis for hot lookups\n- Led the migration from WCF to ASP.NET Core using the strangler fig pattern\n\n" +
-        "Skills: C#, .NET, SQL Server, Redis, RabbitMQ, Docker, Azure, React, TypeScript";
+        "Jane Doe - Senior Software Engineer\n\nExperience\nAcme Retail (2021 - present)\n- Built the product search service in C# on .NET 8, cutting p99 from 300ms to 80ms\n" +
+        "- Introduced Kafka for order events and Redis for hot lookups\n- Moved the checkout API from a monolith to services behind feature flags\n\n" +
+        "Skills: C#, .NET, SQL Server, Redis, Kafka, Docker, Azure, React, TypeScript";
 
     [Fact]
     public void Capture_screens_when_asked()
@@ -52,7 +52,7 @@ public class VisualSnapshots
             var repo = new InMemoryProfileRepository();
             repo.SaveAsync(new CandidateProfile
             {
-                Name = "Claims platform", JobRole = "Senior Backend Engineer", Seniority = Seniority.Senior, JobDescription = JobDescription, ResumeText = Resume,
+                Name = "Orders platform", JobRole = "Senior Backend Engineer", Seniority = Seniority.Senior, JobDescription = JobDescription, ResumeText = Resume,
             }).GetAwaiter().GetResult();
             repo.SaveAsync(new CandidateProfile
             {
@@ -78,7 +78,7 @@ public class VisualSnapshots
                 history.RecordAsync(new LearnHistoryEntry
                 {
                     Question = question, QuestionType = type, Technology = technology, Seniority = "Senior", Source = "fundamentals",
-                    IsGeneral = general, ProfileName = general ? null : "Claims platform", Coach = Sample(answer, followUps),
+                    IsGeneral = general, ProfileName = general ? null : "Orders platform", Coach = Sample(answer, followUps),
                 }).GetAwaiter().GetResult();
                 clock = clock.AddMinutes(25);
             }
@@ -89,13 +89,13 @@ public class VisualSnapshots
                 new FollowUp { Question = "Why can hooks not be called in a condition?", Hint = "React tracks hooks by their call order." },
                 new FollowUp { Question = "When would you write a custom hook?", Hint = "Share stateful logic between components without sharing UI." });
             Add("Why can hooks not be called in a condition?", "technical_concept", "React", true, "React matches each hook to its stored state by the order of the calls, so changing the order between renders gives the wrong state to the wrong hook.");
-            Add("Why did you choose Redis over Memcached for the claims cache?", "resume_deep_dive", null, false, "We needed expiry per key and a shared cache across several instances, and Redis gave us both along with simple data structures for the hot lookups.");
-            Add("Tell me about a time you pushed back on a deadline.", "behavioral", null, false, "On the claims migration the date was set before the data was clean. I showed the team the failure rate from a trial run and we moved the cutover by two weeks.");
-            Add("Design a notification service for a claims platform.", "system_design", null, false, "I would put a queue between the claims service and the senders, keep a preference store per user, and retry failed sends with backoff.");
+            Add("Why did you choose Redis over Memcached for the catalog cache?", "resume_deep_dive", null, false, "We needed expiry per key and a shared cache across several instances, and Redis gave us both along with simple data structures for the hot lookups.");
+            Add("Tell me about a time you pushed back on a deadline.", "behavioral", null, false, "On the catalog migration the date was set before the data was clean. I showed the team the failure rate from a trial run and we moved the cutover by two weeks.");
+            Add("Design a notification service for a orders platform.", "system_design", null, false, "I would put a queue between the orders service and the senders, keep a preference store per user, and retry failed sends with backoff.");
             var practiceHistory = new InMemoryPracticeHistory(() => clock);
             practiceHistory.RecordAsync(new PracticeRecord
             {
-                Question = "Why did you choose Redis over Memcached for the claims cache?", QuestionType = "resume_deep_dive", ProfileName = "Claims platform",
+                Question = "Why did you choose Redis over Memcached for the catalog cache?", QuestionType = "resume_deep_dive", ProfileName = "Orders platform",
                 AnswerText = "We needed expiry per key and a cache shared by several instances, and Redis gave us both. I also wanted simple data structures for the hot lookups.",
                 WordCount = 27, DurationSeconds = 74,
                 Coach = new CoachOutput
@@ -178,7 +178,7 @@ public class VisualSnapshots
 
                 practiceClock = new DateTime(2026, 10, 3, 12, 0, 0, DateTimeKind.Utc);
                 practiceVm.Begin(new LearnSessionRequest(repo.ListAsync().GetAwaiter().GetResult()[0], [QuestionType.Behavioral], null, [], EmploymentType.FullTime));
-                practiceVm.AnswerText = "On the claims migration the date was set before the data was clean. I ran a trial cutover, showed the team a four percent failure rate, and proposed moving the date by two weeks while we fixed the mapping. We moved it, and the real cutover had no failed claims.";
+                practiceVm.AnswerText = "On the catalog migration the date was set before the data was clean. I ran a trial cutover, showed the team a four percent failure rate, and proposed moving the date by two weeks while we fixed the mapping. We moved it, and the real cutover had no failed claims.";
                 practiceClock = practiceClock.AddSeconds(102);
                 practiceVm.Tick();
                 main.CurrentPage = practiceVm;
@@ -211,7 +211,7 @@ public class VisualSnapshots
                 mockVm.AnswerText = "Good, thanks. I have been looking forward to this one.";
                 mockVm.SubmitCommand.ExecuteAsync(null).GetAwaiter().GetResult();
                 mockVm.Composer.ToggleMicCommand.ExecuteAsync(null).GetAwaiter().GetResult();
-                mockSpeech.Mic.Final("On the claims migration the date was set before the data was clean.");
+                mockSpeech.Mic.Final("On the catalog migration the date was set before the data was clean.");
                 mockSpeech.Mic.Partial("so I ran a trial cutover and showed the team a four percent");
                 practiceClock = practiceClock.AddSeconds(262);
                 mockVm.Tick();
