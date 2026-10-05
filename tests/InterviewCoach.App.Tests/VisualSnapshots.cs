@@ -246,6 +246,10 @@ public class VisualSnapshots
                 foreach (var left in snapHistory.ListAsync().GetAwaiter().GetResult().Where(r => r.IsUnfinished).ToList()) snapHistory.DeleteAsync(left.Id).GetAwaiter().GetResult();
                 homeWithHistory.RefreshMockStatusAsync().GetAwaiter().GetResult();
 
+                home.AnswerRules = string.Join(Environment.NewLine, home.AnswerRuleExamples.Where(e => e.Label is "STAR" or "Concise" or "Realistic").Select(e => e.Rule));
+                Save(window, 1180, 1500, Path.Combine(dir, $"17-home-answer-rules-{name}.png"));
+                home.AnswerRules = "";
+
                 var firstRun = new MainViewModel(home, settingsVm, learn, new MemorySettings(new AppSettings()));
                 main.CurrentPage = home;
                 var firstRunWindow = new MainWindow(firstRun);

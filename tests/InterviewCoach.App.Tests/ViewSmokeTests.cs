@@ -129,7 +129,7 @@ public class ViewSmokeTests
     }
 
     [Fact]
-    public async Task The_job_description_and_resume_boxes_use_the_theme_style_so_they_follow_dark_mode()
+    public async Task The_job_description_resume_and_answer_rules_boxes_use_the_theme_style_so_they_follow_dark_mode()
     {
         // A style that does not inherit the theme's TextBox style falls back to the classic white box in dark mode.
         var repo = new InMemoryProfileRepository();
@@ -143,7 +143,7 @@ public class ViewSmokeTests
             Layout(view);
 
             var multiline = Descendants<TextBox>(view).Where(t => t.AcceptsReturn).ToList();
-            Assert.Equal(2, multiline.Count);
+            Assert.Equal(3, multiline.Count);
             var themed = (Style)Application.Current.FindResource(typeof(TextBox));
             Assert.All(multiline, box => Assert.Same(themed, box.Style.BasedOn));
         });

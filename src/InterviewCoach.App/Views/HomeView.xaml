@@ -208,6 +208,33 @@
                             </StackPanel>
                         </Border>
 
+                        <!-- How answers should sound -->
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                    <TextBlock Style="{StaticResource Glyph}" Text="&#xE70F;" Margin="0,0,10,0" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                                    <TextBlock Text="How should answers sound? (optional)" Style="{StaticResource CardHeading}" />
+                                </StackPanel>
+                                <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,10" TextWrapping="Wrap"
+                                           Text="Your own rules for model answers and feedback, for example &quot;use STAR&quot; or &quot;keep it under 100 words&quot;. They come first when they disagree with the built-in style. Save the profile to use them." />
+                                <ItemsControl ItemsSource="{Binding AnswerRuleExamples}" Margin="0,0,0,10">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Content="{Binding Label}" ToolTip="{Binding Rule}" Padding="12,4" Margin="0,0,8,6"
+                                                    Command="{Binding DataContext.AddAnswerRuleCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                    CommandParameter="{Binding Rule}" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <TextBox Style="{StaticResource LongText}" MinHeight="90" MaxHeight="200" MaxLength="1500" AutomationProperties.Name="Answer rules"
+                                         Text="{Binding AnswerRules, UpdateSourceTrigger=PropertyChanged}" />
+                                <TextBlock Style="{StaticResource Hint}" Text="{Binding AnswerRulesStats}" />
+                            </StackPanel>
+                        </Border>
+
                         <!-- Start a session -->
                         <Border Style="{StaticResource Card}">
                             <StackPanel>

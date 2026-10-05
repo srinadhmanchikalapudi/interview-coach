@@ -12,6 +12,7 @@ public static class PromptVars
         ["SENIORITY"] = profile.Seniority.ToString(),
         ["JOB_DESCRIPTION"] = profile.JobDescription,
         ["RESUME"] = profile.ResumeText,
+        ["ANSWER_RULES"] = AnswerRules(profile.AnswerRules),
     };
 
     /// <summary>
@@ -24,7 +25,16 @@ public static class PromptVars
         ["SENIORITY"] = seniority.ToString(),
         ["JOB_DESCRIPTION"] = null,
         ["RESUME"] = null,
+        ["ANSWER_RULES"] = null,
     };
+
+    /// <summary>The candidate's answer rules, trimmed and cut to <see cref="CandidateProfile.MaxAnswerRulesLength"/>; null when there are none (the prompts then show "(none)").</summary>
+    public static string? AnswerRules(string? rules)
+    {
+        var text = rules?.Replace("</candidate_rules>", "", StringComparison.OrdinalIgnoreCase).Trim(); // the rules cannot close their own block
+        if (string.IsNullOrEmpty(text)) return null;
+        return text.Length <= CandidateProfile.MaxAnswerRulesLength ? text : text[..CandidateProfile.MaxAnswerRulesLength];
+    }
 
     /// <summary>A numbered list of the questions asked so far, or "(none)" (spec section 9).</summary>
     public static string AlreadyAsked(IReadOnlyList<string> questions)

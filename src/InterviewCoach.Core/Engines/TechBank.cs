@@ -219,9 +219,10 @@ public sealed class TechBank(ITechBankRepository repository, ILlmService llm, IP
     /// </summary>
     public async Task<CoachOutput> WriteGeneralAnswerAsync(
         string question, Seniority seniority, int? answerWords, string? transcript,
-        string questionType = "technical_concept", CancellationToken ct = default)
+        string questionType = "technical_concept", CancellationToken ct = default, string? answerRules = null)
     {
         var vars = PromptVars.Generic(seniority);
+        vars["ANSWER_RULES"] = PromptVars.AnswerRules(answerRules);
         vars["RESUME"] = GeneralAnswerNote;
         vars["MODE"] = "learn";
         vars["QUESTION"] = question;

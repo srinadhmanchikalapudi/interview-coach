@@ -42,6 +42,7 @@ public sealed class ProfileRepository(IDbContextFactory<AppDbContext> factory, I
         entity.Seniority = profile.Seniority;
         entity.JobDescription = profile.JobDescription;
         entity.ResumeText = profile.ResumeText;
+        entity.AnswerRules = profile.AnswerRules ?? "";
         entity.UpdatedAt = now;
 
         await db.SaveChangesAsync(ct);

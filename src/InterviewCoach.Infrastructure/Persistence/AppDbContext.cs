@@ -27,6 +27,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(p => p.JobRole).IsRequired();
             e.Property(p => p.JobDescription).IsRequired();
             e.Property(p => p.ResumeText).IsRequired();
+            e.Property(p => p.AnswerRules).IsRequired().HasDefaultValue("");
             e.Property(p => p.Seniority).HasConversion<string>().IsRequired(); // readable in the db file, survives enum reordering
             e.HasIndex(p => p.UpdatedAt);
         });

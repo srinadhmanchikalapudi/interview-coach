@@ -19,7 +19,7 @@
 <p align="center">
   <img alt=".NET 10" src="https://img.shields.io/badge/.NET-10-512BD4">
   <img alt="WPF" src="https://img.shields.io/badge/UI-WPF%20%28MVVM%29-0078D4">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-1181%20passing-2EA043">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-1207%20passing-2EA043">
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%2010%2F11-lightgrey">
   <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green">
   <a href="https://github.com/srinadhmanchikalapudi/interview-coach/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/srinadhmanchikalapudi/interview-coach?include_prereleases&label=release"></a>
@@ -274,11 +274,25 @@ regions your subscription allows (the error lists them).
 
 ### Profiles
 
-- A profile is a job you are preparing for: name, role, seniority, job description, resume.
+- A profile is a job you are preparing for: name, role, seniority, job description, resume, and optionally your own [answer rules](#answer-rules).
 - **Start** is disabled until the profile is saved and has a role, a job description and a resume, because a session uses the
   saved copy. Switching profile or clicking New with unsaved edits asks first.
 - Loading a file over existing text asks first. Scanned PDFs with no text, old `.doc` files, corrupt files and files over 20 MB
   produce a plain message instead of a crash. Text over 40,000 characters shows a warning and a **Trim** button.
+
+### Answer rules
+
+Under the resume there is a box, **How should answers sound?**, for your own rules about how model answers and feedback should be written: "use the STAR method", "keep answers concise", "sound realistic, not polished", "always give a number" or anything else about style and structure. The buttons above the box (STAR, Concise, Realistic, Numbers, No jargon, First person) add a ready-made line; edit it or write your own. The limit is 1,500 characters. It is saved with the profile, so press **Save** for a session to use it.
+
+<img src="docs/images/answer-rules-light.png" alt="The answer rules box under the resume" width="560">
+
+- **Your rules come first.** Where they disagree with the built-in style (the length targets, "should never sound like STAR", no labels in the answer, the word lists), your rule wins. Where they say nothing, the built-in guidance still applies.
+- **Where they apply:** the Coach (model answers and the feedback on your own answers in Learn, Practice and Mock Interview) and the Debrief. The interviewer, the question generator and the other prompts never see them.
+- **Feedback judges your answer against your rules**: if you ask for STAR and your answer has no result, the feedback says so.
+- **What they cannot change:** the reply format the app reads, the rule against inventing experience (a detail the resume does not have stays a `[placeholder]`), and honest feedback. A rule that tells the model to ignore its instructions is not followed.
+- **Learn mode:** shared saved answers are written without anyone's rules, so with rules the answer is written fresh, to your rules, and is not saved to the shared bank. This costs one model call per question that a saved answer would not have. Answers already saved or in History are left as they were.
+- **Concepts** sessions have no profile, so no rules apply there.
+- Rules go to your model provider with the resume and job description.
 
 ### Role type
 
@@ -513,7 +527,7 @@ Everything is stored locally under `%LOCALAPPDATA%\InterviewCoach\`:
 | `app.db` | SQLite (WAL mode): profiles, saved technical questions and answers, remembered technologies per job description and per job role. Migrations apply at startup. |
 | `logs\llm-yyyymmdd.log` | Only when **Debug logging** is on. Contains full prompts and replies, **including your resume and job description**. Turn it off afterwards. |
 
-**What leaves your machine:** your resume, job description, and the question text go to the LLM provider you configure, and nothing
+**What leaves your machine:** your resume, job description, answer rules, and the question text go to the LLM provider you configure, and nothing
 else. With OpenRouter they go to OpenRouter and on to whichever company runs the model you picked, so check that model's data policy
 on its OpenRouter page if that matters to you. The model list for the OpenRouter browser is a public download that carries nothing about you. There is no telemetry. In Demo mode nothing is sent anywhere.
 
@@ -526,16 +540,16 @@ on its OpenRouter page if that matters to you. The model list for the OpenRouter
 ## Testing
 
 ```bash
-dotnet test                                     # all 1181 tests
+dotnet test                                     # all 1207 tests
 dotnet test tests/InterviewCoach.Core.Tests     # one project
 dotnet build InterviewCoach.sln -c Release      # use this if the Debug exe is running (it locks its DLLs)
 ```
 
 | Project | Tests | Covers |
 |---|---|---|
-| `InterviewCoach.Core.Tests` | 478 | Prompt rendering, engine behaviour, the bank, answer lengths, question types, text helpers, role type |
+| `InterviewCoach.Core.Tests` | 496 | Prompt rendering, engine behaviour, the bank, answer lengths, question types, text helpers, role type |
 | `InterviewCoach.Infrastructure.Tests` | 280 | JSON parsing, LLM service (retry, cache split, options), settings (DPAPI round trip, no plaintext), SQLite repositories on real files, file extractors, prompt guards, Demo-mode isolation |
-| `InterviewCoach.App.Tests` | 423 | View models and **real WPF views** on a shared STA dispatcher; fails on any binding error |
+| `InterviewCoach.App.Tests` | 431 | View models and **real WPF views** on a shared STA dispatcher; fails on any binding error |
 
 Test names are sentences that describe behaviour. Scripted test doubles (`ScriptedLlmService`, `BankScript`) let tests control exactly
 what the model "says", including delays and failures.

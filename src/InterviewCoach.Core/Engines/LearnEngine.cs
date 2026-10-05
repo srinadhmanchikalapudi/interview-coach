@@ -252,11 +252,14 @@ public sealed class LearnEngine(ILlmService llm, IPromptLibrary prompts, TechBan
         }
     }
 
+    private bool HasAnswerRules => PromptVars.AnswerRules(_profile.AnswerRules) is not null;
+
     /// <summary>The next question from the shared picker, with the saved general answer when it is a saved technical question.</summary>
     private async Task<LearnItem> ProduceQuestionAsync(CancellationToken ct)
     {
         var item = await _picker.NextAsync(ct);
-        if (item is { IsGeneric: true, TechQuestionId: { } questionId } && bank is not null)
+        // Saved answers are shared and written without anyone's rules, so with rules the answer is written fresh (and not saved).
+        if (item is { IsGeneric: true, TechQuestionId: { } questionId } && bank is not null && !HasAnswerRules)
             item.Coach = (await bank.GetSavedAnswerAsync(questionId, _answerWords, ct))?.ForLearning();
         return item;
     }
@@ -296,8 +299,8 @@ public sealed class LearnEngine(ILlmService llm, IPromptLibrary prompts, TechBan
         if (item.IsGeneric && bank is not null)
         {
             var type = string.IsNullOrWhiteSpace(item.QuestionType) ? QuestionType.TechnicalConcept.Id() : item.QuestionType;
-            var general = await bank.WriteGeneralAnswerAsync(item.Question, _profile.Seniority, _answerWords, transcript, type, ct);
-            if (item.TechQuestionId is { } questionId)
+            var general = await bank.WriteGeneralAnswerAsync(item.Question, _profile.Seniority, _answerWords, transcript, type, ct, _profile.AnswerRules);
+            if (item.TechQuestionId is { } questionId && !HasAnswerRules)
                 await bank.SaveAnswerAsync(questionId, _answerWords, general, ct);
             return general;
         }

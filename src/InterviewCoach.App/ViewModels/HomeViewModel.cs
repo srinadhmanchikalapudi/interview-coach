@@ -86,12 +86,26 @@ public partial class TechnologyOption(string name, Action<TechnologyOption> chan
     partial void OnIsCheckedChanged(bool value) => changed(this);
 }
 
+/// <summary>A ready-made answer rule offered as a button under the answer rules box.</summary>
+public record AnswerRuleExample(string Label, string Rule)
+{
+    public static IReadOnlyList<AnswerRuleExample> All { get; } =
+    [
+        new("STAR", "Use the STAR method (Situation, Task, Action, Result) for behavioral and project answers."),
+        new("Concise", "Keep answers concise: short sentences, no preamble, stop once the point is made."),
+        new("Realistic", "Sound realistic, like an engineer talking, not a polished script. Include a real trade-off or mistake where it fits."),
+        new("Numbers", "Include a concrete number or result wherever the resume supports one."),
+        new("No jargon", "Avoid buzzwords and jargon; explain things in plain words."),
+        new("First person", "Always speak in the first person (I, we), never in the third person."),
+    ];
+}
+
 /// <summary>Home screen. For now this is the profile panel (milestone 2); the mode cards arrive with the modes.</summary>
 public partial class HomeViewModel : ObservableObject
 {
     private static readonly HashSet<string> EditorFields =
     [
-        nameof(Name), nameof(JobRole), nameof(SelectedSeniority), nameof(JobDescription), nameof(ResumeText), nameof(EditingId),
+        nameof(Name), nameof(JobRole), nameof(SelectedSeniority), nameof(JobDescription), nameof(ResumeText), nameof(AnswerRules), nameof(EditingId),
     ];
 
     private readonly IProfileRepository _repository;
@@ -640,6 +654,7 @@ public partial class HomeViewModel : ObservableObject
     [ObservableProperty] private Seniority _selectedSeniority = Seniority.Mid;
     [ObservableProperty] private string _jobDescription = "";
     [ObservableProperty] private string _resumeText = "";
+    [ObservableProperty] private string _answerRules = "";
     [ObservableProperty] private string _status = "";
     [ObservableProperty, NotifyPropertyChangedFor(nameof(IsNotBusy))] private bool _isBusy;
 
@@ -669,10 +684,14 @@ public partial class HomeViewModel : ObservableObject
 
     public bool IsDirty => HasEditor && (
         Name != _baseline.Name || JobRole != _baseline.JobRole || SelectedSeniority != _baseline.Seniority ||
-        JobDescription != _baseline.JobDescription || ResumeText != _baseline.ResumeText);
+        JobDescription != _baseline.JobDescription || ResumeText != _baseline.ResumeText || AnswerRules != _baseline.AnswerRules);
 
     public string JobDescriptionStats => $"{JobDescription.Length:N0} characters";
     public string ResumeStats => $"{ResumeText.Length:N0} characters";
+    public string AnswerRulesStats => $"{AnswerRules.Length:N0} / {CandidateProfile.MaxAnswerRulesLength:N0} characters";
+
+    /// <summary>One-click rules for the answer rules box; each adds its sentence on a new line unless it is already there.</summary>
+    public IReadOnlyList<AnswerRuleExample> AnswerRuleExamples { get; } = AnswerRuleExample.All;
     public bool JobDescriptionTooLong => JobDescription.Length > CandidateProfile.LongTextThreshold;
     public bool ResumeTooLong => ResumeText.Length > CandidateProfile.LongTextThreshold;
 
@@ -705,6 +724,7 @@ public partial class HomeViewModel : ObservableObject
         OnPropertyChanged(nameof(CanDelete));
         OnPropertyChanged(nameof(JobDescriptionStats));
         OnPropertyChanged(nameof(ResumeStats));
+        OnPropertyChanged(nameof(AnswerRulesStats));
         OnPropertyChanged(nameof(JobDescriptionTooLong));
         OnPropertyChanged(nameof(ResumeTooLong));
         OnPropertyChanged(nameof(JobDescriptionWarning));
@@ -756,6 +776,7 @@ public partial class HomeViewModel : ObservableObject
         SelectedSeniority = profile.Seniority;
         JobDescription = profile.JobDescription;
         ResumeText = profile.ResumeText;
+        AnswerRules = profile.AnswerRules;
         HasEditor = true;
         Status = "";
         OnPropertyChanged(nameof(IsDirty));
@@ -767,7 +788,7 @@ public partial class HomeViewModel : ObservableObject
         _baseline = new CandidateProfile();
         HasEditor = false;
         EditingId = 0;
-        Name = JobRole = JobDescription = ResumeText = "";
+        Name = JobRole = JobDescription = ResumeText = AnswerRules = "";
         SelectedSeniority = Seniority.Mid;
         Status = "";
         if (TechnologyMode) _ = RefreshTechnologiesAsync();
@@ -781,6 +802,7 @@ public partial class HomeViewModel : ObservableObject
         Seniority = SelectedSeniority,
         JobDescription = JobDescription,
         ResumeText = ResumeText,
+        AnswerRules = AnswerRules,
     };
 
     private bool ConfirmDiscard()
@@ -877,6 +899,15 @@ public partial class HomeViewModel : ObservableObject
 
     [RelayCommand]
     private void TrimJobDescription() => JobDescription = TextTools.TrimTo(JobDescription, CandidateProfile.LongTextThreshold);
+
+    [RelayCommand]
+    private void AddAnswerRule(string? rule)
+    {
+        if (string.IsNullOrWhiteSpace(rule) || AnswerRules.Contains(rule, StringComparison.OrdinalIgnoreCase)) return;
+        var next = AnswerRules.TrimEnd().Length == 0 ? rule : AnswerRules.TrimEnd() + Environment.NewLine + rule;
+        if (next.Length > CandidateProfile.MaxAnswerRulesLength) return; // the box would cut it; leave what is there
+        AnswerRules = next;
+    }
 
     [RelayCommand]
     private void TrimResume() => ResumeText = TextTools.TrimTo(ResumeText, CandidateProfile.LongTextThreshold);

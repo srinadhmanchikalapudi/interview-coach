@@ -43,6 +43,7 @@ public class ProfileRepositoryTests : IDisposable
         JobRole = "Senior Backend Engineer",
         Seniority = Seniority.Senior,
         JobDescription = "Build services.\n\nMust know SQL.",
+        AnswerRules = "Use STAR.\nKeep it concise.",
         ResumeText = "Jane Doe\n- Built the ranking service (p99 300ms to 80ms)\n- Ünïcode ✓ résumé",
     };
 
@@ -59,6 +60,7 @@ public class ProfileRepositoryTests : IDisposable
         Assert.Equal(Seniority.Senior, reopened.Seniority);
         Assert.Equal("Build services.\n\nMust know SQL.", reopened.JobDescription);
         Assert.Equal(Sample().ResumeText, reopened.ResumeText);
+        Assert.Equal("Use STAR.\nKeep it concise.", reopened.AnswerRules);
     }
 
     [Fact]
