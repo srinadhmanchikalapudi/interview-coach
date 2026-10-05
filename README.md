@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://github.com/srinadhmanchikalapudi/interview-coach/releases/latest"><b>Download for Windows</b></a> &nbsp;·&nbsp;
-  <a href="#install">Install</a> &nbsp;·&nbsp;
+  <a href="#install-in-3-steps">Install in 3 steps</a> &nbsp;·&nbsp;
   <a href="#using-the-app">Using the app</a> &nbsp;·&nbsp;
   <a href="#screenshots">Screenshots</a>
 </p>
@@ -28,24 +28,39 @@
 
 ---
 
+## Install in 3 steps
+
+No technical knowledge needed. You need a Windows 10 or 11 PC.
+
+1. **Download.** Open the [latest release](https://github.com/srinadhmanchikalapudi/interview-coach/releases/latest), scroll to **Assets** and click **`InterviewCoach-Setup-<version>.exe`**. It is about 87 MB.
+2. **Run it.** Open the file from your Downloads folder.
+   - If Windows shows a blue **"Windows protected your PC"** screen, that is expected (the app is not code-signed yet). Click **More info**, then **Run anyway**.
+   - Click **Next** through the installer, then **Finish**. It installs just for you and asks for no administrator password.
+3. **Open Interview Coach** from the Start menu. Go to **Settings** and either paste a language model key or switch on **Demo mode** to try it with no key. Then create a profile with your job description and resume, and start with Learn.
+
+It updates itself later: a bar appears at the top when a new version is out. [More about installing and updating](#install).
+
+---
+
 ## Contents
 
-1. [What it does](#what-it-does)
-2. [Screenshots](#screenshots)
-3. [Status and roadmap](#status-and-roadmap)
-4. [Install](#install)
-5. [Getting started](#getting-started)
-6. [Using the app](#using-the-app)
-7. [How it works](#how-it-works)
-8. [Architecture](#architecture)
-9. [Prompts](#prompts)
-10. [Speed and cost](#speed-and-cost)
-11. [Data, settings and privacy](#data-settings-and-privacy)
-12. [Testing](#testing)
-13. [Repository layout](#repository-layout)
-14. [Development guide](#development-guide)
-15. [Documentation](#documentation)
-16. [Commit conventions](#commit-conventions)
+1. [Install in 3 steps](#install-in-3-steps)
+2. [What it does](#what-it-does)
+3. [Screenshots](#screenshots)
+4. [Status and roadmap](#status-and-roadmap)
+5. [Install](#install)
+6. [Getting started](#getting-started)
+7. [Using the app](#using-the-app)
+8. [How it works](#how-it-works)
+9. [Architecture](#architecture)
+10. [Prompts](#prompts)
+11. [Speed and cost](#speed-and-cost)
+12. [Data, settings and privacy](#data-settings-and-privacy)
+13. [Testing](#testing)
+14. [Repository layout](#repository-layout)
+15. [Development guide](#development-guide)
+16. [Documentation](#documentation)
+17. [Commit conventions](#commit-conventions)
 
 ---
 
