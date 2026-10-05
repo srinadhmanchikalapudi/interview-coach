@@ -569,6 +569,86 @@ public class AutoUpdateTests
         Assert.Equal([AppInfo.ReleasesUrl], w.Opener.Opened);
     }
 
+    // Found by use: after "Check for updates now" Settings said a version was available but had no way to install it
+    // (the bar above the page is hidden on Settings).
+
+    private static async Task<(SettingsViewModel Settings, World World, ScriptedDialogs Dialogs)> NewSettingsAsync(bool installed = true)
+    {
+        var (_, w, dialogs) = await NewMainAsync(installed);
+        return (new SettingsViewModel(w.Settings, new FakeLlmService(), null, dialogs, null, null, w.Service), w, dialogs);
+    }
+
+    [Fact]
+    public async Task After_a_check_finds_a_version_Settings_offers_Update_now()
+    {
+        var (settings, w, _) = await NewSettingsAsync();
+        Assert.False(settings.CanInstallUpdate);
+
+        w.Checker.Result = UpdateCheckResult.Available(Newer());
+        await settings.CheckForUpdatesNowCommand.ExecuteAsync(null);
+
+        Assert.True(settings.CanInstallUpdate);
+        Assert.Equal("Update now", settings.InstallUpdateText);
+    }
+
+    [Fact]
+    public async Task Settings_offers_nothing_to_install_when_up_to_date_or_the_check_failed()
+    {
+        var (settings, w, _) = await NewSettingsAsync();
+
+        await settings.CheckForUpdatesNowCommand.ExecuteAsync(null);
+        Assert.False(settings.CanInstallUpdate);
+
+        w.Checker.Result = UpdateCheckResult.Failed("No internet.");
+        await settings.CheckForUpdatesNowCommand.ExecuteAsync(null);
+        Assert.False(settings.CanInstallUpdate);
+    }
+
+    [Fact]
+    public async Task Update_now_in_Settings_asks_then_installs_and_closes_the_program()
+    {
+        var (settings, w, dialogs) = await NewSettingsAsync();
+        w.Checker.Result = UpdateCheckResult.Available(Newer());
+        await settings.CheckForUpdatesNowCommand.ExecuteAsync(null);
+
+        await settings.InstallUpdateCommand.ExecuteAsync(null);
+
+        Assert.Equal(["Update Interview Coach"], dialogs.Confirmations);
+        Assert.Equal(1, w.Installer.Downloads);
+        Assert.Equal([@"C:\temp\setup.exe"], w.Installer.Launched);
+        Assert.Equal(1, w.Exits);
+    }
+
+    [Fact]
+    public async Task Declining_in_Settings_changes_nothing()
+    {
+        var (settings, w, dialogs) = await NewSettingsAsync();
+        w.Checker.Result = UpdateCheckResult.Available(Newer());
+        await settings.CheckForUpdatesNowCommand.ExecuteAsync(null);
+        dialogs.ConfirmAnswer = false;
+
+        await settings.InstallUpdateCommand.ExecuteAsync(null);
+
+        Assert.Equal(0, w.Installer.Downloads);
+        Assert.Equal(0, w.Exits);
+        Assert.True(settings.CanInstallUpdate);
+    }
+
+    [Fact]
+    public async Task A_copy_that_was_not_installed_gets_a_download_button_in_Settings()
+    {
+        var (settings, w, dialogs) = await NewSettingsAsync(installed: false);
+        w.Checker.Result = UpdateCheckResult.Available(Newer());
+        await settings.CheckForUpdatesNowCommand.ExecuteAsync(null);
+
+        Assert.Equal("Download the update", settings.InstallUpdateText);
+        await settings.InstallUpdateCommand.ExecuteAsync(null);
+
+        Assert.Empty(dialogs.Confirmations);
+        Assert.Equal(["https://github.com/me/repo/releases/tag/v1.1.0"], w.Opener.Opened);
+        Assert.Equal(0, w.Installer.Downloads);
+    }
+
     // ---- the screen
 
     private static void Layout(FrameworkElement view)

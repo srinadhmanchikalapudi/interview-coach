@@ -140,6 +140,22 @@ public sealed class UpdateService(
         }
     }
 
+    /// <summary>
+    /// What both "Update now" buttons do: ask first (the program closes, updates and starts again), then install. An install from here is
+    /// only offered for a copy that setup installed; for any other copy this opens the download page.
+    /// </summary>
+    public async Task InstallWithConfirmAsync(IDialogService? dialogs)
+    {
+        if (Available is not { } update) return;
+        if (CanInstallInPlace && dialogs is not null &&
+            !dialogs.Confirm("Update Interview Coach", $"Install version {UpdateVersions.Display(update.Version)} now? Interview Coach will close, update and start again. A mock interview in progress is kept in History; an answer you have not sent in Practice is not."))
+            return;
+        await InstallAsync();
+    }
+
+    /// <summary>True while there is a version to install (or to download), including after an install that failed.</summary>
+    public bool HasUpdateToInstall => Available is not null && Phase is UpdatePhase.Available or UpdatePhase.Failed;
+
     /// <summary>Opens the release page in the browser.</summary>
     public void OpenReleasePage() => opener.Open(Available?.PageUrl ?? AppInfo.ReleasesUrl);
 

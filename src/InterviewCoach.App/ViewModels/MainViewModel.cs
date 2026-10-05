@@ -200,14 +200,7 @@ public partial class MainViewModel : ObservableObject
     }
 
     // The user is asked first: the program closes, updates and starts again.
-    private async Task InstallUpdateAsync()
-    {
-        if (_updates is not { Available: { } update } u) return;
-        if (u.CanInstallInPlace && _dialogs is not null &&
-            !_dialogs.Confirm("Update Interview Coach", $"Install version {UpdateVersions.Display(update.Version)} now? Interview Coach will close, update and start again. A mock interview in progress is kept in History; an answer you have not sent in Practice is not."))
-            return;
-        await u.InstallAsync();
-    }
+    private Task InstallUpdateAsync() => _updates?.InstallWithConfirmAsync(_dialogs) ?? Task.CompletedTask;
 
     private AppNotice? SetupNotice()
     {

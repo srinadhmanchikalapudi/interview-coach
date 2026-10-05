@@ -19,7 +19,7 @@
 <p align="center">
   <img alt=".NET 10" src="https://img.shields.io/badge/.NET-10-512BD4">
   <img alt="WPF" src="https://img.shields.io/badge/UI-WPF%20%28MVVM%29-0078D4">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-1207%20passing-2EA043">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-1212%20passing-2EA043">
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%2010%2F11-lightgrey">
   <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green">
   <a href="https://github.com/srinadhmanchikalapudi/interview-coach/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/srinadhmanchikalapudi/interview-coach?include_prereleases&label=release"></a>
@@ -175,7 +175,7 @@ The program is not code-signed, so Windows SmartScreen may say "Windows protecte
 
 ### Updates
 
-When the program starts it asks GitHub (at most once a day) for the number of the newest release. If there is a newer one, a bar appears above the page: **Update now** downloads the setup program, checks it, and (after you confirm) closes the program, updates it and starts it again; your data is kept. Nothing is ever installed without your click. A copy you unzipped instead of installing gets a **Download** button that opens the release page.
+When the program starts it asks GitHub (at most once a day) for the number of the newest release. If there is a newer one, a bar appears above the page: **Update now** (the bar, or the same button in Settings, About and updates) downloads the setup program, checks it, and (after you confirm) closes the program, updates it and starts it again; your data is kept. Nothing is ever installed without your click. A copy you unzipped instead of installing gets a **Download** button that opens the release page.
 
 The check sends nothing about you (it is a plain request for the latest release's details) and can be switched off under **Settings, About and updates**, where there is also **Check for updates now**. The download must come from github.com over HTTPS and must match the checksum GitHub publishes for it, or it is deleted and not run.
 
@@ -540,7 +540,7 @@ on its OpenRouter page if that matters to you. The model list for the OpenRouter
 ## Testing
 
 ```bash
-dotnet test                                     # all 1207 tests
+dotnet test                                     # all 1212 tests
 dotnet test tests/InterviewCoach.Core.Tests     # one project
 dotnet build InterviewCoach.sln -c Release      # use this if the Debug exe is running (it locks its DLLs)
 ```
@@ -549,7 +549,7 @@ dotnet build InterviewCoach.sln -c Release      # use this if the Debug exe is r
 |---|---|---|
 | `InterviewCoach.Core.Tests` | 496 | Prompt rendering, engine behaviour, the bank, answer lengths, question types, text helpers, role type |
 | `InterviewCoach.Infrastructure.Tests` | 280 | JSON parsing, LLM service (retry, cache split, options), settings (DPAPI round trip, no plaintext), SQLite repositories on real files, file extractors, prompt guards, Demo-mode isolation |
-| `InterviewCoach.App.Tests` | 431 | View models and **real WPF views** on a shared STA dispatcher; fails on any binding error |
+| `InterviewCoach.App.Tests` | 436 | View models and **real WPF views** on a shared STA dispatcher; fails on any binding error |
 
 Test names are sentences that describe behaviour. Scripted test doubles (`ScriptedLlmService`, `BankScript`) let tests control exactly
 what the model "says", including delays and failures.

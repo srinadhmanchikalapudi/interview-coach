@@ -45,7 +45,7 @@ public partial class SettingsViewModel : ObservableObject
     {
         _speech = speech;
         _updates = updates;
-        if (updates is not null) updates.Changed += () => { OnPropertyChanged(nameof(UpdateStatus)); OnPropertyChanged(nameof(HasUpdateStatus)); OnPropertyChanged(nameof(CanCheckNow)); };
+        if (updates is not null) updates.Changed += () => { OnPropertyChanged(nameof(UpdateStatus)); OnPropertyChanged(nameof(HasUpdateStatus)); OnPropertyChanged(nameof(CanCheckNow)); OnPropertyChanged(nameof(CanInstallUpdate)); OnPropertyChanged(nameof(InstallUpdateText)); };
         _store = store;
         _llm = llm;
         _bank = bank;
@@ -477,6 +477,13 @@ public partial class SettingsViewModel : ObservableObject
         if (_updates is null) return;
         await _updates.CheckAsync(manual: true);
     }
+
+    /// <summary>A newer version is known, so the button that installs it (or opens its download page) is shown.</summary>
+    public bool CanInstallUpdate => _updates is { HasUpdateToInstall: true };
+    public string InstallUpdateText => _updates is { CanInstallInPlace: true } ? "Update now" : "Download the update";
+
+    [RelayCommand]
+    private Task InstallUpdateAsync() => _updates?.InstallWithConfirmAsync(_dialogs) ?? Task.CompletedTask;
 
     [RelayCommand]
     private void OpenReleasePage() => _updates?.OpenReleasePage();
