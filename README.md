@@ -146,6 +146,18 @@ dotnet run --project src/InterviewCoach.App
 
 Or open `InterviewCoach.sln` in Visual Studio and run `InterviewCoach.App`.
 
+### Build a release (.exe)
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\publish.ps1
+```
+
+This runs the tests, then publishes **one self-contained `InterviewCoach.App.exe`** (about 95 MB, the .NET runtime is inside, so the other machine needs nothing installed) and a zip of it under `dist\`. Options: `-Version 1.2.0`, `-Runtime win-arm64`, `-SkipTests`. Keep the `Prompts` folder next to the exe (you can edit the prompts there; the app has built-in copies if it is missing). Windows 10 (build 19041) or later. Your data stays per Windows user in `%LOCALAPPDATA%\InterviewCoach`, so a new exe finds the existing database and settings. Not signed, so Windows SmartScreen may warn the first time on another machine ("More info", "Run anyway"). The same thing by hand:
+
+```bash
+dotnet publish src/InterviewCoach.App -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o dist/app
+```
+
 ### First run
 
 1. Open **Settings**. Paste your API key (or set `ANTHROPIC_API_KEY` in your environment) and click **Test connection**.
