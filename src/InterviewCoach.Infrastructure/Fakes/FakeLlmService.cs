@@ -141,7 +141,7 @@ public sealed class FakeLlmService(Func<LlmRole, string, string>? responder = nu
             { "kind": "strength", "point": "A sample strength.", "quote": null },
             { "kind": "fix", "point": "A sample fix: give the number.", "quote": null }
           ],
-          "model_answer": "I started by measuring where the time went. At [Company] we had [a specific problem, with a number], and I [what you personally did]. The result was [your before and after metric].",
+          "model_answer": "I started by measuring where the time went. At my last company we had a checkout service that slowed down every evening, and I traced it to one slow query and added an index. The result was p99 dropping from [roughly 400 ms] to [under 150 ms].",
           "shape": "Direct answer → what you did → result with a number",
           "delivery": null,
           "follow_ups": [
@@ -155,7 +155,7 @@ public sealed class FakeLlmService(Func<LlmRole, string, string>? responder = nu
         {
           "what_theyre_testing": "Demo mode: this is sample coaching text, not advice written for your resume. With a real key, this explains the signal the interviewer wants at your level.",
           "feedback": [],
-          "model_answer": "I picked the simplest thing that could work first. At [Company] we had [a specific problem, with a number], and the reason we didn't just [obvious alternative] was [the real constraint]. What I ended up doing was [what you personally built or decided]. The result was [your actual before/after metric]. Honestly, what I'd change is [one honest thing you'd do differently].",
+          "model_answer": "I picked the simplest thing that could work first. At my last company we needed to speed up a busy API, and the reason we didn't just add more servers was that the database was the bottleneck. What I ended up doing was adding a cache for the hottest lookups. The result was average response time dropping from [about 300 ms] to [about 120 ms]. Honestly, what I'd change is the alerting, which fired too late.",
           "shape": "Direct answer → the constraint → what you chose and why → result with a number → what you'd change",
           "delivery": null,
           "follow_ups": [

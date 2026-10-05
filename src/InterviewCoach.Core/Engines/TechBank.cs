@@ -16,7 +16,8 @@ public sealed class TechBank(ITechBankRepository repository, ILlmService llm, IP
     /// <summary>Stands in for the resume when a general answer is written, so the Coach writes one that fits anybody.</summary>
     public const string GeneralAnswerNote =
         "(No resume is included on purpose. Write a strong general answer that does not depend on any one person's background. " +
-        "Wherever the candidate's own experience would go, use a bracketed placeholder such as [where you have used it].)";
+        "Wherever the candidate's own experience would go, word it without a name where you can (\"on one of our services\") and otherwise use a bracketed placeholder such as [where you have used it]. " +
+        "Any number follows the numbers rule: a realistic figure in square brackets, never a blank.)";
 
     /// <summary>
     /// Key for "no word count requested" in saved answers. It was 0 while the Coach was told nothing about length and wrote

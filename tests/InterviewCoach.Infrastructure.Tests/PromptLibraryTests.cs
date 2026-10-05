@@ -28,6 +28,40 @@ public class PromptLibraryTests
         Assert.Contains("<<JOB_ROLE>>", rendered);
     }
 
+    // Found by use: model answers said "API performance increased by ____%" and the candidate had to stop and think of a number.
+    [Fact]
+    public void The_coach_prompt_asks_for_realistic_figures_in_brackets_and_forbids_blanks()
+    {
+        var rendered = EmbeddedOnly().Render(PromptName.Coach, FullVars());
+
+        Assert.Contains("write a realistic figure", rendered);
+        Assert.Contains("use the resume's own figure exactly", rendered);
+        Assert.Contains("in square brackets with the figure inside", rendered);
+        Assert.Contains("Never leave a blank, underscores", rendered);
+        Assert.Contains("without stopping to think of a number", rendered);
+        Assert.DoesNotContain("use a bracketed placeholder such as [your actual p99", rendered);   // the old rule
+        Assert.DoesNotContain("At [Company]", rendered);                                           // the example no longer shows a name blank
+    }
+
+    [Fact]
+    public void The_coach_prompt_still_never_invents_experience_employers_or_tools()
+    {
+        var rendered = EmbeddedOnly().Render(PromptName.Coach, FullVars());
+
+        Assert.Contains("Never invent experience, employers, tools or products", rendered);
+        Assert.Contains("word the sentence without one", rendered);                       // no name: reword, do not leave a blank
+    }
+
+    [Fact]
+    public void The_coach_prompt_asks_for_realistic_figures_in_the_fixed_part_so_caching_still_works()
+    {
+        var rendered = EmbeddedOnly().Render(PromptName.Coach, FullVars());
+        var fixedPart = rendered[..rendered.IndexOf("=== THE CANDIDATE AND THE QUESTION ===", StringComparison.Ordinal)];
+
+        Assert.Contains("write a realistic figure", fixedPart);
+        Assert.DoesNotContain("<<", fixedPart);                                           // no variable before the cache boundary
+    }
+
     [Fact]
     public void The_coach_prompt_asks_for_the_point_first_and_never_shows_a_warm_up_opening()
     {
@@ -39,7 +73,7 @@ public class PromptLibraryTests
         Assert.DoesNotContain("Open the way people actually open", rendered);
         // The example of a good answer must itself start with the point (the rule names the forbidden openers, so it may quote them).
         var normalised = rendered.Replace("\r\n", "\n");
-        Assert.Contains("HUMAN (write like this):\n\"At [Company]", normalised);
+        Assert.Contains("HUMAN (write like this):\n\"At my last company", normalised);
     }
 
     [Theory]

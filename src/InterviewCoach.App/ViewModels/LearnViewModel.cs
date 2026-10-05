@@ -62,8 +62,8 @@ public partial class LearnViewModel : ObservableObject
     /// <summary>A technology concepts session has no resume, so there is nothing to tailor an answer to.</summary>
     public bool CanTailor => IsGenericAnswer && _request is not null && !ConceptSession.IsConceptProfile(_request.Profile);
     public string GenericAnswerNote => HasTechnology
-        ? $"This is a general answer about {Technology}, written without your resume so it can be saved and reused. Wherever your own experience belongs there is a [bracketed placeholder]."
-        : "This is a general answer, written without your resume so it can be saved and reused. Wherever your own experience belongs there is a [bracketed placeholder].";
+        ? $"This is a general answer about {Technology}, written without your resume so it can be saved and reused. A bracketed number is a realistic suggestion; a bracket such as [where you have used it] is for your own experience."
+        : "This is a general answer, written without your resume so it can be saved and reused. A bracketed number is a realistic suggestion; a bracket such as [where you have used it] is for your own experience.";
 
     public bool IsGenerating => _engine?.Phase == LearnPhase.GeneratingQuestion;
     public bool IsLoadingAnswer => _engine?.Phase == LearnPhase.LoadingAnswer;

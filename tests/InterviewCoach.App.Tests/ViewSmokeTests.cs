@@ -218,8 +218,8 @@ public class ViewSmokeTests
         Assert.Contains("THE SHAPE OF IT", text);
         Assert.Contains("WHERE THEY'LL GO NEXT", text);
         Assert.Contains("Why that approach over the alternatives?", text);   // a follow-up
-        Assert.Contains("[Company]", highlighted);                           // placeholders are highlighted
-        Assert.Contains("[your actual before/after metric]", highlighted);
+        Assert.Contains("[about 300 ms]", highlighted);                      // suggested figures are highlighted
+        Assert.Contains("[about 120 ms]", highlighted);
     }
 
     [Fact]

@@ -21,6 +21,16 @@ public class TechBankTests
         Name = "p", JobRole = "Backend Engineer", Seniority = Seniority.Senior, JobDescription = jd, ResumeText = "RESUME-MARKER",
     };
 
+    // ---- the general answer note
+
+    [Fact]
+    public void The_note_that_stands_in_for_the_resume_asks_for_bracketed_realistic_figures_and_no_blanks()
+    {
+        Assert.Contains("realistic figure in square brackets", TechBank.GeneralAnswerNote);
+        Assert.Contains("never a blank", TechBank.GeneralAnswerNote);
+        Assert.Contains("[where you have used it]", TechBank.GeneralAnswerNote);              // own experience is still left for the candidate
+    }
+
     // ---- technologies from the job description
 
     [Fact]
