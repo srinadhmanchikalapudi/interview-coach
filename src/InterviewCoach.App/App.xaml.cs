@@ -107,6 +107,7 @@ internal static class ServiceRegistration
         s.AddSingleton<SettingsViewModel>();
         s.AddSingleton<LearnViewModel>();
         s.AddSingleton<LibraryViewModel>();
+        s.AddSingleton<InterviewCoach.Core.Speech.SpeechPhraseSource>(sp => new InterviewCoach.Core.Speech.SpeechPhraseSource(sp.GetService<TechBank>())); // terms for the recognizer, from what was already read
         s.AddSingleton<PracticeViewModel>();
         s.AddSingleton<ConceptsViewModel>();
         s.AddSingleton<MockViewModel>();

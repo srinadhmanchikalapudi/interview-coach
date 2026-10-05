@@ -33,11 +33,15 @@ public sealed class AzureSpeechToText(string key, string region, string language
     private SpeechRecognizer? _recognizer;
     private AudioConfig? _audio;
 
+    private IReadOnlyList<string> _phrases = [];
+
     public bool SupportsPartials => true;
 
     public event EventHandler<string>? PartialRecognized;
     public event EventHandler<string>? FinalRecognized;
     public event EventHandler<string>? Error;
+
+    public void SetPhrases(IReadOnlyList<string> phrases) => _phrases = phrases;
 
     public async Task StartAsync(CancellationToken ct)
     {
@@ -51,6 +55,12 @@ public sealed class AzureSpeechToText(string key, string region, string language
             config.SpeechRecognitionLanguage = language;
             _audio = AudioConfig.FromDefaultMicrophoneInput();
             var recognizer = new SpeechRecognizer(config, _audio);
+            if (_phrases.Count > 0)
+            {
+                // A phrase list makes the recognizer prefer these terms to look-alikes (".NET" for "dot net", "queue" for "cube").
+                var grammar = PhraseListGrammar.FromRecognizer(recognizer);
+                foreach (var phrase in _phrases) grammar.AddPhrase(phrase);
+            }
             recognizer.Recognizing += (_, e) =>
             {
                 if (!string.IsNullOrWhiteSpace(e.Result.Text)) PartialRecognized?.Invoke(this, e.Result.Text);

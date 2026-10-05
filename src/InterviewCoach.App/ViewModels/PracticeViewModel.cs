@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using InterviewCoach.Core.Abstractions;
 using InterviewCoach.Core.Engines;
 using InterviewCoach.Core.Models;
+using InterviewCoach.Core.Speech;
 using InterviewCoach.App.Services;
 
 namespace InterviewCoach.App.ViewModels;
@@ -31,6 +32,8 @@ public partial class PracticeViewModel : ObservableObject
     private readonly IPracticeHistory? _history;
 
     private PracticeEngine? _engine;
+    private readonly SpeechPhraseSource? _phraseSource;
+    private IReadOnlyList<string> _basePhrases = [];
     private LearnSessionRequest? _request;
     private LearnItem? _shownItem;
     private int _shownAttempt = 1;
@@ -45,8 +48,9 @@ public partial class PracticeViewModel : ObservableObject
 
     public PracticeViewModel(
         ILlmService llm, IPromptLibrary prompts, ISettingsStore settings, TechBank? bank = null, Func<double>? random = null, Func<DateTime>? now = null,
-        IPracticeHistory? history = null, ISpeechFactory? speech = null)
+        IPracticeHistory? history = null, ISpeechFactory? speech = null, SpeechPhraseSource? phrases = null)
     {
+        _phraseSource = phrases;
         _history = history;
         _now = now ?? (() => DateTime.UtcNow);
         _speech = speech;
@@ -100,6 +104,7 @@ public partial class PracticeViewModel : ObservableObject
         _engine?.Cancel();
         StopVoice();
         _request = request;
+        StartPhrases(request);
         // The technology bank is optional, as in Learn mode: with it off every question is written from the resume and job description.
         _engine = new PracticeEngine(_llm, _prompts, _settings.Current.ReuseGeneralAnswers ? _bank : null, _random, _history);
         _engine.Changed += Refresh;
@@ -318,6 +323,7 @@ public partial class PracticeViewModel : ObservableObject
             // A new question (or a follow-up): an empty box and a fresh timer.
             _shownItem = item;
             _shownAttempt = attempt;
+            UpdatePhrases();
             _lastAnswerText = "";
             Composer.SetText("");
             EmptyMessage = "";
@@ -354,6 +360,27 @@ public partial class PracticeViewModel : ObservableObject
         TryAgainCommand.NotifyCanExecuteChanged();
         UsePreviousAnswerCommand.NotifyCanExecuteChanged();
     }
+
+    // ---- the terms the recognizer is told to expect
+
+    private void StartPhrases(LearnSessionRequest request)
+    {
+        _basePhrases = SpeechPhrases.Build(request.Technologies, [request.Profile.JobRole]);
+        UpdatePhrases();
+        if (_phraseSource is null) return;
+        _ = LoadPhrasesAsync(request);
+    }
+
+    // The saved technologies of the job description, the resume's skills and employers: found without any model call, a moment after the session starts.
+    private async Task LoadPhrasesAsync(LearnSessionRequest request)
+    {
+        var found = await _phraseSource!.ForProfileAsync(request.Profile, request.Technologies);
+        if (!ReferenceEquals(_request, request)) return; // another session started meanwhile
+        _basePhrases = found;
+        UpdatePhrases();
+    }
+
+    private void UpdatePhrases() => Composer.Phrases = SpeechPhrases.Build([_shownItem?.Technology], _basePhrases);
 
     private void ResetTimer()
     {

@@ -12,7 +12,7 @@
 <p align="center">
   <img alt=".NET 10" src="https://img.shields.io/badge/.NET-10-512BD4">
   <img alt="WPF" src="https://img.shields.io/badge/UI-WPF%20%28MVVM%29-0078D4">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-1049%20passing-2EA043">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-1096%20passing-2EA043">
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%2010%2F11-lightgrey">
   <img alt="Status" src="https://img.shields.io/badge/status-Learn%20mode%20complete-blue">
 </p>
@@ -194,7 +194,7 @@ measurements this app's coach call took about 21 seconds at the default and abou
 
 ### Optional: speech keys
 
-Voice is optional: Practice works fully by typing. **Hear questions** needs nothing (the Windows voice is the default). **Dictation** needs an Azure Speech key and region (live transcript) or an OpenAI key (records, then transcribes), set in Settings, Speech, where **Load voices**, **Test voice** and **Test microphone** check them (they use the saved settings, so click Save first). In Practice, **Speak** or **F2** starts and stops the microphone, the words go into the answer box at the cursor so you can type and talk in the same box, **Repeat** says the question again, and **Read aloud** on the model answer reads it. With an Azure for Students
+Voice is optional: Practice works fully by typing. **Hear questions** needs nothing (the Windows voice is the default). **Dictation** needs an Azure Speech key and region (live transcript) or an OpenAI key (records, then transcribes), set in Settings, Speech, where **Load voices**, **Test voice** and **Test microphone** check them (they use the saved settings, so click Save first). In Practice, **Speak** or **F2** starts and stops the microphone, the words go into the answer box at the cursor so you can type and talk in the same box, **Repeat** says the question again, and **Read aloud** on the model answer reads it. The recognizer is told which words to expect (the technologies of your job description, the skills line of your resume, your employers and projects, the role, and in a mock interview the topics of its plan), so ".NET", "SignalR" or the name of your employer come out right far more often. This costs nothing: it uses what was already read and saved, never a model call. With an Azure for Students
 subscription, some regions are blocked by policy; if creating a Speech resource fails with `RequestDisallowedByAzure`, pick one of the
 regions your subscription allows (the error lists them).
 
@@ -452,16 +452,16 @@ on its OpenRouter page if that matters to you. The model list for the OpenRouter
 ## Testing
 
 ```bash
-dotnet test                                     # all 1049 tests
+dotnet test                                     # all 1096 tests
 dotnet test tests/InterviewCoach.Core.Tests     # one project
 dotnet build InterviewCoach.sln -c Release      # use this if the Debug exe is running (it locks its DLLs)
 ```
 
 | Project | Tests | Covers |
 |---|---|---|
-| `InterviewCoach.Core.Tests` | 442 | Prompt rendering, engine behaviour, the bank, answer lengths, question types, text helpers, role type |
-| `InterviewCoach.Infrastructure.Tests` | 222 | JSON parsing, LLM service (retry, cache split, options), settings (DPAPI round trip, no plaintext), SQLite repositories on real files, file extractors, prompt guards, Demo-mode isolation |
-| `InterviewCoach.App.Tests` | 385 | View models and **real WPF views** on a shared STA dispatcher; fails on any binding error |
+| `InterviewCoach.Core.Tests` | 478 | Prompt rendering, engine behaviour, the bank, answer lengths, question types, text helpers, role type |
+| `InterviewCoach.Infrastructure.Tests` | 225 | JSON parsing, LLM service (retry, cache split, options), settings (DPAPI round trip, no plaintext), SQLite repositories on real files, file extractors, prompt guards, Demo-mode isolation |
+| `InterviewCoach.App.Tests` | 393 | View models and **real WPF views** on a shared STA dispatcher; fails on any binding error |
 
 Test names are sentences that describe behaviour. Scripted test doubles (`ScriptedLlmService`, `BankScript`) let tests control exactly
 what the model "says", including delays and failures.

@@ -56,6 +56,12 @@ public sealed partial class AnswerComposer : ObservableObject
     /// <summary>Raised after dictated words were put in the box, so the view can move the cursor to the end of them.</summary>
     public event Action<int>? CaretRequested;
 
+    /// <summary>
+    /// Words and names likely to be spoken in this answer (technologies, employers, the role), given to the recognizer when the microphone starts so it
+    /// prefers them to look-alikes. The owner sets and updates them; they only help, so nothing depends on them.
+    /// </summary>
+    public IReadOnlyList<string> Phrases { get; set; } = [];
+
     /// <summary>True when speech is built in at all; the microphone button shows only then.</summary>
     public bool HasSpeech => _speech is not null;
 
@@ -143,6 +149,7 @@ public sealed partial class AnswerComposer : ObservableObject
         try
         {
             stt = _speech.CreateSpeechToText();
+            if (Phrases.Count > 0) stt.SetPhrases(Phrases);
         }
         catch (Exception ex)
         {

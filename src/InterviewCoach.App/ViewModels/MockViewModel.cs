@@ -5,6 +5,7 @@ using InterviewCoach.App.Services;
 using InterviewCoach.Core.Abstractions;
 using InterviewCoach.Core.Engines;
 using InterviewCoach.Core.Models;
+using InterviewCoach.Core.Speech;
 
 namespace InterviewCoach.App.ViewModels;
 
@@ -31,6 +32,9 @@ public partial class MockViewModel : ObservableObject
     private readonly Speaker? _speaker;
 
     private MockEngine? _engine;
+    private readonly SpeechPhraseSource? _phraseSource;
+    private IReadOnlyList<string> _basePhrases = [];
+    private InterviewPlanDto? _phrasedPlan;
     private MockSessionRequest? _request;
     private int _spokenTurns;
     private bool _debriefRaised;
@@ -38,8 +42,9 @@ public partial class MockViewModel : ObservableObject
 
     public MockViewModel(
         ILlmService llm, IPromptLibrary prompts, ISettingsStore settings, ISpeechFactory? speech = null, IDialogService? dialogs = null,
-        IMockHistory? history = null, Func<DateTime>? now = null)
+        IMockHistory? history = null, Func<DateTime>? now = null, SpeechPhraseSource? phrases = null)
     {
+        _phraseSource = phrases;
         _llm = llm;
         _prompts = prompts;
         _settings = settings;
@@ -105,6 +110,8 @@ public partial class MockViewModel : ObservableObject
         _spokenTurns = 0;
         _debriefRaised = false;
         _answerStartedAt = null;
+        _phrasedPlan = null;
+        StartPhrases(request);
         UnexpectedError = null;
         EmptyMessage = "";
         SpeechNotice = "";
@@ -285,6 +292,7 @@ public partial class MockViewModel : ObservableObject
         foreach (var turn in _engine.Turns.Skip(Conversation.Count))
             Conversation.Add(new ConversationLine(turn.Speaker == MockSpeaker.Interviewer ? "Interviewer" : "You", turn.Text, turn.Speaker == MockSpeaker.Interviewer));
 
+        UpdatePhrases();
         OnPropertyChanged(string.Empty);
         EndInterviewCommand.NotifyCanExecuteChanged();
         RepeatCommand.NotifyCanExecuteChanged();
@@ -337,6 +345,39 @@ public partial class MockViewModel : ObservableObject
         if (!closing && ReferenceEquals(engine, _engine) && engine.Phase == MockPhase.CandidateAnswering && _settings.Current.AutoListen
             && !Composer.IsListening && AnswerText.Trim().Length == 0)
             await Composer.StartListeningAsync(manual: false);
+    }
+
+    // ---- the terms the recognizer is told to expect
+
+    private void StartPhrases(MockSessionRequest request)
+    {
+        _basePhrases = SpeechPhrases.Build([request.Profile.JobRole]);
+        Composer.Phrases = _basePhrases;
+        if (_phraseSource is null) return;
+        _ = LoadPhrasesAsync(request);
+    }
+
+    // The saved technologies of the job description, the resume's skills and employers: found without any model call, a moment after the interview starts.
+    private async Task LoadPhrasesAsync(MockSessionRequest request)
+    {
+        var found = await _phraseSource!.ForProfileAsync(request.Profile);
+        if (!ReferenceEquals(_request, request)) return;
+        _basePhrases = found;
+        _phrasedPlan = null;
+        UpdatePhrases();
+    }
+
+    // Once the round is planned, its topics ("PDF/SignalR pipeline", "strangler fig migration") are the words most likely to be spoken next.
+    private void UpdatePhrases()
+    {
+        if (_engine?.Plan is not { } plan)
+        {
+            Composer.Phrases = _basePhrases;
+            return;
+        }
+        if (ReferenceEquals(plan, _phrasedPlan)) return;
+        _phrasedPlan = plan;
+        Composer.Phrases = SpeechPhrases.Build(plan.Phases.SelectMany(p => p.Topics), plan.FocusAreas.Select(a => a.Name), _basePhrases);
     }
 
     // LlmExceptions are handled inside the engine (Failed phase + Retry). Anything else is a bug or an environment problem,

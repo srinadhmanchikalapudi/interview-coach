@@ -11,6 +11,9 @@ internal sealed class TestStt : ISpeechToText
     public bool Started { get; private set; }
     public bool Stopped { get; private set; }
     public string? SayOnStop { get; set; }
+    /// <summary>The terms the screen told the recognizer to expect (empty if it was never told).</summary>
+    public IReadOnlyList<string> Phrases { get; private set; } = [];
+    public void SetPhrases(IReadOnlyList<string> phrases) => Phrases = phrases;
 
     public event EventHandler<string>? PartialRecognized;
     public event EventHandler<string>? FinalRecognized;

@@ -96,6 +96,18 @@ public sealed class TechBank(ITechBankRepository repository, ILlmService llm, IP
         return technologies;
     }
 
+    /// <summary>The technologies already read from the profile's job description, or none. Never calls the model.</summary>
+    public async Task<IReadOnlyList<string>> GetSavedTechnologiesAsync(CandidateProfile profile, CancellationToken ct = default)
+        => string.IsNullOrWhiteSpace(profile.JobDescription)
+            ? []
+            : await repository.GetTechnologiesAsync(TextTools.Fingerprint(profile.JobDescription), ct) ?? [];
+
+    /// <summary>The employers and highlights already read from the profile's resume, or none. Never calls the model.</summary>
+    public async Task<IReadOnlyList<ResumeTopic>> GetSavedResumeTopicsAsync(CandidateProfile profile, CancellationToken ct = default)
+        => string.IsNullOrWhiteSpace(profile.ResumeText)
+            ? []
+            : await repository.GetResumeTopicsAsync(TextTools.Fingerprint(profile.ResumeText), ct) ?? [];
+
     /// <summary>Employers kept from a resume, and highlights kept per employer.</summary>
     public const int MaxEmployers = 8;
     public const int MaxHighlights = 5;

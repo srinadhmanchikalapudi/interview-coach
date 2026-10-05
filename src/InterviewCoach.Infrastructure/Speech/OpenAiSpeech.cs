@@ -42,12 +42,15 @@ internal static class OpenAiAudio
 public sealed class OpenAiSpeechToText(AppSettings settings, IAudioRecorder recorder, Uri? endpoint = null) : ISpeechToText
 {
     private bool _recording;
+    private IReadOnlyList<string> _phrases = [];
 
     public bool SupportsPartials => false;
 
     public event EventHandler<string>? PartialRecognized { add { } remove { } }
     public event EventHandler<string>? FinalRecognized;
     public event EventHandler<string>? Error;
+
+    public void SetPhrases(IReadOnlyList<string> phrases) => _phrases = phrases;
 
     public Task StartAsync(CancellationToken ct)
     {
@@ -85,7 +88,7 @@ public sealed class OpenAiSpeechToText(AppSettings settings, IAudioRecorder reco
         try
         {
             var audio = OpenAiAudio.CreateClient(settings, endpoint).GetAudioClient(OpenAiAudio.TranscriptionModel);
-            var result = await audio.TranscribeAudioAsync(new MemoryStream(wav), "answer.wav", new AudioTranscriptionOptions { Language = "en" }).ConfigureAwait(false);
+            var result = await audio.TranscribeAudioAsync(new MemoryStream(wav), "answer.wav", new AudioTranscriptionOptions { Language = "en", Prompt = SpeechPhrases.AsPrompt(_phrases) is { Length: > 0 } hint ? hint : null }).ConfigureAwait(false);
             var text = result.Value.Text?.Trim();
             if (!string.IsNullOrEmpty(text)) FinalRecognized?.Invoke(this, text);
         }

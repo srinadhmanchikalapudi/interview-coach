@@ -41,6 +41,12 @@ public interface ISpeechToText : IAsyncDisposable
     event EventHandler<string>? PartialRecognized;
     event EventHandler<string>? FinalRecognized;
     event EventHandler<string>? Error;
+    /// <summary>
+    /// Words and names likely to be spoken (technologies, employers, the role), so the recognizer prefers them to look-alikes. Called before
+    /// <see cref="StartAsync"/>. A recognizer that cannot use them ignores them, which is what the default does.
+    /// </summary>
+    void SetPhrases(IReadOnlyList<string> phrases) { }
+
     Task StartAsync(CancellationToken ct);
     /// <summary>For record-then-transcribe providers, this is where FinalRecognized fires.</summary>
     Task StopAsync();

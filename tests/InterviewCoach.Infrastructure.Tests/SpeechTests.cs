@@ -143,6 +143,33 @@ public class SpeechTests
     }
 
     [Fact]
+    public async Task OpenAI_dictation_sends_the_expected_terms_as_Whisper_prompt()
+    {
+        using var server = new FakeOpenAiAudio();
+        await using var stt = new OpenAiSpeechToText(OpenAi(), new FakeRecorder(), server.Endpoint);
+        stt.SetPhrases([".NET", "SignalR", "Claims Processing Facility"]);
+        await stt.StartAsync(CancellationToken.None);
+
+        await server.ServeAsync(() => stt.StopAsync());
+
+        Assert.Contains("name=prompt", server.BodyText);
+        Assert.Contains("A technical job interview. Terms that may be spoken: .NET, SignalR, Claims Processing Facility.", server.BodyText);
+    }
+
+    [Fact]
+    public async Task OpenAI_dictation_sends_no_prompt_when_there_are_no_terms()
+    {
+        using var server = new FakeOpenAiAudio();
+        await using var stt = new OpenAiSpeechToText(OpenAi(), new FakeRecorder(), server.Endpoint);
+        stt.SetPhrases([]);
+        await stt.StartAsync(CancellationToken.None);
+
+        await server.ServeAsync(() => stt.StopAsync());
+
+        Assert.DoesNotContain("name=prompt", server.BodyText);
+    }
+
+    [Fact]
     public async Task OpenAI_dictation_reports_a_rejected_key_in_words_and_delivers_nothing()
     {
         using var server = new FakeOpenAiAudio { Status = 401 };
@@ -309,6 +336,20 @@ public class SpeechTests
         Assert.Contains("something odd", AzureErrors.Describe(CancellationErrorCode.RuntimeError, "something odd"));
         Assert.Contains("Microphone", AzureErrors.Describe(new ApplicationException("Exception with an error code: 0x8 (SPXERR_MIC_NOT_AVAILABLE)")));
         Assert.StartsWith("Could not start Azure Speech", AzureErrors.Describe(new InvalidOperationException("other")));
+    }
+
+    [Fact]
+    public async Task Azure_dictation_given_terms_still_reports_a_start_that_fails_as_a_message()
+    {
+        await using var stt = new AzureSpeechToText("", "");
+        var errors = new List<string>();
+        stt.Error += (_, e) => errors.Add(e);
+        stt.SetPhrases(["SignalR", ".NET"]);
+
+        await stt.StartAsync(CancellationToken.None);
+        await stt.StopAsync();
+
+        Assert.NotEmpty(errors);
     }
 
     [Fact]
