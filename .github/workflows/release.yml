@@ -3,7 +3,8 @@ name: Release
 # Publishing a version: push a tag such as v1.0.0.
 #   git tag v1.0.0
 #   git push origin v1.0.0
-# The workflow tests the code, builds the single-file exe, a zip and the Windows installer, and attaches all three to a GitHub release.
+# The workflow tests the code, builds the single-file exe, a zip and the Windows installer, and attaches all three to a GitHub release,
+# whose notes list the commits since the previous tag (tools/release-notes.ps1).
 on:
   push:
     tags: ["v*"]
@@ -16,6 +17,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the whole history and the tags, so the release notes can list the commits since the previous version
 
       - uses: actions/setup-dotnet@v4
         with:
@@ -45,12 +48,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $v = "${{ steps.version.outputs.version }}"
-          $notes = @'
-          **Install:** download the `Setup` file below and run it (no administrator rights needed). Or download the zip, unzip it and run `InterviewCoach.App.exe` with the `Prompts` folder next to it.
-
-          Windows may show a SmartScreen warning because the program is not code-signed: choose **More info**, then **Run anyway**.
-          '@
-          Set-Content -Path release-notes.md -Value $notes
+          ./tools/release-notes.ps1 -Tag "${{ github.ref_name }}" -OutFile release-notes.md
           gh release create "${{ github.ref_name }}" `
             "dist/InterviewCoach-Setup-$v.exe" `
             "dist/InterviewCoach-$v-win-x64.zip" `
