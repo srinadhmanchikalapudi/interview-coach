@@ -9,6 +9,11 @@
     <ApplicationIcon>Assets/app.ico</ApplicationIcon>
     <AssemblyTitle>Interview Coach</AssemblyTitle>
     <Product>Interview Coach</Product>
+    <Company>srinadhmanchikalapudi</Company>
+    <Copyright>Copyright (c) 2026 srinadhmanchikalapudi. MIT License.</Copyright>
+    <Description>Prepare for a specific job interview: learn, practise and mock interviews built from your resume and the job description.</Description>
+    <RepositoryUrl>https://github.com/srinadhmanchikalapudi/interview-coach</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <!-- ThemeMode (Windows 11 Fluent look, follows the system light/dark setting) is still flagged experimental. -->
     <NoWarn>$(NoWarn);WPF0001</NoWarn>
   </PropertyGroup>

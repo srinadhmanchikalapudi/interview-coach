@@ -1,7 +1,9 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using InterviewCoach.App.Services;
 using InterviewCoach.Core.Abstractions;
 using InterviewCoach.Core.Models;
+using InterviewCoach.Core.Updates;
 
 namespace InterviewCoach.App.ViewModels;
 
@@ -22,6 +24,9 @@ public partial class MainViewModel : ObservableObject
     private readonly ISettingsStore _store;
     private AppNotice? _transient;
     private bool _setupNoticeDismissed;
+    private readonly UpdateService? _updates;
+    private readonly IDialogService? _dialogs;
+    private Version? _updateDismissed;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsHomeSelected), nameof(IsSettingsSelected), nameof(IsLibrarySelected), nameof(IsConceptsSelected), nameof(IsHistorySelected), nameof(Notice), nameof(HasNotice))]
@@ -31,8 +36,17 @@ public partial class MainViewModel : ObservableObject
 
     public MainViewModel(
         HomeViewModel home, SettingsViewModel settings, LearnViewModel learn, ISettingsStore store, LibraryViewModel? library = null,
-        PracticeViewModel? practice = null, ConceptsViewModel? concepts = null, MockViewModel? mock = null, HistoryViewModel? history = null)
+        PracticeViewModel? practice = null, ConceptsViewModel? concepts = null, MockViewModel? mock = null, HistoryViewModel? history = null,
+        UpdateService? updates = null, IDialogService? dialogs = null)
     {
+        _updates = updates;
+        _dialogs = dialogs;
+        if (updates is not null)
+            updates.Changed += () =>
+            {
+                OnPropertyChanged(nameof(Notice));
+                OnPropertyChanged(nameof(HasNotice));
+            };
         _concepts = concepts;
         _history = history;
         _home = home;
@@ -161,9 +175,39 @@ public partial class MainViewModel : ObservableObject
     // ---- the bar above the page
 
     /// <summary>What to tell the user above the page, or null: a problem that was reported, else a missing key (not on Settings itself).</summary>
-    public AppNotice? Notice => _transient ?? SetupNotice();
+    public AppNotice? Notice => _transient ?? UpdateNotice() ?? SetupNotice();
 
     public bool HasNotice => Notice is not null;
+
+    // A newer version, being downloaded, or an update that failed. Never shown on Settings (which has its own update controls) and a dismissed
+    // version stays dismissed until the program is started again.
+    private AppNotice? UpdateNotice()
+    {
+        if (_updates is not { } u || IsSettingsSelected) return null;
+        switch (u.Phase)
+        {
+            case UpdatePhase.Available when u.Available is { } update && update.Version != _updateDismissed:
+                return new AppNotice(
+                    $"Version {UpdateVersions.Display(update.Version)} is available (you have {u.CurrentText}).", NoticeLevel.Info,
+                    u.CanInstallInPlace ? "Update now" : "Download", () => _ = InstallUpdateAsync());
+            case UpdatePhase.Downloading when u.Available is { } downloading:
+                return new AppNotice($"Downloading version {UpdateVersions.Display(downloading.Version)}… {(int)(u.Progress * 100)}%", NoticeLevel.Info);
+            case UpdatePhase.Failed when u.Available is not null && u.Error is not null:
+                return new AppNotice($"The update did not install: {u.Error}", NoticeLevel.Error, "Open download page", u.OpenReleasePage);
+            default:
+                return null;
+        }
+    }
+
+    // The user is asked first: the program closes, updates and starts again.
+    private async Task InstallUpdateAsync()
+    {
+        if (_updates is not { Available: { } update } u) return;
+        if (u.CanInstallInPlace && _dialogs is not null &&
+            !_dialogs.Confirm("Update Interview Coach", $"Install version {UpdateVersions.Display(update.Version)} now? Interview Coach will close, update and start again. A mock interview in progress is kept in History; an answer you have not sent in Practice is not."))
+            return;
+        await u.InstallAsync();
+    }
 
     private AppNotice? SetupNotice()
     {
@@ -192,6 +236,7 @@ public partial class MainViewModel : ObservableObject
     private void DismissNotice()
     {
         if (_transient is not null) _transient = null;
+        else if (UpdateNotice() is not null && _updates?.Available is { } update) _updateDismissed = update.Version;
         else _setupNoticeDismissed = true;
         OnPropertyChanged(nameof(Notice));
         OnPropertyChanged(nameof(HasNotice));

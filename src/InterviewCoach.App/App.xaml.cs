@@ -1,3 +1,4 @@
+using System.Net.Http;
 using System.Windows;
 using System.Windows.Threading;
 using InterviewCoach.App.Services;
@@ -10,6 +11,8 @@ using InterviewCoach.Infrastructure.Llm;
 using InterviewCoach.Infrastructure.Persistence;
 using InterviewCoach.Infrastructure.Prompts;
 using InterviewCoach.Infrastructure.Settings;
+using InterviewCoach.Infrastructure.Updates;
+using InterviewCoach.Core.Updates;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -44,6 +47,9 @@ public partial class App : Application
         }
 
         _host.Services.GetRequiredService<MainWindow>().Show();
+
+        // Look for a newer version in the background (if Settings allows it); a failure is silent.
+        _ = _host.Services.GetRequiredService<UpdateService>().CheckOnStartupAsync();
     }
 
     protected override async void OnExit(ExitEventArgs e)
@@ -69,6 +75,13 @@ public partial class App : Application
 
 internal static class ServiceRegistration
 {
+    private static HttpClient NewGitHubClient(TimeSpan timeout)
+    {
+        var client = new HttpClient { Timeout = timeout };
+        client.DefaultRequestHeaders.UserAgent.ParseAdd($"InterviewCoach/{AppInfo.CurrentVersion}"); // GitHub's API requires a user agent
+        return client;
+    }
+
     public static HostApplicationBuilder ConfigureInterviewCoach(this HostApplicationBuilder builder)
     {
         var s = builder.Services;
@@ -108,6 +121,16 @@ internal static class ServiceRegistration
         s.AddSingleton<LearnViewModel>();
         s.AddSingleton<LibraryViewModel>();
         s.AddSingleton<InterviewCoach.Core.Speech.SpeechPhraseSource>(sp => new InterviewCoach.Core.Speech.SpeechPhraseSource(sp.GetService<TechBank>())); // terms for the recognizer, from what was already read
+        s.AddSingleton<IProcessLauncher, ShellProcessLauncher>();
+        s.AddSingleton<IUrlOpener, ShellUrlOpener>();
+        s.AddSingleton<IInstallationInfo, InstallationInfo>();
+        // Looking for an update is a tiny request with a short timeout; downloading the setup program may take minutes.
+        s.AddSingleton<IUpdateChecker>(_ => new GitHubUpdateChecker(NewGitHubClient(TimeSpan.FromSeconds(15)), AppInfo.Owner, AppInfo.Repo));
+        s.AddSingleton<IUpdateInstaller>(sp => new UpdateInstaller(NewGitHubClient(Timeout.InfiniteTimeSpan), sp.GetRequiredService<IProcessLauncher>()));
+        s.AddSingleton(sp => new UpdateService(
+            sp.GetRequiredService<IUpdateChecker>(), sp.GetRequiredService<IUpdateInstaller>(), sp.GetRequiredService<ISettingsStore>(),
+            sp.GetRequiredService<IInstallationInfo>(), sp.GetRequiredService<IUrlOpener>(), AppInfo.CurrentVersion,
+            exit: () => Application.Current.Dispatcher.Invoke(Application.Current.Shutdown)));
         s.AddSingleton<PracticeViewModel>();
         s.AddSingleton<ConceptsViewModel>();
         s.AddSingleton<MockViewModel>();

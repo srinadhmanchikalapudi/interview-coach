@@ -12,8 +12,9 @@
 <p align="center">
   <img alt=".NET 10" src="https://img.shields.io/badge/.NET-10-512BD4">
   <img alt="WPF" src="https://img.shields.io/badge/UI-WPF%20%28MVVM%29-0078D4">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-1096%20passing-2EA043">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-1181%20passing-2EA043">
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%2010%2F11-lightgrey">
+  <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green">
   <img alt="Status" src="https://img.shields.io/badge/status-Learn%20mode%20complete-blue">
 </p>
 
@@ -131,11 +132,17 @@ a full visual redesign. [SPEC.md](SPEC.md) section 14 lists every change and **o
 
 ## Install
 
-**Just want to use it?** Go to the [latest release](https://github.com/srinadhmanchikalapudi/interview-coach/releases/latest), download **`InterviewCoach-Setup-<version>.exe`** and run it. No administrator rights and no .NET install are needed; it adds a Start Menu entry (and a desktop shortcut if you tick it) and can be removed from Windows' *Installed apps*. A new version installed over an old one keeps your profiles, saved questions, history and settings, which live in `%LOCALAPPDATA%\InterviewCoach`. Uninstalling asks whether to delete them too.
+**Just want to use it?** Go to the [latest release](https://github.com/srinadhmanchikalapudi/interview-coach/releases/latest), download **`InterviewCoach-Setup-<version>.exe`** and run it. No administrator rights and no .NET install are needed; it adds a Start Menu entry (and a desktop shortcut if you tick it) and can be removed from Windows' *Installed apps*. A new version installed over an old one keeps your profiles, saved questions, history and settings, which live in `%LOCALAPPDATA%\InterviewCoach`. Uninstalling asks whether to delete them too. **The program updates itself**: see below.
 
 Prefer no installer? Download the **zip** from the same page, unzip it anywhere and run `InterviewCoach.App.exe` (keep the `Prompts` folder next to it).
 
 The program is not code-signed, so Windows SmartScreen may say "Windows protected your PC" the first time: choose **More info**, then **Run anyway**. After installing, open **Settings** and add a language model key (or turn on **Demo mode** to look around with no key). Windows 10 (build 19041) or later, 64-bit.
+
+### Updates
+
+When the program starts it asks GitHub (at most once a day) for the number of the newest release. If there is a newer one, a bar appears above the page: **Update now** downloads the setup program, checks it, and (after you confirm) closes the program, updates it and starts it again; your data is kept. Nothing is ever installed without your click. A copy you unzipped instead of installing gets a **Download** button that opens the release page.
+
+The check sends nothing about you (it is a plain request for the latest release's details) and can be switched off under **Settings, About and updates**, where there is also **Check for updates now**. The download must come from github.com over HTTPS and must match the checksum GitHub publishes for it, or it is deleted and not run.
 
 ## Getting started
 
@@ -475,6 +482,8 @@ Everything is stored locally under `%LOCALAPPDATA%\InterviewCoach\`:
 else. With OpenRouter they go to OpenRouter and on to whichever company runs the model you picked, so check that model's data policy
 on its OpenRouter page if that matters to you. The model list for the OpenRouter browser is a public download that carries nothing about you. There is no telemetry. In Demo mode nothing is sent anywhere.
 
+**Network use.** Besides the language model and speech services you choose, the only request the program makes is the daily look for a newer release on GitHub (switchable in Settings).
+
 **Key fallbacks** when a Settings field is empty: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION`.
 
 **Database tables:** `Profiles`, `TechQuestions`, `TechAnswers`, `JdTechnologies`, `RoleTechnologies` (the technologies of a job role, fetched once), `ResumeTopics` (employers and projects read from a resume), `LearnHistory` and `PracticeAttempts` (the Library), `MockSessions` (mock interviews, written as they go: plan, conversation with the interview's own clock, debrief and the coaching of each question as JSON, the profile and role type).
@@ -482,7 +491,7 @@ on its OpenRouter page if that matters to you. The model list for the OpenRouter
 ## Testing
 
 ```bash
-dotnet test                                     # all 1096 tests
+dotnet test                                     # all 1181 tests
 dotnet test tests/InterviewCoach.Core.Tests     # one project
 dotnet build InterviewCoach.sln -c Release      # use this if the Debug exe is running (it locks its DLLs)
 ```
@@ -490,8 +499,8 @@ dotnet build InterviewCoach.sln -c Release      # use this if the Debug exe is r
 | Project | Tests | Covers |
 |---|---|---|
 | `InterviewCoach.Core.Tests` | 478 | Prompt rendering, engine behaviour, the bank, answer lengths, question types, text helpers, role type |
-| `InterviewCoach.Infrastructure.Tests` | 225 | JSON parsing, LLM service (retry, cache split, options), settings (DPAPI round trip, no plaintext), SQLite repositories on real files, file extractors, prompt guards, Demo-mode isolation |
-| `InterviewCoach.App.Tests` | 393 | View models and **real WPF views** on a shared STA dispatcher; fails on any binding error |
+| `InterviewCoach.Infrastructure.Tests` | 280 | JSON parsing, LLM service (retry, cache split, options), settings (DPAPI round trip, no plaintext), SQLite repositories on real files, file extractors, prompt guards, Demo-mode isolation |
+| `InterviewCoach.App.Tests` | 423 | View models and **real WPF views** on a shared STA dispatcher; fails on any binding error |
 
 Test names are sentences that describe behaviour. Scripted test doubles (`ScriptedLlmService`, `BankScript`) let tests control exactly
 what the model "says", including delays and failures.
@@ -561,4 +570,4 @@ Areas used so far: `build`, `core`, `infra`, `app`, `prompts`, `data`, `design`,
 
 ## License
 
-No license has been chosen yet; until one is added, all rights are reserved by the author.
+Interview Coach is released under the [MIT License](LICENSE): use it, change it, share it. The packages it uses keep their own licenses, listed in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md); note that the Azure speech feature uses Microsoft's Speech SDK, which has Microsoft's own terms (not MIT).

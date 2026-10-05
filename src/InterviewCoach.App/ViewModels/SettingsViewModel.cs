@@ -7,6 +7,7 @@ using InterviewCoach.Core.Abstractions;
 using InterviewCoach.Core.Engines;
 using InterviewCoach.Core.Models;
 using InterviewCoach.Core.Speech;
+using InterviewCoach.Core.Updates;
 
 namespace InterviewCoach.App.ViewModels;
 
@@ -31,6 +32,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly IDialogService? _dialogs;
     private readonly IOpenRouterCatalog? _catalog;
     private readonly ISpeechFactory? _speech;
+    private readonly UpdateService? _updates;
 
     // Both sets of per-role models (the Anthropic/OpenAI one and the OpenRouter one) are held here, so switching the
     // provider on screen swaps the boxes without losing what was typed for the other provider.
@@ -39,9 +41,11 @@ public partial class SettingsViewModel : ObservableObject
     private IReadOnlyList<OpenRouterModel> _catalogModels = [];
 
     public SettingsViewModel(ISettingsStore store, ILlmService llm, TechBank? bank = null, IDialogService? dialogs = null, IOpenRouterCatalog? catalog = null,
-        ISpeechFactory? speech = null)
+        ISpeechFactory? speech = null, UpdateService? updates = null)
     {
         _speech = speech;
+        _updates = updates;
+        if (updates is not null) updates.Changed += () => { OnPropertyChanged(nameof(UpdateStatus)); OnPropertyChanged(nameof(HasUpdateStatus)); OnPropertyChanged(nameof(CanCheckNow)); };
         _store = store;
         _llm = llm;
         _bank = bank;
@@ -120,6 +124,7 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private int _silenceSeconds = 6;
     [ObservableProperty] private bool _showQuestionTextDefault;
     [ObservableProperty] private bool _demoMode;
+    [ObservableProperty] private bool _checkForUpdates = true;
     [ObservableProperty] private bool _debugLogging;
 
     // OpenRouter model browser
@@ -206,6 +211,7 @@ public partial class SettingsViewModel : ObservableObject
         SilenceSeconds = s.SilenceSeconds;
         ShowQuestionTextDefault = s.ShowQuestionTextDefault;
         DemoMode = s.DemoMode;
+        CheckForUpdates = s.CheckForUpdates;
         DebugLogging = s.DebugLogging;
         StatusMessage = "";
         TestResults.Clear();
@@ -239,6 +245,7 @@ public partial class SettingsViewModel : ObservableObject
         s.SilenceSeconds = Math.Max(1, SilenceSeconds);
         s.ShowQuestionTextDefault = ShowQuestionTextDefault;
         s.DemoMode = DemoMode;
+        s.CheckForUpdates = CheckForUpdates;
         s.DebugLogging = DebugLogging;
         return s;
     }
@@ -455,6 +462,24 @@ public partial class SettingsViewModel : ObservableObject
             IsTesting = false;
         }
     }
+
+    // ---- About and updates
+
+    public bool HasUpdates => _updates is not null;
+    public string VersionText => _updates is null ? "" : $"Interview Coach {_updates.CurrentText}";
+    public string UpdateStatus => _updates?.StatusText ?? "";
+    public bool HasUpdateStatus => UpdateStatus.Length > 0;
+    public bool CanCheckNow => _updates is { Phase: not (UpdatePhase.Checking or UpdatePhase.Downloading) };
+
+    [RelayCommand]
+    private async Task CheckForUpdatesNowAsync()
+    {
+        if (_updates is null) return;
+        await _updates.CheckAsync(manual: true);
+    }
+
+    [RelayCommand]
+    private void OpenReleasePage() => _updates?.OpenReleasePage();
 
     // ---- Speech tests. They use the saved settings (the speech services read them), so unsaved changes are pointed out.
 

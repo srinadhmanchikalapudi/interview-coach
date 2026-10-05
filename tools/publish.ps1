@@ -51,6 +51,10 @@ dotnet publish src/InterviewCoach.App -c Release -r $Runtime --self-contained tr
     -o $out --nologo
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed." }
 
+# The licenses travel with the program.
+Copy-Item (Join-Path $root "LICENSE"), (Join-Path $root "THIRD-PARTY-NOTICES.md") -Destination $out
+Copy-Item (Join-Path $root "licenses") -Destination (Join-Path $out "licenses") -Recurse
+
 $zip = Join-Path $root "dist\$name.zip"
 if (Test-Path $zip) { Remove-Item $zip -Force }
 Compress-Archive -Path (Join-Path $out "*") -DestinationPath $zip

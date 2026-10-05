@@ -65,6 +65,11 @@ public class AppSettings
     public RoundType MockRoundType { get; set; } = RoundType.Mixed;
     public int MockDurationMinutes { get; set; } = RoundTypes.DefaultDuration;
 
+    // Updates
+    /// <summary>Look for a newer release on GitHub when the program starts (at most once a day). Only the version number is asked for; nothing is sent about you.</summary>
+    public bool CheckForUpdates { get; set; } = true;
+    public DateTime? LastUpdateCheck { get; set; }
+
     // Behavior
     /// <summary>Speak each Practice question aloud when it appears (when a voice is ready).</summary>
     public bool SpeakQuestions { get; set; } = true;

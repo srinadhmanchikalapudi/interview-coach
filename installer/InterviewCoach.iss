@@ -43,6 +43,7 @@ MinVersion=10.0.19041
 CloseApplications=yes
 RestartApplications=no
 
+LicenseFile=..\LICENSE
 SetupIconFile=..\src\InterviewCoach.App\Assets\app.ico
 UninstallDisplayIcon={app}\{#AppExe}
 UninstallDisplayName={#AppName}
@@ -63,14 +64,26 @@ Source: "{#SourceDir}\{#AppExe}"; DestDir: "{app}"; Flags: ignoreversion
 ; The prompts sit next to the exe so they can be tweaked; the program has built-in copies if they are missing.
 Source: "{#SourceDir}\Prompts\*"; DestDir: "{app}\Prompts"; Flags: ignoreversion recursesubdirs createallsubdirs
 
+; The licenses travel with the program (the Speech SDK's terms require its license text to be included).
+Source: "..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\THIRD-PARTY-NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\licenses\*"; DestDir: "{app}\licenses"; Flags: ignoreversion
+
 [Icons]
 Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExe}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\{#AppExe}"; Description: "Start {#AppName}"; Flags: nowait postinstall skipifsilent
+; An update started from inside the program passes /RESTARTAPP=1, so the program comes back by itself when the silent install is done.
+Filename: "{app}\{#AppExe}"; Flags: nowait runasoriginaluser; Check: RestartRequested
 
 [Code]
+function RestartRequested: Boolean;
+begin
+  Result := ExpandConstant('{param:RESTARTAPP|0}') = '1';
+end;
+
 // Uninstalling removes the program only. The user's profiles, saved questions, history, settings and logs are theirs, so they are kept
 // unless the user says to delete them (never asked for a silent uninstall).
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
