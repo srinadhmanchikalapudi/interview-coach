@@ -24,18 +24,19 @@
 1. [What it does](#what-it-does)
 2. [Screenshots](#screenshots)
 3. [Status and roadmap](#status-and-roadmap)
-4. [Getting started](#getting-started)
-5. [Using the app](#using-the-app)
-6. [How it works](#how-it-works)
-7. [Architecture](#architecture)
-8. [Prompts](#prompts)
-9. [Speed and cost](#speed-and-cost)
-10. [Data, settings and privacy](#data-settings-and-privacy)
-11. [Testing](#testing)
-12. [Repository layout](#repository-layout)
-13. [Development guide](#development-guide)
-14. [Documentation](#documentation)
-15. [Commit conventions](#commit-conventions)
+4. [Install](#install)
+5. [Getting started](#getting-started)
+6. [Using the app](#using-the-app)
+7. [How it works](#how-it-works)
+8. [Architecture](#architecture)
+9. [Prompts](#prompts)
+10. [Speed and cost](#speed-and-cost)
+11. [Data, settings and privacy](#data-settings-and-privacy)
+12. [Testing](#testing)
+13. [Repository layout](#repository-layout)
+14. [Development guide](#development-guide)
+15. [Documentation](#documentation)
+16. [Commit conventions](#commit-conventions)
 
 ---
 
@@ -128,6 +129,14 @@ Beyond the original spec, these were added during the build: scenario questions,
 By technology and Other, prompt caching and prefetching, thinking-effort setting, full-time or contract role type, an OpenRouter provider with a model browser, a new icon and
 a full visual redesign. [SPEC.md](SPEC.md) section 14 lists every change and **overrides the spec where they differ**.
 
+## Install
+
+**Just want to use it?** Go to the [latest release](https://github.com/srinadhmanchikalapudi/interview-coach/releases/latest), download **`InterviewCoach-Setup-<version>.exe`** and run it. No administrator rights and no .NET install are needed; it adds a Start Menu entry (and a desktop shortcut if you tick it) and can be removed from Windows' *Installed apps*. A new version installed over an old one keeps your profiles, saved questions, history and settings, which live in `%LOCALAPPDATA%\InterviewCoach`. Uninstalling asks whether to delete them too.
+
+Prefer no installer? Download the **zip** from the same page, unzip it anywhere and run `InterviewCoach.App.exe` (keep the `Prompts` folder next to it).
+
+The program is not code-signed, so Windows SmartScreen may say "Windows protected your PC" the first time: choose **More info**, then **Run anyway**. After installing, open **Settings** and add a language model key (or turn on **Demo mode** to look around with no key). Windows 10 (build 19041) or later, 64-bit.
+
 ## Getting started
 
 ### Requirements
@@ -152,11 +161,20 @@ Or open `InterviewCoach.sln` in Visual Studio and run `InterviewCoach.App`.
 powershell -ExecutionPolicy Bypass -File tools\publish.ps1
 ```
 
-This runs the tests, then publishes **one self-contained `InterviewCoach.App.exe`** (about 95 MB, the .NET runtime is inside, so the other machine needs nothing installed) and a zip of it under `dist\`. Options: `-Version 1.2.0`, `-Runtime win-arm64`, `-SkipTests`. Keep the `Prompts` folder next to the exe (you can edit the prompts there; the app has built-in copies if it is missing). Windows 10 (build 19041) or later. Your data stays per Windows user in `%LOCALAPPDATA%\InterviewCoach`, so a new exe finds the existing database and settings. Not signed, so Windows SmartScreen may warn the first time on another machine ("More info", "Run anyway"). The same thing by hand:
+This runs the tests, then publishes **one self-contained `InterviewCoach.App.exe`** (about 95 MB, the .NET runtime is inside, so the other machine needs nothing installed) and a zip of it under `dist\`. Add **`-Installer`** to also build the Windows setup program (`dist\InterviewCoach-Setup-<version>.exe`, made with [Inno Setup](https://jrsoftware.org/isinfo.php): `winget install JRSoftware.InnoSetup`; the script is `installer\InterviewCoach.iss`). Other options: `-Version 1.2.0`, `-Runtime win-arm64`, `-SkipTests`. Keep the `Prompts` folder next to the exe (you can edit the prompts there; the app has built-in copies if it is missing). Windows 10 (build 19041) or later. Your data stays per Windows user in `%LOCALAPPDATA%\InterviewCoach`, so a new exe finds the existing database and settings. Not signed, so Windows SmartScreen may warn the first time on another machine ("More info", "Run anyway"). The same thing by hand:
 
 ```bash
 dotnet publish src/InterviewCoach.App -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o dist/app
 ```
+
+**Publishing a version for everyone to download.** Push a tag; GitHub does the rest (`.github/workflows/release.yml`: it runs the tests, builds the exe, the zip and the installer, and attaches all three to a new GitHub release with generated notes):
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+Every push and pull request is also built and tested on GitHub (`.github/workflows/ci.yml`).
 
 ### First run
 

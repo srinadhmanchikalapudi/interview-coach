@@ -1,0 +1,59 @@
+name: Release
+
+# Publishing a version: push a tag such as v1.0.0.
+#   git tag v1.0.0
+#   git push origin v1.0.0
+# The workflow tests the code, builds the single-file exe, a zip and the Windows installer, and attaches all three to a GitHub release.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write   # to create the release and attach the files
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Version from the tag
+        id: version
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart("v")
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          if (-not (Get-Command ISCC.exe -ErrorAction SilentlyContinue) -and -not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup -y --no-progress
+          }
+
+      - name: Test, publish and build the installer
+        shell: pwsh
+        run: ./tools/publish.ps1 -Version "${{ steps.version.outputs.version }}" -Installer
+
+      - name: Create the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $v = "${{ steps.version.outputs.version }}"
+          $notes = @'
+          **Install:** download the `Setup` file below and run it (no administrator rights needed). Or download the zip, unzip it and run `InterviewCoach.App.exe` with the `Prompts` folder next to it.
+
+          Windows may show a SmartScreen warning because the program is not code-signed: choose **More info**, then **Run anyway**.
+          '@
+          Set-Content -Path release-notes.md -Value $notes
+          gh release create "${{ github.ref_name }}" `
+            "dist/InterviewCoach-Setup-$v.exe" `
+            "dist/InterviewCoach-$v-win-x64.zip" `
+            --title "Interview Coach $v" `
+            --notes-file release-notes.md `
+            --generate-notes
